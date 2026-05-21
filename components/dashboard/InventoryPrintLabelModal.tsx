@@ -6,6 +6,8 @@ import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import { insertConsumableLot } from '../../lib/supabaseFinanceInventory';
 import { generateInventoryScanToken } from '../../lib/inventoryScanToken';
+import { btnPrimary, btnSecondary, pillNavBtn, pillNavWrap, stockInput } from './stockPanelStyles';
+import { cn } from '@/lib/utils';
 
 export interface LotManualDraft {
   lot_number: string;
@@ -421,7 +423,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
               Type d’étiquette
             </p>
             <div
-              className="flex flex-wrap gap-2 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1"
+              className={cn(pillNavWrap, 'flex flex-wrap')}
               role="group"
               aria-label="Type d’étiquette"
             >
@@ -430,11 +432,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
                   key={id}
                   type="button"
                   onClick={() => setAssetKind(id)}
-                  className={`min-h-[44px] flex-1 min-w-[100px] px-3 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
-                    assetKind === id
-                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                      : 'text-zinc-600 dark:text-zinc-400 border border-transparent'
-                  }`}
+                  className={cn(pillNavBtn(assetKind === id), 'flex-1 min-w-[100px]')}
                 >
                   {label}
                 </button>
@@ -454,22 +452,18 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
               value={detailNote}
               onChange={(e) => setDetailNote(e.target.value)}
               placeholder="Ex. 9RL, noir, marque…"
-              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+              className={cn(stockInput, 'w-full')}
             />
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
-            <button
-              type="button"
-              className="min-h-[44px] px-4 rounded-xl border border-zinc-300 dark:border-zinc-600 text-sm font-medium text-zinc-800 dark:text-zinc-100 active:scale-[0.98] transition-all"
-              onClick={onClose}
-            >
+            <button type="button" className={cn(btnSecondary, 'min-h-[44px]')} onClick={onClose}>
               Annuler
             </button>
             <button
               type="button"
               disabled={working || !studioId}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
+              className={cn(btnPrimary, 'disabled:opacity-50')}
               onClick={() => void onGenerate()}
             >
               {working ? (
@@ -488,7 +482,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
           <p className="text-sm font-medium text-zinc-900 dark:text-white text-center">
             {preview.headline}
           </p>
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950/80 p-4 flex flex-col items-center gap-3">
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black p-4 flex flex-col items-center gap-3 shadow-[0_0_20px_rgba(255,255,255,0.02)]">
             <img
               src={preview.qrDataUrl}
               alt=""
@@ -506,28 +500,16 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
             feuille d’impression (sur iPhone : partage → Imprimer ou Enregistrer en PDF).
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all"
-              onClick={handlePrint}
-            >
+            <button type="button" className={btnPrimary} onClick={handlePrint}>
               <Printer className="w-4 h-4 shrink-0" />
               Imprimer l’étiquette
             </button>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-800 dark:text-zinc-100 active:scale-[0.98] transition-all"
-              onClick={handleDownloadQr}
-            >
+            <button type="button" className={btnSecondary} onClick={handleDownloadQr}>
               <Download className="w-4 h-4 shrink-0" />
               Télécharger le QR
             </button>
           </div>
-          <button
-            type="button"
-            className="w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm active:scale-[0.98] transition-all text-zinc-700 dark:text-zinc-300"
-            onClick={onClose}
-          >
+          <button type="button" className={cn(btnSecondary, 'w-full')} onClick={onClose}>
             Fermer
           </button>
         </div>

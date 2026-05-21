@@ -1053,6 +1053,23 @@ export async function markDepositAsPaid(aptId: string, studioId: string): Promis
   if (error) throw error;
 }
 
+/** Solde encaissé hors Stripe (espèces, virement, autre TPE). */
+export async function markBalanceAsPaid(
+  aptId: string,
+  studioId: string,
+  paidAtIso: string = new Date().toISOString()
+): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_appointments')
+    .update({
+      balance_paid_at: paidAtIso,
+      updated_at: paidAtIso,
+    })
+    .eq('id', aptId)
+    .eq('studio_id', studioId);
+  if (error) throw error;
+}
+
 // Flash designs
 export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
   return {

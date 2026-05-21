@@ -6,6 +6,7 @@ import * as Sentry from "https://deno.land/x/sentry/index.mjs";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { applyPaidCheckoutDbState } from "../_shared/applyPaidCheckoutDbState.ts";
 import { applyPaidTerminalBalanceFromPaymentIntent } from "../_shared/applyPaidTerminalBalance.ts";
+import { triggerPaymentInvoiceGeneration } from "../_shared/triggerPaymentInvoice.ts";
 import {
   appendFlashVitrineNote,
   type AppointmentRowForCrm,
@@ -702,6 +703,16 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        if (studioId && effectiveAppointmentId && (type === "deposit" || type === "balance" || type === "full_payment")) {
+          await triggerPaymentInvoiceGeneration({
+            studioId,
+            appointmentId: effectiveAppointmentId,
+            paymentKind: type,
+            amountPaidEur: amountPaid,
+            paymentReference: session.id,
+          });
+        }
+
         if (type === "deposit" && studioId) {
           const { data: studioForEmail } = await supabase
             .from("inkflow_studios")
@@ -975,10 +986,25 @@ Deno.serve(async (req: Request) => {
           amount_received: pi.amount_received ?? null,
           amount: pi.amount ?? null,
         });
-        if (
-          pi.metadata &&
-          (pi.metadata as Record<string, string | undefined>).inkflow_terminal === "1"
-        ) {
+        const piMeta = pi.metadata as Record<string, string | undefined> | undefined;
+        if (piMeta?.inkflow_terminal === "1" && piMeta.type === "balance") {
+          const tStudio = (piMeta.studio_id || "").trim();
+          const tApt = (piMeta.appointment_id || "").trim();
+          const paidEur =
+            typeof pi.amount_received === "number" && pi.amount_received > 0
+              ? Math.round((pi.amount_received / 100) * 100) / 100
+              : typeof pi.amount === "number"
+                ? Math.round((pi.amount / 100) * 100) / 100
+                : 0;
+          if (tStudio && tApt && paidEur > 0) {
+            await triggerPaymentInvoiceGeneration({
+              studioId: tStudio,
+              appointmentId: tApt,
+              paymentKind: "balance",
+              amountPaidEur: paidEur,
+              paymentReference: pi.id,
+            });
+          }
           console.log("[stripe-webhook] payment_intent.succeeded Terminal balance pi=", pi.id);
         }
         break;

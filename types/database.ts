@@ -2188,6 +2188,69 @@ export type Database = {
           },
         ];
       };
+      inkflow_payment_invoices: {
+        Row: {
+          amount_paid_eur: number;
+          appointment_id: string;
+          client_id: string | null;
+          created_at: string;
+          deposit_eur: number | null;
+          document_number: string;
+          id: string;
+          payment_kind: string;
+          payment_reference: string | null;
+          public_url: string | null;
+          storage_path: string | null;
+          studio_id: string;
+          total_eur: number | null;
+        };
+        Insert: {
+          amount_paid_eur?: number;
+          appointment_id: string;
+          client_id?: string | null;
+          created_at?: string;
+          deposit_eur?: number | null;
+          document_number: string;
+          id?: string;
+          payment_kind: string;
+          payment_reference?: string | null;
+          public_url?: string | null;
+          storage_path?: string | null;
+          studio_id: string;
+          total_eur?: number | null;
+        };
+        Update: {
+          amount_paid_eur?: number;
+          appointment_id?: string;
+          client_id?: string | null;
+          created_at?: string;
+          deposit_eur?: number | null;
+          document_number?: string;
+          id?: string;
+          payment_kind?: string;
+          payment_reference?: string | null;
+          public_url?: string | null;
+          storage_path?: string | null;
+          studio_id?: string;
+          total_eur?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_payment_invoices_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_payment_invoices_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       inkflow_price_contributions: {
         Row: {
           category_slug: string;

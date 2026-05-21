@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import type { Appointment, ProjectRequest } from '@/types';
+import type { Appointment, Client, ProjectRequest } from '@/types';
 import {
+  countAgendaAppointmentsForDay,
+  countAgendaAppointmentsForMonth,
+  mapPlanningDayPreviewClients,
   mapAppointmentDepositsToStripeRows,
   mapProjectRequestsToInbox,
   mapTodayAppointmentsToSlots,
@@ -29,7 +32,10 @@ export interface DashboardBentoUnifiedProps {
   avatarUploading?: boolean;
   onAvatarPress?: () => void;
   todayIso: string;
+  /** Liste complète agenda — compteurs pilotage alignés calendrier. */
+  appointments: Appointment[];
   todayAppointments: Appointment[];
+  clients: Client[];
   pendingRequestsCount: number;
   recentDeposits: Appointment[];
   projectRequests: ProjectRequest[];
@@ -43,6 +49,8 @@ export interface DashboardBentoUnifiedProps {
   onOpenAgenda: () => void;
   onOpenRequests: () => void;
   onNewAppointment: () => void;
+  onNewClient?: () => void;
+  onOpenAppointmentPreview?: (appointmentId: string) => void;
   onOpenFlashTab: () => void;
   className?: string;
 }
@@ -64,7 +72,9 @@ export function DashboardBentoUnified({
   avatarUploading = false,
   onAvatarPress,
   todayIso,
+  appointments,
   todayAppointments,
+  clients,
   pendingRequestsCount,
   recentDeposits,
   projectRequests,
@@ -78,6 +88,8 @@ export function DashboardBentoUnified({
   onOpenAgenda,
   onOpenRequests,
   onNewAppointment,
+  onNewClient,
+  onOpenAppointmentPreview,
   onOpenFlashTab,
   className = '',
 }: DashboardBentoUnifiedProps) {
@@ -92,8 +104,16 @@ export function DashboardBentoUnified({
       };
 
   const todaySlots = useMemo(
-    () => mapTodayAppointmentsToSlots(todayAppointments),
-    [todayAppointments]
+    () => mapTodayAppointmentsToSlots(todayAppointments, clients),
+    [todayAppointments, clients]
+  );
+  const todayAgendaCount = useMemo(
+    () => countAgendaAppointmentsForDay(appointments, todayIso),
+    [appointments, todayIso]
+  );
+  const monthAgendaCount = useMemo(
+    () => countAgendaAppointmentsForMonth(appointments, referenceDate),
+    [appointments, referenceDate]
   );
   const depositRows = useMemo(
     () => mapAppointmentDepositsToStripeRows(recentDeposits),
@@ -106,6 +126,29 @@ export function DashboardBentoUnified({
     if (Number.isNaN(d.getTime())) return "Aujourd'hui";
     return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   }, [todayIso]);
+
+  const dayPreviewClients = useMemo(
+    () =>
+      todaySlots.length === 0
+        ? mapPlanningDayPreviewClients(appointments, clients, todayIso, [2, 3], 3)
+        : [],
+    [todaySlots.length, appointments, clients, todayIso]
+  );
+
+  const quickClients = useMemo(
+    () =>
+      [...clients]
+        .sort((a, b) =>
+          (b.lastVisit ?? b.firstVisit ?? '').localeCompare(a.lastVisit ?? a.firstVisit ?? '')
+        )
+        .slice(0, 6)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          avatarUrl: c.avatar,
+        })),
+    [clients]
+  );
 
   return (
     <motion.section
@@ -136,19 +179,24 @@ export function DashboardBentoUnified({
       />
 
       <BentoPilotageQuickRow
-        todayAppointmentsCount={todaySlots.length}
+        todayAppointmentsCount={todayAgendaCount}
+        monthAppointmentsCount={monthAgendaCount}
         pendingRequestsCount={pendingRequestsCount}
         onOpenAgenda={onOpenAgenda}
         onOpenRequests={onOpenRequests}
         className="mt-3 px-4 md:mx-0 md:mt-5 md:px-0"
       />
 
-      <div className="ink-oled-stack mt-4 grid grid-cols-1 gap-5 px-4 md:mx-0 md:mt-5 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-6 md:px-0">
+      <div className="ink-oled-stack mt-4 grid grid-cols-1 gap-5 px-4 md:mx-0 md:mt-5 md:grid-cols-12 md:gap-6 md:px-0">
         <BentoAgendaTodayTile
           todayLabel={todayLabel}
           slots={todaySlots}
+          dayPreviewClients={dayPreviewClients}
+          quickClients={quickClients}
           onOpenAgenda={onOpenAgenda}
           onNewAppointment={onNewAppointment}
+          onNewClient={onNewClient}
+          onOpenAppointmentPreview={onOpenAppointmentPreview}
           onOpenFlashTab={onOpenFlashTab}
           className="md:col-span-7 md:row-span-2"
         />
@@ -172,6 +220,11 @@ export function DashboardBentoUnified({
           className="md:col-span-12"
         />
       </div>
+      {/* Réserve scroll mobile — évite que la dernière carte soit sous la bottom nav fixe */}
+      <div
+        className="pointer-events-none w-full shrink-0 md:hidden min-h-[calc(var(--inkflow-mobile-dock-reserve,7.5rem)+env(safe-area-inset-bottom,0px))]"
+        aria-hidden
+      />
     </motion.section>
   );
 }

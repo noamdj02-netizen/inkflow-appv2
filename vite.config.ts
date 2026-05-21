@@ -10,6 +10,41 @@ import { visualizer } from 'rollup-plugin-visualizer';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * `vite build # commentaire` peut passer `#` comme répertoire racine (→ index.tsx#/index.html).
+ * On retire ces args avant que Vite ne les interprète.
+ */
+const hashArgIndex = process.argv.indexOf('#');
+if (hashArgIndex !== -1) {
+  process.argv.splice(hashArgIndex);
+}
+
+/** Vendor splitting — isoler les grosses libs du chunk applicatif (index / routes). */
+function inkflowManualChunks(id: string): string | undefined {
+  if (!id.includes('node_modules')) return undefined;
+
+  if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+  if (id.includes('@supabase')) return 'vendor-supabase';
+  if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
+  if (id.includes('framer-motion') || id.includes('motion-dom')) return 'vendor-motion';
+  if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-leaflet';
+  if (id.includes('react-joyride')) return 'vendor-joyride';
+  if (id.includes('lucide-react')) return 'vendor-icons';
+  if (id.includes('@sentry')) return 'vendor-sentry';
+  if (id.includes('posthog-js')) return 'vendor-analytics';
+  if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'vendor-radix';
+  if (
+    id.includes('/react-dom/') ||
+    id.includes('/react/') ||
+    id.includes('scheduler/') ||
+    id.includes('use-sync-external-store')
+  ) {
+    return 'vendor-react';
+  }
+
+  return 'vendor-others';
+}
+
 const PWA_ICON_SIZES = [48, 72, 96, 128, 144, 152, 192, 384, 512] as const;
 const pwaWebManifestIcons = [
   ...PWA_ICON_SIZES.map((s) => ({
@@ -48,7 +83,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, envDir, '');
   const sentryAuthToken = env.SENTRY_AUTH_TOKEN || process.env.SENTRY_AUTH_TOKEN;
   const bundleAnalyze = process.env.ANALYZE === '1';
+  const isProductionBuild = mode === 'production';
   return {
+    /** Racine explicite — évite qu’un arg `#` (commentaire npm mal interprété) ne casse le build. */
+    root: __dirname,
     envDir,
     server: {
       port: 3000,
@@ -85,13 +123,14 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
-      ...(bundleAnalyze
+      // Rapport treemap à chaque `vite build` (prod) — `npm run analyze` ouvre le navigateur (ANALYZE=1).
+      ...(isProductionBuild
         ? [
             visualizer({
-              filename: 'dist/stats.html',
+              filename: path.resolve(__dirname, 'dist/stats.html'),
+              open: bundleAnalyze && !process.env.CI,
               gzipSize: true,
               brotliSize: true,
-              open: process.env.CI ? false : true,
               template: 'treemap',
             }),
           ]
@@ -157,26 +196,14 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: !!sentryAuthToken,
       target: 'es2020',
-      // Lazy routes + manualChunks : index (~730k) et DashboardPro (~740k) restent volumineux mais attendus.
+      // Lazy routes + manualChunks — voir dist/stats.html après chaque build prod.
       chunkSizeWarningLimit: 800,
       commonjsOptions: {
         transformMixedEsModules: true,
       },
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) return undefined;
-            if (id.includes('recharts')) return 'vendor-charts';
-            if (id.includes('@supabase')) return 'vendor-supabase';
-            if (id.includes('jspdf')) return 'vendor-pdf';
-            if (id.includes('html2canvas')) return 'vendor-html2canvas';
-            if (id.includes('framer-motion') || id.includes('motion-dom'))
-              return 'vendor-framer-motion';
-            if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-leaflet';
-            if (id.includes('react-joyride')) return 'vendor-joyride';
-            if (id.includes('lucide-react')) return 'vendor-lucide';
-            return undefined;
-          },
+          manualChunks: inkflowManualChunks,
         },
       },
     },

@@ -43,7 +43,10 @@ function BentoPilotageStatTile({
 }
 
 export interface BentoPilotageQuickRowProps {
+  /** RDV actifs du jour civil local — aligné `PlanningSidebar`. */
   todayAppointmentsCount: number;
+  /** RDV actifs du mois affiché (hero / calendrier). */
+  monthAppointmentsCount?: number;
   pendingRequestsCount: number;
   onOpenAgenda: () => void;
   onOpenRequests: () => void;
@@ -53,11 +56,19 @@ export interface BentoPilotageQuickRowProps {
 /** Deux tuiles produit — RDV du jour & demandes en attente, sous le hero. */
 export function BentoPilotageQuickRow({
   todayAppointmentsCount,
+  monthAppointmentsCount = 0,
   pendingRequestsCount,
   onOpenAgenda,
   onOpenRequests,
   className = '',
 }: BentoPilotageQuickRowProps) {
+  const rdvTileValue = todayAppointmentsCount > 0 ? todayAppointmentsCount : monthAppointmentsCount;
+  const rdvTileLabel =
+    todayAppointmentsCount > 0
+      ? "RDV aujourd'hui"
+      : monthAppointmentsCount > 0
+        ? 'RDV ce mois'
+        : "RDV aujourd'hui";
   const reduceMotion = useReducedMotion();
   const motionProps = reduceMotion
     ? {}
@@ -74,12 +85,12 @@ export function BentoPilotageQuickRow({
       aria-label="Raccourcis pilotage du jour"
     >
       <BentoPilotageStatTile
-        value={todayAppointmentsCount}
-        label="RDV aujourd'hui"
+        value={rdvTileValue}
+        label={rdvTileLabel}
         icon={CalendarCheck}
         iconClassName="text-zinc-700 dark:text-zinc-300"
         onClick={onOpenAgenda}
-        ariaLabel={`${todayAppointmentsCount} rendez-vous aujourd'hui — ouvrir l'agenda`}
+        ariaLabel={`${rdvTileValue} rendez-vous (${rdvTileLabel.toLowerCase()}) — ouvrir l'agenda`}
       />
       <BentoPilotageStatTile
         value={pendingRequestsCount}

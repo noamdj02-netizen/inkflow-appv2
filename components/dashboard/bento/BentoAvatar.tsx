@@ -1,31 +1,29 @@
-function initialsFromLabel(label: string): string {
-  const t = label.trim();
-  if (!t) return '?';
-  const parts = t.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase().slice(0, 2);
-  }
-  return t.slice(0, 2).toUpperCase();
-}
+import { ClientPhotoAvatar } from '@/components/common/ClientPhotoAvatar';
+import { cn } from '@/lib/utils';
 
 export interface BentoAvatarProps {
   name: string;
+  src?: string | null;
   className?: string;
 }
 
-/** Pastille initiales — taille fixe 40px pour aligner acomptes / inbox / listes CRM. */
-export function BentoAvatar({ name, className = '' }: BentoAvatarProps) {
+/** Pastille 40px — photo client ou initiales (aligné agenda / CRM). */
+export function BentoAvatar({ name, src, className = '' }: BentoAvatarProps) {
   return (
     <span
-      className={[
-        'flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[13px] font-semibold uppercase text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      className={cn(
+        'relative flex size-10 shrink-0 overflow-hidden rounded-full bg-zinc-100 text-[13px] font-semibold uppercase text-zinc-700 ring-1 ring-black/[0.04] dark:bg-zinc-800/90 dark:text-zinc-200 dark:ring-white/[0.06]',
+        className
+      )}
       aria-hidden
     >
-      {initialsFromLabel(name)}
+      <ClientPhotoAvatar
+        name={name}
+        src={src}
+        className="size-full"
+        textClassName="text-[13px] font-semibold uppercase text-zinc-700 dark:text-zinc-200"
+        imgClassName="rounded-full"
+      />
     </span>
   );
 }

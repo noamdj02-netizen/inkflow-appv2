@@ -1,21 +1,16 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { CreditCard, Loader2, Package, Smartphone, X } from 'lucide-react';
-import type { Terminal } from '@stripe/terminal-js';
-import type { Appointment, FlashDesign } from '../../types';
+import { FileText, Loader2, X } from 'lucide-react';
+import type { Appointment, FlashDesign, User } from '../../types';
+import { handleClientPaymentSuccess } from '../../lib/automations';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
+import { formatAppointmentSlotLabel } from '../../lib/appointmentSessionSync';
 import {
   appointmentWithResolvedFlashPrice,
   flashPriceNeedsPersist,
 } from '../../lib/flashAppointmentPrice';
 import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
-import { isInkflowProShellClient } from '../../lib/nativeWebShell';
-import { getCanonicalAppOrigin } from '../../lib/urls';
-import {
-  stripeTerminalCreateBalanceIntent,
-  stripeTerminalFetchConnectionSecret,
-} from '../../lib/stripeTerminalBalance';
 
 export interface SessionCloseoutSheetProps {
   isOpen: boolean;
@@ -23,82 +18,29 @@ export interface SessionCloseoutSheetProps {
   appointment: Appointment | null;
   studioId: string | null;
   studioSlug?: string | null;
-  /** Catalogue flash — aligne le solde avec le cockpit (prix catalogue si `price` en base est 0). */
   flashDesigns?: FlashDesign[];
-  /** Après sauvegarde du prix flash sur Supabase — garde l’état local cohérent. */
   onFlashPriceSynced?: (merged: Appointment) => void;
-  /** Stripe Connect prêt (même signal que le reste du dashboard). */
   stripeConnectReady: boolean;
   onGoToStockTrace: (appointmentId: string, clientId: string | null) => void;
-  /** Après succès TPE : met à jour la fiche locale (le webhook confirme côté serveur). */
   onBalanceMarkedPaid?: (appointmentId: string, paidAtIso: string) => void;
-  /** Après encaissement Terminal réussi : resync dashboard finance + état Stripe Connect (différé pour laisser la BDD valider). */
   onPostBalancePaymentSync?: () => void;
+  /** Ferme la clôture et garde l’aperçu client ouvert (scroll vers Documents). */
+  onPaymentSuccess?: () => void;
+  artist: User;
 }
 
-function isErr<T extends { error: ExposedError }>(r: unknown): r is T {
-  return Boolean(
-    r && typeof r === 'object' && 'error' in r && (r as { error: unknown }).error != null
-  );
-}
+const btnPrimaryZinc =
+  'w-full inline-flex items-center justify-center gap-2.5 min-h-[48px] rounded-xl bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 disabled:opacity-45 active:scale-[0.98] transition-all dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100';
 
-interface ExposedError {
-  message: string;
-}
+const btnPrimaryCollect =
+  'w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-45 active:scale-[0.98] transition-all dark:bg-emerald-500 dark:hover:bg-emerald-600';
 
-/** Messages Stripe Terminal (souvent en anglais) → aide exploitable en FR. */
-function formatStripeTerminalToastMessage(raw: string | undefined, fallback: string): string {
-  const m = (raw || '').trim();
-  const lower = m.toLowerCase();
-  if (
-    lower.includes('only test mode keys') &&
-    (lower.includes('simulator') || lower.includes('simulated'))
-  ) {
-    return (
-      'Simulateur Terminal : Stripe n’accepte que des clés test (sk_test). ' +
-      'Mets STRIPE_SECRET_KEY en sk_test sur Supabase (Edge Functions / stripe-terminal), ou retire VITE_STRIPE_TERMINAL_SIMULATOR dans .env.local pour du live avec un lecteur physique.'
-    );
-  }
-  if (lower.includes('no such payment_intent')) {
-    return (
-      'Paiement introuvable pour ce lecteur (souvent Connect / mauvais compte Stripe). ' +
-      'Déploie la dernière Edge `stripe-terminal`, puis recharge la page et recrée un encaissement.'
-    );
-  }
-  return m || fallback;
-}
+const btnSecondaryOutline =
+  'w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-zinc-200 bg-white text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-45 active:scale-[0.98] transition-all dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-100 dark:hover:bg-zinc-800/80';
 
-function shouldUseTerminalSimulator(): boolean {
-  return import.meta.env.VITE_STRIPE_TERMINAL_SIMULATOR === 'true';
-}
+const linkDiscrete =
+  'text-xs font-medium text-zinc-400 underline-offset-2 hover:text-zinc-600 active:scale-[0.98] transition-all dark:text-zinc-500 dark:hover:text-zinc-300';
 
-function shouldUseNativeTapToPayIphone(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  if (!isInkflowProShellClient()) return false;
-  if (shouldUseTerminalSimulator()) return false;
-  return /iPhone|iPad|iPod/.test(navigator.userAgent);
-}
-
-function isIosPhoneOrPad(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /iPhone|iPad|iPod/.test(navigator.userAgent);
-}
-
-/**
- * iPhone/iPad en Safari ou PWA : pas de lecteur Bluetooth via Terminal.js Web.
- * Même handoff HTTPS → Inkflow Pro que le shell natif (Tap to Pay NFC).
- */
-function shouldHandoffIosTapToPayWeb(): boolean {
-  if (shouldUseTerminalSimulator()) return false;
-  if (!isIosPhoneOrPad()) return false;
-  // Déjà couvert par shouldUseNativeTapToPayIphone (return avant).
-  if (isInkflowProShellClient()) return false;
-  return true;
-}
-
-/**
- * Après passage du RDV en « terminé » : solde Stripe (Checkout ou Terminal) + raccourci traçabilité matériel.
- */
 export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   isOpen,
   onClose,
@@ -111,21 +53,13 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   onGoToStockTrace,
   onBalanceMarkedPaid,
   onPostBalancePaymentSync,
+  onPaymentSuccess,
+  artist,
 }) => {
   const toast = useToast();
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [terminalLoading, setTerminalLoading] = useState(false);
-  const [terminalStatus, setTerminalStatus] = useState<string | null>(null);
-  const isNativeShell = typeof navigator !== 'undefined' && isInkflowProShellClient();
-
-  /** Libellé du 2ᵉ bouton : sur iOS (hors simulateur dev) on vise Tap to Pay, pas un lecteur BT web. */
-  const terminalButtonPrimaryLabel = (() => {
-    if (shouldUseTerminalSimulator()) return 'Lecteur Stripe (simulateur)';
-    if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
-      return 'Tap to Pay / lecteur Stripe';
-    }
-    return 'Lecteur Stripe (Bluetooth ou simulateur)';
-  })();
+  const [isManualLoading, setIsManualLoading] = useState(false);
+  const [isLinkLoading, setIsLinkLoading] = useState(false);
+  const [isInvoiceLoading, setIsInvoiceLoading] = useState(false);
 
   const displayAppointment = useMemo(
     () => (appointment ? appointmentWithResolvedFlashPrice(appointment, flashDesigns) : null),
@@ -134,7 +68,9 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
 
   const remaining = displayAppointment ? appointmentRemainingBalanceEuros(displayAppointment) : 0;
   const balanceMarkedPaid = Boolean(appointment?.balancePaidAt?.trim());
-  const balanceAlready = balanceMarkedPaid || remaining < 0.01;
+  const balanceSettled = balanceMarkedPaid || remaining < 0.01;
+  const canCollectPayment = !balanceSettled && remaining >= 0.01 && Boolean(studioId);
+  const actionsBusy = isManualLoading || isLinkLoading;
 
   const persistFlashPriceIfNeeded = useCallback(async (): Promise<{
     apt: Appointment;
@@ -151,43 +87,74 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
         return null;
       }
     }
-    const rem = appointmentRemainingBalanceEuros(merged);
-    return { apt: merged, remainingEuros: rem };
+    return { apt: merged, remainingEuros: appointmentRemainingBalanceEuros(merged) };
   }, [appointment, studioId, flashDesigns, onFlashPriceSynced, toast]);
 
-  const openTapToPayInNativeApp = useCallback(
-    (amountEuros: number) => {
-      if (!appointment || !studioId) return;
-      if (typeof window === 'undefined') return;
-      const params = new URLSearchParams({
-        appointment: appointment.id,
-        studio: studioId,
-        amountEuros: amountEuros.toFixed(2),
+  const handleManualCollect = useCallback(async () => {
+    const prep = await persistFlashPriceIfNeeded();
+    if (!prep || !studioId) return;
+    const { apt, remainingEuros } = prep;
+    if (remainingEuros < 0.01) return;
+
+    setIsManualLoading(true);
+    try {
+      const paidAt = new Date().toISOString();
+      onBalanceMarkedPaid?.(apt.id, paidAt);
+      const result = await handleClientPaymentSuccess({
+        appointmentId: apt.id,
+        studioId,
+        artist,
+        paymentKind: 'manual_balance',
+        amountPaidEur: remainingEuros,
+        paymentReference: `manual-${paidAt}`,
+        downloadPdf: true,
+        skipIfExists: true,
       });
-      const query = params.toString();
+      if (result.ok) {
+        if (result.skipped) {
+          toast.info('Reçu déjà dans le dossier client.');
+        } else if (result.savedToDossier) {
+          toast.success(
+            'Encaissement enregistré · reçu archivé — visible dans Documents (aperçu client).'
+          );
+        } else {
+          toast.success(
+            'Encaissement enregistré · reçu téléchargé (liez le client au CRM pour l’archivage).'
+          );
+        }
+        onPostBalancePaymentSync?.();
+        onPaymentSuccess?.();
+        onClose();
+      } else {
+        toast.error(result.reason || 'Erreur lors du reçu PDF.');
+      }
+    } catch {
+      toast.error('Impossible d’enregistrer l’encaissement.');
+    } finally {
+      setIsManualLoading(false);
+    }
+  }, [
+    persistFlashPriceIfNeeded,
+    studioId,
+    artist,
+    onBalanceMarkedPaid,
+    onPostBalancePaymentSync,
+    onPaymentSuccess,
+    onClose,
+    toast,
+  ]);
 
-      // Toujours passer par HTTPS `/tap-to-pay` : Safari et le WKWebView sans schéma en whitelist
-      // peuvent afficher « adresse non valide » sur `location.href = inkflowpro://…`.
-      // La page handoff charge dans le WebView puis propose un lien (geste utilisateur) vers l’app native.
-      const base = getCanonicalAppOrigin().replace(/\/$/, '');
-      window.location.assign(`${base}/tap-to-pay?${query}`);
-    },
-    [appointment, studioId]
-  );
-
-  const handleStripeBalance = useCallback(async () => {
+  const handleStripePaymentLink = useCallback(async () => {
     const prep = await persistFlashPriceIfNeeded();
     if (!prep) return;
     const { apt, remainingEuros } = prep;
-    if (!studioId || remainingEuros < 1) {
-      toast.info('Aucun solde à encaisser en ligne pour ce rendez-vous.');
-      return;
-    }
+    if (!studioId || remainingEuros < 1) return;
     if (!stripeConnectReady) {
-      toast.error('Active Stripe Connect (Paramètres → Paiements) pour encaisser par carte.');
+      toast.error('Active Stripe Connect dans Paramètres → Paiements.');
       return;
     }
-    setCheckoutLoading(true);
+
+    setIsLinkLoading(true);
     try {
       const result = await createCheckoutSession({
         studioId,
@@ -207,199 +174,63 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
     } catch {
       toast.error('Impossible d’ouvrir le paiement.');
     } finally {
-      setCheckoutLoading(false);
+      setIsLinkLoading(false);
     }
   }, [persistFlashPriceIfNeeded, studioId, studioSlug, stripeConnectReady, toast]);
 
-  const handleTerminalBalance = useCallback(async () => {
-    const prep = await persistFlashPriceIfNeeded();
-    if (!prep) return;
-    const { apt, remainingEuros } = prep;
-    if (!studioId || remainingEuros < 1) {
-      toast.info('Aucun solde à encaisser pour ce rendez-vous.');
-      return;
-    }
-    if (!stripeConnectReady) {
-      toast.error('Active Stripe Connect (Paramètres → Paiements) pour encaisser par carte.');
-      return;
-    }
-    if (typeof window === 'undefined') {
-      toast.error('Terminal Stripe indisponible dans cet environnement.');
-      return;
-    }
-    // iPhone dans le shell natif Inkflow Pro : Tap to Pay NFC → flux SDK natif (handoff).
-    if (shouldUseNativeTapToPayIphone()) {
-      openTapToPayInNativeApp(remainingEuros);
-      return;
-    }
-    // Safari / PWA sur iPhone : pas de Terminal.js Bluetooth utile → ouvrir la page handoff vers l’app Tap to Pay.
-    if (shouldHandoffIosTapToPayWeb()) {
-      openTapToPayInNativeApp(remainingEuros);
-      return;
-    }
-    // Web desktop & Android : Terminal.js = lecteur Bluetooth ou simulateur.
-
-    setTerminalLoading(true);
-    setTerminalStatus(null);
-    let terminal: Terminal | null = null;
-
-    const disconnectSafe = async () => {
-      try {
-        if (terminal?.getConnectionStatus() === 'connected') {
-          await terminal.disconnectReader();
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-
+  const handleDownloadInvoicePdf = useCallback(async () => {
+    if (!appointment || !studioId) return;
+    setIsInvoiceLoading(true);
     try {
-      const intent = await stripeTerminalCreateBalanceIntent({
-        studioId,
+      const prep = await persistFlashPriceIfNeeded();
+      const apt = prep?.apt ?? appointment;
+      const result = await handleClientPaymentSuccess({
         appointmentId: apt.id,
-        amountEuros: remainingEuros,
+        studioId,
+        artist,
+        paymentKind: 'balance',
+        amountPaidEur: 0,
+        paymentReference: `invoice-only-${Date.now()}`,
+        downloadPdf: true,
+        skipIfExists: false,
       });
-      if ('error' in intent) {
-        toast.error(
-          formatStripeTerminalToastMessage(intent.error, 'Préparation encaissement impossible.')
-        );
-        return;
-      }
-
-      const { loadStripeTerminal } = await import('@stripe/terminal-js/pure');
-      const StripeTerminalNs = await loadStripeTerminal();
-      if (!StripeTerminalNs) {
-        toast.error('SDK Terminal Stripe non chargé (HTTPS requis en production).');
-        return;
-      }
-
-      const useSimulated = shouldUseTerminalSimulator();
-
-      setTerminalStatus(
-        useSimulated ? 'Connexion au simulateur Stripe…' : 'Recherche du lecteur Stripe…'
-      );
-      terminal = StripeTerminalNs.create({
-        onFetchConnectionToken: async () => {
-          const tok = await stripeTerminalFetchConnectionSecret(studioId);
-          if ('error' in tok) {
-            throw new Error(tok.error);
-          }
-          return tok.secret;
-        },
-        onUnexpectedReaderDisconnect: () => {
-          setTerminalStatus(null);
-          toast.error(
-            'Lecteur Stripe déconnecté. Rapproche le lecteur puis relance l’encaissement.'
-          );
-        },
-      });
-
-      const discover = await terminal.discoverReaders(
-        useSimulated ? { simulated: true } : { simulated: false }
-      );
-
-      if (isErr<{ error: ExposedError }>(discover)) {
-        toast.error(
-          formatStripeTerminalToastMessage(
-            discover.error.message,
-            'Découverte des lecteurs impossible.'
-          )
-        );
-        await disconnectSafe();
-        return;
-      }
-
-      const readers = discover.discoveredReaders;
-      if (!readers.length) {
-        toast.error(
-          useSimulated
-            ? 'Aucun lecteur simulé. Utilise des clés Stripe test avec VITE_STRIPE_TERMINAL_SIMULATOR=true.'
-            : isNativeShell
-              ? 'Aucun lecteur Stripe détecté. Allume ton WisePad / Reader M2, puis réessaie.'
-              : 'Aucun lecteur détecté. Utilise « Lien paiement Stripe » (carte ou Apple Pay) ou connecte un lecteur Bluetooth Stripe.'
-        );
-        await disconnectSafe();
-        return;
-      }
-
-      const conn = await terminal.connectReader(readers[0]);
-      if (isErr<{ error: ExposedError }>(conn)) {
-        toast.error(
-          formatStripeTerminalToastMessage(conn.error.message, 'Connexion lecteur impossible.')
-        );
-        await disconnectSafe();
-        return;
-      }
-
-      setTerminalStatus('Présente la carte au lecteur…');
-      const collected = await terminal.collectPaymentMethod(intent.clientSecret, {
-        config_override: { update_payment_intent: true, skip_tipping: true },
-      });
-
-      if (isErr<{ error: ExposedError }>(collected)) {
-        toast.error(
-          formatStripeTerminalToastMessage(collected.error.message, 'Lecture carte interrompue.')
-        );
-        await disconnectSafe();
-        return;
-      }
-
-      setTerminalStatus('Validation du paiement…');
-      const processed = await terminal.processPayment(collected.paymentIntent);
-
-      if (isErr<{ error: ExposedError }>(processed)) {
-        toast.error(
-          formatStripeTerminalToastMessage(
-            processed.error.message,
-            'Échec de la confirmation du paiement.'
-          )
-        );
-        await disconnectSafe();
-        return;
-      }
-
-      if (processed.paymentIntent.status !== 'succeeded') {
-        toast.warning(
-          `Statut paiement Stripe : ${processed.paymentIntent.status}. Vérifie le Dashboard.`
-        );
-      } else {
-        const paidAt = new Date().toISOString();
-        toast.success(`Solde encaissé (${intent.amountEuros.toFixed(2)} €)`);
-        onBalanceMarkedPaid?.(apt.id, paidAt);
-        if (typeof window !== 'undefined' && onPostBalancePaymentSync) {
-          window.setTimeout(() => onPostBalancePaymentSync(), 650);
+      if (result.ok) {
+        if (result.skipped && result.publicUrl) {
+          toast.info('Reçu déjà dans le dossier client.');
+        } else if (result.downloaded || result.savedToDossier) {
+          toast.success('Reçu PDF prêt — visible dans Documents (aperçu client).');
         }
+        if (result.savedToDossier) {
+          onPostBalancePaymentSync?.();
+          onPaymentSuccess?.();
+        }
+      } else {
+        toast.error(result.reason || 'Génération impossible.');
       }
-
-      await disconnectSafe();
-      onClose();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      toast.error(formatStripeTerminalToastMessage(msg, 'Erreur Terminal Stripe.'));
-      await disconnectSafe();
+    } catch {
+      toast.error('Erreur lors de la génération.');
     } finally {
-      setTerminalStatus(null);
-      setTerminalLoading(false);
+      setIsInvoiceLoading(false);
     }
   }, [
-    persistFlashPriceIfNeeded,
+    appointment,
     studioId,
-    stripeConnectReady,
-    toast,
-    onBalanceMarkedPaid,
+    artist,
+    persistFlashPriceIfNeeded,
     onPostBalancePaymentSync,
-    onClose,
-    isNativeShell,
-    openTapToPayInNativeApp,
+    onPaymentSuccess,
+    toast,
   ]);
 
-  const handleStock = useCallback(() => {
+  const handleStockLink = useCallback(() => {
     if (!appointment) return;
     onGoToStockTrace(appointment.id, appointment.clientId?.trim() || null);
     onClose();
   }, [appointment, onGoToStockTrace, onClose]);
 
   if (!isOpen || !appointment) return null;
+
+  const remainingLabel = remaining.toFixed(2);
 
   return (
     <div
@@ -414,123 +245,101 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
         aria-label="Fermer"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-5 sm:p-6 space-y-4 safe-bottom animate-in slide-in-from-bottom-4">
+      <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-5 sm:p-6 space-y-5 safe-bottom animate-in slide-in-from-bottom-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2
               id="session-closeout-title"
-              className="text-lg font-bold text-zinc-900 dark:text-white font-display tracking-tight"
+              className="font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white"
             >
               Clôture de séance
             </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              {appointment.clientName} · {appointment.service}
+            <p className="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-300">
+              {appointment.clientName}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+              {appointment.service}
+            </p>
+            <p className="mt-1 text-xs font-medium capitalize text-zinc-400 dark:text-zinc-500">
+              {formatAppointmentSlotLabel(appointment)}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-zinc-500 transition-all hover:bg-zinc-100 active:scale-[0.98] dark:hover:bg-zinc-800"
             aria-label="Fermer"
           >
-            <X className="w-5 h-5" />
+            <X className="size-5" />
           </button>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-950/50 p-4">
-          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
-            Solde à encaisser
+        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
+            {balanceSettled ? 'Solde réglé' : 'Solde à encaisser'}
           </p>
-          <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white mt-1">
-            {remaining.toFixed(2)} €
+          <p className="mt-1 font-display text-3xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">
+            {remainingLabel} €
           </p>
-          {balanceMarkedPaid ? (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-              Solde déjà enregistré comme réglé.
-            </p>
-          ) : balanceAlready ? (
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
-              {appointment.tattooType === 'flash'
-                ? 'Solde calculé à 0 € (prix non renseigné ou entièrement couvert). Vérifie le prix / le flash dans l’agenda — avec un prix catalogue, le solde s’affiche ici automatiquement.'
-                : 'Montant restant nul. Modifie le prix du rendez-vous dans l’agenda si tu dois encore encaisser.'}
-            </p>
-          ) : !appointment.depositPaid ? (
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
-              Acompte non marqué payé sur la fiche — le solde calculé part du prix total.
-            </p>
-          ) : null}
-          {!balanceAlready && remaining >= 1 ? (
-            <p className="text-[11px] text-zinc-500 mt-3 leading-snug">
-              Pour ajuster le montant, modifie le <strong>prix du rendez-vous</strong> dans l’agenda
-              puis rouvre cette feuille.
+          {balanceSettled ? (
+            <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+              Paiement déjà enregistré sur ce rendez-vous.
             </p>
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={checkoutLoading || balanceAlready || remaining < 1 || !stripeConnectReady}
-            onClick={() => void handleStripeBalance()}
-            className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
-          >
-            {checkoutLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <CreditCard className="w-4 h-4" />
-            )}
-            {checkoutLoading ? 'Redirection…' : 'Lien paiement Stripe (client)'}
-          </button>
+        <div className="space-y-3">
+          {balanceSettled ? (
+            <button
+              type="button"
+              disabled={isInvoiceLoading || !studioId}
+              onClick={() => void handleDownloadInvoicePdf()}
+              className={btnPrimaryZinc}
+            >
+              {isInvoiceLoading ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <FileText className="size-4" aria-hidden />
+              )}
+              <span>{isInvoiceLoading ? 'Génération…' : '📄 Télécharger le reçu PDF'}</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={!canCollectPayment || actionsBusy}
+                onClick={() => void handleManualCollect()}
+                className={btnPrimaryCollect}
+              >
+                {isManualLoading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                <span>
+                  {isManualLoading
+                    ? 'Enregistrement…'
+                    : `Encaisser ${remainingLabel} € (Espèces, Virement…) + Reçu PDF`}
+                </span>
+              </button>
 
-          <button
-            type="button"
-            disabled={terminalLoading || balanceAlready || remaining < 1 || !stripeConnectReady}
-            onClick={() => void handleTerminalBalance()}
-            className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/70 text-zinc-900 dark:text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
-          >
-            {terminalLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Smartphone className="w-4 h-4" />
-            )}
-            {terminalLoading ? (terminalStatus ?? 'Terminal…') : terminalButtonPrimaryLabel}
-          </button>
+              <button
+                type="button"
+                disabled={!canCollectPayment || !stripeConnectReady || actionsBusy}
+                onClick={() => void handleStripePaymentLink()}
+                className={btnSecondaryOutline}
+              >
+                {isLinkLoading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                <span>
+                  {isLinkLoading
+                    ? 'Ouverture du lien…'
+                    : '🔗 Envoyer un lien de paiement Stripe (Apple Pay, CB…)'}
+                </span>
+              </button>
+            </>
+          )}
+        </div>
 
-          <button
-            type="button"
-            onClick={handleStock}
-            className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-900 dark:text-white active:scale-[0.98] transition-all"
-          >
-            <Package className="w-4 h-4" />
+        <div className="flex justify-center border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <button type="button" onClick={handleStockLink} className={linkDiscrete}>
             Tracer le matériel (aiguille)
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full text-center text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 py-2 active:scale-[0.98] transition-all"
-          >
-            Plus tard
-          </button>
-        </div>
-        <div className="space-y-1.5 text-[11px] text-zinc-500 leading-snug">
-          <p>
-            <strong>Lien paiement</strong> : page sécurisée (Apple Pay / Google Pay). Tu peux faire
-            présenter la carte sur ton téléphone.
-          </p>
-          <p>
-            <strong>Terminal</strong> : sur ordinateur ou Android, lecteur physique Stripe (WisePad
-            3 / Reader M2) ou simulateur dev. Sur <strong>iPhone</strong>, ce bouton ouvre la page
-            vers l’app <strong>Inkflow Pro</strong> pour le NFC Tap to Pay sans lecteur ; depuis le
-            navigateur tu peux aussi utiliser le <strong>lien paiement</strong> (Apple Pay).
-            {shouldUseTerminalSimulator() ? (
-              <span className="block mt-1 text-amber-700 dark:text-amber-400">
-                Simulateur activé : utilise uniquement des clés Stripe test (`sk_test`).
-              </span>
-            ) : null}
-          </p>
-          <p>
-            Pour tester en local avec tes clés live, laisse `VITE_STRIPE_TERMINAL_SIMULATOR` vide.
-          </p>
         </div>
       </div>
     </div>

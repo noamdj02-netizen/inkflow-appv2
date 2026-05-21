@@ -114,3 +114,7 @@ verify_jwt = false
 # Cron pg_net : rappel si créneau dépassé sans clôture (confirmed / in_progress).
 [functions.remind-slot-closeout-nudge]
 verify_jwt = false
+
+# Facture PDF post-paiement — JWT ou service role (handler).
+[functions.generate-payment-invoice]
+verify_jwt = false

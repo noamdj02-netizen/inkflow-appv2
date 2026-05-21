@@ -9,6 +9,8 @@ import React, {
   Suspense,
 } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { SidebarSubmenuMotion } from '@/components/motion/SidebarSubmenuMotion';
+import { DashboardSidebarNavButton } from '@/components/dashboard/DashboardSidebarNavButton';
 import {
   LayoutDashboard,
   Calendar,
@@ -2783,7 +2785,7 @@ export const DashboardPro: React.FC = () => {
                 {/* Finance avec sous-menu */}
                 {moduleFlags.finance && (
                   <div>
-                    <button
+                    <DashboardSidebarNavButton
                       onClick={() =>
                         setExpandedMenus((prev) => ({ ...prev, finance: !prev.finance }))
                       }
@@ -2796,61 +2798,59 @@ export const DashboardPro: React.FC = () => {
                       <ChevronRight
                         className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.finance ? 'rotate-90' : ''}`}
                       />
-                    </button>
-                    {expandedMenus.finance && (
-                      <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('finance');
-                              setFinanceView('revenus');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'revenus' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'revenus' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                          />
-                          Revenus
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('finance');
-                              setFinanceView('acomptes');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'acomptes' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'acomptes' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                          />
-                          Acomptes
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('finance');
-                              setFinanceView('pilotage');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'pilotage' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <LineChart className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                          Pilotage AE
-                        </button>
-                      </div>
-                    )}
+                    </DashboardSidebarNavButton>
+                    <SidebarSubmenuMotion open={expandedMenus.finance}>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('finance');
+                            setFinanceView('revenus');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'revenus' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'revenus' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Revenus
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('finance');
+                            setFinanceView('acomptes');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'acomptes' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'acomptes' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Acomptes
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('finance');
+                            setFinanceView('pilotage');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'pilotage' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <LineChart className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                        Pilotage AE
+                      </button>
+                    </SidebarSubmenuMotion>
                   </div>
                 )}
 
                 {/* Planning avec sous-menu */}
                 {moduleFlags.planning && (
                   <div>
-                    <button
+                    <DashboardSidebarNavButton
                       onClick={() =>
                         setExpandedMenus((prev) => ({ ...prev, planning: !prev.planning }))
                       }
@@ -2865,68 +2865,66 @@ export const DashboardPro: React.FC = () => {
                       <ChevronRight
                         className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.planning ? 'rotate-90' : ''}`}
                       />
-                    </button>
-                    {expandedMenus.planning && (
-                      <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('agenda');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'agenda' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'agenda' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                          />
-                          Synthèse
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('appointments');
-                              setPlanningView('week');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'week' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'week' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                          />
-                          Vue semaine
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('appointments');
-                              setPlanningView('month');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'month' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'month' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                          />
-                          Vue mois
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('settings');
-                              setSettingsTab('availability');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600 flex-shrink-0" />
-                          Disponibilités
-                        </button>
-                      </div>
-                    )}
+                    </DashboardSidebarNavButton>
+                    <SidebarSubmenuMotion open={expandedMenus.planning}>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('agenda');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'agenda' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'agenda' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Synthèse
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('appointments');
+                            setPlanningView('week');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'week' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'week' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Vue semaine
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('appointments');
+                            setPlanningView('month');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'month' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'month' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Vue mois
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('settings');
+                            setSettingsTab('availability');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600 flex-shrink-0" />
+                        Disponibilités
+                      </button>
+                    </SidebarSubmenuMotion>
                   </div>
                 )}
               </div>
@@ -2940,7 +2938,7 @@ export const DashboardPro: React.FC = () => {
               <div className="space-y-0.5">
                 {/* Demandes avec sous-menu */}
                 <div>
-                  <button
+                  <DashboardSidebarNavButton
                     onClick={() =>
                       setExpandedMenus((prev) => ({ ...prev, requests: !prev.requests }))
                     }
@@ -2958,120 +2956,115 @@ export const DashboardPro: React.FC = () => {
                     <ChevronRight
                       className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.requests ? 'rotate-90' : ''}`}
                     />
-                  </button>
-                  {expandedMenus.requests && (
-                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('requests');
-                            setRequestsSubTab('inbox');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'inbox' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'inbox' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        <span className="flex-1 text-left" title="File d’attente unifiée">
-                          File d’attente
+                  </DashboardSidebarNavButton>
+                  <SidebarSubmenuMotion open={expandedMenus.requests}>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('requests');
+                          setRequestsSubTab('inbox');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'inbox' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'inbox' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      <span className="flex-1 text-left" title="File d’attente unifiée">
+                        File d’attente
+                      </span>
+                      {demandes.total > 0 && (
+                        <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
+                          {demandes.total > 9 ? '9+' : demandes.total}
                         </span>
-                        {demandes.total > 0 && (
-                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
-                            {demandes.total > 9 ? '9+' : demandes.total}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('requests');
-                            setRequestsSubTab('rdv');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        <span className="flex-1 text-left" title="Créneaux agenda à valider">
-                          Créneaux agenda
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('requests');
+                          setRequestsSubTab('rdv');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      <span className="flex-1 text-left" title="Créneaux agenda à valider">
+                        Créneaux agenda
+                      </span>
+                      {demandes.pendingRdv > 0 && (
+                        <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
+                          {demandes.pendingRdv > 9 ? '9+' : demandes.pendingRdv}
                         </span>
-                        {demandes.pendingRdv > 0 && (
-                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
-                            {demandes.pendingRdv > 9 ? '9+' : demandes.pendingRdv}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('requests');
-                            setRequestsSubTab('bookings');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        <span
-                          className="flex-1 text-left"
-                          title="Réservations depuis la page /book"
-                        >
-                          Page book
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('requests');
+                          setRequestsSubTab('bookings');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      <span className="flex-1 text-left" title="Réservations depuis la page /book">
+                        Page book
+                      </span>
+                      {demandes.pendingVitrine > 0 && (
+                        <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
+                          {demandes.pendingVitrine > 9 ? '9+' : demandes.pendingVitrine}
                         </span>
-                        {demandes.pendingVitrine > 0 && (
-                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
-                            {demandes.pendingVitrine > 9 ? '9+' : demandes.pendingVitrine}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('requests');
-                            setRequestsSubTab('projects');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('requests');
+                          setRequestsSubTab('projects');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      <span
+                        className="flex-1 text-left"
+                        title="Formulaire projet sans date (brief)"
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        <span
-                          className="flex-1 text-left"
-                          title="Formulaire projet sans date (brief)"
-                        >
-                          Brief sans date
+                        Brief sans date
+                      </span>
+                      {demandes.pendingProjects > 0 && (
+                        <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
+                          {demandes.pendingProjects > 9 ? '9+' : demandes.pendingProjects}
                         </span>
-                        {demandes.pendingProjects > 0 && (
-                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
-                            {demandes.pendingProjects > 9 ? '9+' : demandes.pendingProjects}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('requests');
-                            setRequestsSubTab('history');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'history' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        Historique
-                      </button>
-                    </div>
-                  )}
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('requests');
+                          setRequestsSubTab('history');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'history' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      Historique
+                    </button>
+                  </SidebarSubmenuMotion>
                 </div>
 
                 <button
@@ -3114,7 +3107,7 @@ export const DashboardPro: React.FC = () => {
 
                 {/* Clients avec sous-menu */}
                 <div>
-                  <button
+                  <DashboardSidebarNavButton
                     onClick={() =>
                       setExpandedMenus((prev) => ({ ...prev, clients: !prev.clients }))
                     }
@@ -3127,64 +3120,62 @@ export const DashboardPro: React.FC = () => {
                     <ChevronRight
                       className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.clients ? 'rotate-90' : ''}`}
                     />
-                  </button>
-                  {expandedMenus.clients && (
-                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                  </DashboardSidebarNavButton>
+                  <SidebarSubmenuMotion open={expandedMenus.clients}>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('clients');
+                          setClientsView('overview');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'overview' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'overview' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      Vue d'ensemble
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('clients');
+                          setClientsView('projects');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      Projets
+                    </button>
+                    {moduleFlags.loyalty && (
                       <button
                         onClick={() =>
                           handleSidebarNav(() => {
                             setActiveTab('clients');
-                            setClientsView('overview');
+                            setClientsView('loyalty');
                             setSidebarOpen(false);
                           })
                         }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'overview' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'overview' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                         />
-                        Vue d'ensemble
+                        Fidélité
                       </button>
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('clients');
-                            setClientsView('projects');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        Projets
-                      </button>
-                      {moduleFlags.loyalty && (
-                        <button
-                          onClick={() =>
-                            handleSidebarNav(() => {
-                              setActiveTab('clients');
-                              setClientsView('loyalty');
-                              setSidebarOpen(false);
-                            })
-                          }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                          />
-                          Fidélité
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </SidebarSubmenuMotion>
                 </div>
 
                 {/* Ma vitrine avec sous-menu */}
                 {(moduleFlags.flashShop || moduleFlags.vitrine) && (
                   <div>
-                    <button
+                    <DashboardSidebarNavButton
                       onClick={() =>
                         setExpandedMenus((prev) => ({ ...prev, vitrine: !prev.vitrine }))
                       }
@@ -3201,162 +3192,40 @@ export const DashboardPro: React.FC = () => {
                       <ChevronRight
                         className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.vitrine ? 'rotate-90' : ''}`}
                       />
-                    </button>
-                    {expandedMenus.vitrine && (
-                      <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                        {moduleFlags.flashShop && (
-                          <button
-                            onClick={() =>
-                              handleSidebarNav(() => {
-                                setActiveTab('flash');
-                                setSidebarOpen(false);
-                              })
-                            }
-                            className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'flash' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                            />
-                            Galerie Flash
-                          </button>
-                        )}
-                        {moduleFlags.flashShop && (
-                          <button
-                            onClick={() =>
-                              handleSidebarNav(() => {
-                                setActiveTab('portfolio');
-                                setSidebarOpen(false);
-                              })
-                            }
-                            className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'portfolio' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                            />
-                            Portfolio
-                          </button>
-                        )}
-                        {moduleFlags.vitrine && (
-                          <button
-                            onClick={() =>
-                              handleSidebarNav(() => {
-                                setActiveTab('settings');
-                                setSettingsTab('vitrine');
-                                setSidebarOpen(false);
-                              }, true)
-                            }
-                            className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                            />
-                            Personnaliser
-                          </button>
-                        )}
-                        {moduleFlags.vitrine &&
-                          studioSlug &&
-                          (isRestricted ? (
-                            <button
-                              onClick={() => handleSidebarNav(() => {})}
-                              className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left"
-                            >
-                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                              Voir ma vitrine
-                            </button>
-                          ) : (
-                            <a
-                              href={`/studio/${studioSlug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
-                            >
-                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                              Voir ma vitrine
-                            </a>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Paramètres avec sous-menu */}
-                <div>
-                  <button
-                    onClick={() =>
-                      setExpandedMenus((prev) => ({ ...prev, settings: !prev.settings }))
-                    }
-                    className={`${SIDEBAR_NAV_ROW} ${
-                      activeTab === 'settings' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
-                    }`}
-                  >
-                    <Settings className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">Paramètres</span>
-                    <ChevronRight
-                      className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.settings ? 'rotate-90' : ''}`}
-                    />
-                  </button>
-                  {expandedMenus.settings && (
-                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('settings');
-                            setSettingsTab('home');
-                            setSidebarOpen(false);
-                          }, true)
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'home' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'home' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        Tous les paramètres
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('account');
-                            setSidebarOpen(false);
-                          })
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'account' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        Mon compte
-                      </button>
-                      {!isCollaboratorUser && (
+                    </DashboardSidebarNavButton>
+                    <SidebarSubmenuMotion open={expandedMenus.vitrine}>
+                      {moduleFlags.flashShop && (
                         <button
                           onClick={() =>
                             handleSidebarNav(() => {
-                              setActiveTab('etablissement');
+                              setActiveTab('flash');
                               setSidebarOpen(false);
                             })
                           }
-                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'etablissement' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'flash' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'etablissement' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                           />
-                          Établissement
+                          Galerie Flash
                         </button>
                       )}
-                      <button
-                        onClick={() =>
-                          handleSidebarNav(() => {
-                            setActiveTab('settings');
-                            setSettingsTab('billing');
-                            setSidebarOpen(false);
-                          }, true)
-                        }
-                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                        />
-                        Abonnement
-                      </button>
+                      {moduleFlags.flashShop && (
+                        <button
+                          onClick={() =>
+                            handleSidebarNav(() => {
+                              setActiveTab('portfolio');
+                              setSidebarOpen(false);
+                            })
+                          }
+                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'portfolio' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                          />
+                          Portfolio
+                        </button>
+                      )}
                       {moduleFlags.vitrine && (
                         <button
                           onClick={() =>
@@ -3371,11 +3240,129 @@ export const DashboardPro: React.FC = () => {
                           <span
                             className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                           />
-                          Vitrine
+                          Personnaliser
                         </button>
                       )}
-                    </div>
-                  )}
+                      {moduleFlags.vitrine &&
+                        studioSlug &&
+                        (isRestricted ? (
+                          <button
+                            onClick={() => handleSidebarNav(() => {})}
+                            className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left"
+                          >
+                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                            Voir ma vitrine
+                          </button>
+                        ) : (
+                          <a
+                            href={`/studio/${studioSlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                          >
+                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                            Voir ma vitrine
+                          </a>
+                        ))}
+                    </SidebarSubmenuMotion>
+                  </div>
+                )}
+
+                {/* Paramètres avec sous-menu */}
+                <div>
+                  <DashboardSidebarNavButton
+                    onClick={() =>
+                      setExpandedMenus((prev) => ({ ...prev, settings: !prev.settings }))
+                    }
+                    className={`${SIDEBAR_NAV_ROW} ${
+                      activeTab === 'settings' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
+                    }`}
+                  >
+                    <Settings className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Paramètres</span>
+                    <ChevronRight
+                      className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.settings ? 'rotate-90' : ''}`}
+                    />
+                  </DashboardSidebarNavButton>
+                  <SidebarSubmenuMotion open={expandedMenus.settings}>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('settings');
+                          setSettingsTab('home');
+                          setSidebarOpen(false);
+                        }, true)
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'home' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'home' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      Tous les paramètres
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('account');
+                          setSidebarOpen(false);
+                        })
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'account' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      Mon compte
+                    </button>
+                    {!isCollaboratorUser && (
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('etablissement');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'etablissement' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'etablissement' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Établissement
+                      </button>
+                    )}
+                    <button
+                      onClick={() =>
+                        handleSidebarNav(() => {
+                          setActiveTab('settings');
+                          setSettingsTab('billing');
+                          setSidebarOpen(false);
+                        }, true)
+                      }
+                      className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                      />
+                      Abonnement
+                    </button>
+                    {moduleFlags.vitrine && (
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('settings');
+                            setSettingsTab('vitrine');
+                            setSidebarOpen(false);
+                          }, true)
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        Vitrine
+                      </button>
+                    )}
+                  </SidebarSubmenuMotion>
                 </div>
               </div>
             </div>

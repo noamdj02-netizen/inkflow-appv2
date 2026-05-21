@@ -32,6 +32,7 @@
     "seed:mockup": "node --env-file=.env.local scripts/seed-mockup-data.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo-marketing.mjs",
     "seed:demo:clean": "node --env-file=.env.local scripts/seed-demo-marketing.mjs --clean",
+    "seed:mai-2026": "node --experimental-strip-types --env-file=.env.local scripts/seed-mai-2026.ts",
     "smoke:urls": "node scripts/smoke-urls.mjs",
     "readiness:env": "node scripts/readiness.mjs env",
     "readiness:sentry": "node scripts/readiness.mjs sentry",
@@ -167,7 +168,6 @@
     "*.{css,json,md}": "prettier --write"
   },
   "description": "Une application complète pour gérer votre studio de tatouage : réservations, paiements, galerie Flash, et CRM client.",
-  "main": ".figma-logo-code.js",
   "directories": {
     "doc": "docs",
     "lib": "lib",

@@ -1,4 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { useInkflowGestures } from '@/lib/motion/inkflowGestures';
+import {
+  RequestsTabPanel,
+  RequestsListRowMotion,
+  RequestsMotionButton,
+  RequestsInboxStagger,
+  RequestsInboxStaggerItem,
+} from './requests/RequestsMotion';
 import {
   History,
   CheckCircle,
@@ -194,114 +203,123 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
   onOpenDiscussion,
   studioId,
   onOpenClientFiche,
-}) => (
-  <div className={dashboardListRow}>
-    <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
-      <div
-        className={cn(dashboardAvatarFrame, dashboardAvatarSm, 'flex items-center justify-center')}
-      >
-        <ClientPhotoAvatar
-          name={apt.clientName}
-          src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
-          className="h-full w-full"
-          textClassName="text-lg font-bold text-zinc-700 dark:text-zinc-200"
-        />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-lg text-zinc-900 dark:text-white">{apt.clientName}</div>
-        <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 min-w-0">
-          <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75] text-zinc-400 dark:text-zinc-500" />
-          <span className="truncate">{apt.clientEmail}</span>
+}) => {
+  const { cardTap, transition } = useInkflowGestures();
+  return (
+    <motion.div className={dashboardListRow} whileTap={cardTap} transition={transition}>
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
+        <div
+          className={cn(
+            dashboardAvatarFrame,
+            dashboardAvatarSm,
+            'flex items-center justify-center'
+          )}
+        >
+          <ClientPhotoAvatar
+            name={apt.clientName}
+            src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
+            className="h-full w-full"
+            textClassName="text-lg font-bold text-zinc-700 dark:text-zinc-200"
+          />
         </div>
-        {stampRw && (
-          <div className="mt-3 flex items-start gap-2 rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-3 py-2.5 text-sm text-blue-900 dark:text-blue-100">
-            <Gift className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-            <span>
-              Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir sur
-              ce projet — code{' '}
-              <code className="font-mono text-xs bg-white/70 dark:bg-blue-950/40 px-1.5 py-0.5 rounded-md">
-                {stampRw.promoCode}
-              </code>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-lg text-zinc-900 dark:text-white">
+            {apt.clientName}
+          </div>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 min-w-0">
+            <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75] text-zinc-400 dark:text-zinc-500" />
+            <span className="truncate">{apt.clientEmail}</span>
+          </div>
+          {stampRw && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-3 py-2.5 text-sm text-blue-900 dark:text-blue-100">
+              <Gift className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+              <span>
+                Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir
+                sur ce projet — code{' '}
+                <code className="font-mono text-xs bg-white/70 dark:bg-blue-950/40 px-1.5 py-0.5 rounded-md">
+                  {stampRw.promoCode}
+                </code>
+              </span>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+            <span className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-700 dark:text-zinc-300">
+              <Calendar className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+              {apt.date} • {apt.time}
+            </span>
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">{apt.service}</span>
+            <span className="font-semibold tabular-nums text-blue-700 dark:text-blue-400">
+              {apt.price}€
             </span>
           </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2 mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-          <span className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-700 dark:text-zinc-300">
-            <Calendar className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
-            {apt.date} • {apt.time}
-          </span>
-          <span className="font-medium text-zinc-800 dark:text-zinc-200">{apt.service}</span>
-          <span className="font-semibold tabular-nums text-blue-700 dark:text-blue-400">
-            {apt.price}€
-          </span>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className={cn(dashboardStatusBadge.pending)}>En attente</span>
-          {apt.createdAt && inboxSlaUrgencyLabel(apt.createdAt) ? (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/20 dark:text-red-300">
-              <Clock className="size-3 shrink-0" aria-hidden />
-              {inboxSlaUrgencyLabel(apt.createdAt)}
-            </span>
-          ) : null}
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className={cn(dashboardStatusBadge.pending)}>En attente</span>
+            {apt.createdAt && inboxSlaUrgencyLabel(apt.createdAt) ? (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/20 dark:text-red-300">
+                <Clock className="size-3 shrink-0" aria-hidden />
+                {inboxSlaUrgencyLabel(apt.createdAt)}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
 
-    <div className="flex flex-col gap-2 sm:items-end sm:ml-14 w-full sm:max-w-md">
-      <InboxQuickActions
-        primary={{
-          key: 'accept',
-          label: 'Accepter',
-          onClick: onAccept,
-          variant: 'primary',
-          icon: <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-        }}
-        secondary={[
-          ...(studioId
-            ? [
-                {
-                  key: 'deposit',
-                  label: 'Acompte',
-                  onClick: onDeposit,
-                  icon: <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-                },
-              ]
-            : []),
-          ...(apt.projectRequestId && onOpenDiscussion
-            ? [
-                {
-                  key: 'discussion',
-                  label: 'Discussion',
-                  onClick: () => onOpenDiscussion(`pr_${apt.projectRequestId}`),
-                  variant: 'primary' as const,
-                  icon: <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-                },
-              ]
-            : []),
-          {
-            key: 'refuse',
-            label: 'Refuser',
-            onClick: onRefuse,
-            variant: 'danger',
-            icon: <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-          },
-        ]}
-      />
-    </div>
-    {onOpenClientFiche && (
-      <div className="w-full sm:ml-14 pt-1">
-        <button
-          type="button"
-          onClick={onOpenClientFiche}
-          className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/60 text-sm font-semibold text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
-        >
-          <User className="w-4 h-4 shrink-0" aria-hidden />
-          Fiche client
-        </button>
+      <div className="flex flex-col gap-2 sm:items-end sm:ml-14 w-full sm:max-w-md">
+        <InboxQuickActions
+          primary={{
+            key: 'accept',
+            label: 'Accepter',
+            onClick: onAccept,
+            variant: 'primary',
+            icon: <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+          }}
+          secondary={[
+            ...(studioId
+              ? [
+                  {
+                    key: 'deposit',
+                    label: 'Acompte',
+                    onClick: onDeposit,
+                    icon: <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+                  },
+                ]
+              : []),
+            ...(apt.projectRequestId && onOpenDiscussion
+              ? [
+                  {
+                    key: 'discussion',
+                    label: 'Discussion',
+                    onClick: () => onOpenDiscussion(`pr_${apt.projectRequestId}`),
+                    variant: 'primary' as const,
+                    icon: <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+                  },
+                ]
+              : []),
+            {
+              key: 'refuse',
+              label: 'Refuser',
+              onClick: onRefuse,
+              variant: 'danger',
+              icon: <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+            },
+          ]}
+        />
       </div>
-    )}
-  </div>
-);
+      {onOpenClientFiche && (
+        <div className="w-full sm:ml-14 pt-1">
+          <button
+            type="button"
+            onClick={onOpenClientFiche}
+            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/60 text-sm font-semibold text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+          >
+            <User className="w-4 h-4 shrink-0" aria-hidden />
+            Fiche client
+          </button>
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   studioId,
@@ -1289,7 +1307,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 role="tablist"
                 aria-label="Périmètre"
               >
-                <button
+                <RequestsMotionButton
                   type="button"
                   role="tab"
                   aria-selected={inboxQueueScope === 'action'}
@@ -1301,8 +1319,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   }`}
                 >
                   À traiter
-                </button>
-                <button
+                </RequestsMotionButton>
+                <RequestsMotionButton
                   type="button"
                   role="tab"
                   aria-selected={inboxQueueScope === 'all'}
@@ -1314,7 +1332,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   }`}
                 >
                   Tout
-                </button>
+                </RequestsMotionButton>
               </div>
               <div
                 className="flex gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide touch-pan-x rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/30 p-1"
@@ -1328,7 +1346,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     { id: 'manual' as const, label: 'Agenda & projets' },
                   ] as const
                 ).map(({ id, label }) => (
-                  <button
+                  <RequestsMotionButton
                     key={id}
                     type="button"
                     role="tab"
@@ -1341,20 +1359,20 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     }`}
                   >
                     {label}
-                  </button>
+                  </RequestsMotionButton>
                 ))}
               </div>
-              <button
+              <RequestsMotionButton
                 type="button"
                 onClick={() => setSourcesModalOpen(true)}
-                className="flex w-full min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-900/50 px-4 py-3 text-left shadow-sm active:scale-[0.99] transition-transform"
+                className="flex w-full min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-900/50 px-4 py-3 text-left shadow-sm"
               >
                 <span className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   <Inbox className="w-4 h-4 shrink-0 text-zinc-500" aria-hidden />
                   <span className="min-w-0">Sources du studio</span>
                 </span>
                 <ChevronRight className="w-4 h-4 shrink-0 text-zinc-400" aria-hidden />
-              </button>
+              </RequestsMotionButton>
               {firstInboxTarget ? (
                 <InboxTreatNextBar
                   totalPending={inboxPendingTotal}
@@ -1452,7 +1470,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       </div>
 
       <div className="min-w-0 pt-4 sm:pt-5 pb-6">
-        <div
+        <RequestsTabPanel
+          tabKey={activeTab}
           id="requests-panel"
           role="tabpanel"
           aria-labelledby={`requests-tab-${activeTab}`}
@@ -1483,7 +1502,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-6 p-1 sm:p-2">
+                <RequestsInboxStagger className="space-y-6 p-1 sm:p-2">
                   {inboxAgendaList.length > 0 && (
                     <section
                       className="space-y-2"
@@ -1557,7 +1576,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                 ? SOURCE_ACCENT.vitrineFlash
                                 : SOURCE_ACCENT.vitrineCustom;
                             return (
-                              <div key={bk.id} className={dashboardListRow}>
+                              <RequestsListRowMotion key={bk.id} className={dashboardListRow}>
                                 <div className="flex flex-1 min-w-0 gap-2 items-start">
                                   <button
                                     type="button"
@@ -1794,7 +1813,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                     </div>
                                   </div>
                                 )}
-                              </div>
+                              </RequestsListRowMotion>
                             );
                           })}
                         </div>
@@ -1827,7 +1846,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                               pr.description
                             );
                             return (
-                              <div key={pr.id} className={dashboardListRow}>
+                              <RequestsListRowMotion key={pr.id} className={dashboardListRow}>
                                 <div className="flex flex-1 min-w-0 gap-2 items-start md:items-center w-full md:w-auto">
                                   <button
                                     type="button"
@@ -1992,14 +2011,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                     )}
                                   </div>
                                 </div>
-                              </div>
+                              </RequestsListRowMotion>
                             );
                           })}
                         </div>
                       )}
                     </section>
                   )}
-                </div>
+                </RequestsInboxStagger>
               )}
             </>
           )}
@@ -2164,7 +2183,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           'Votre demande de tatouage'
                         );
                         return (
-                          <div
+                          <RequestsListRowMotion
                             key={bk.id}
                             className={cn(dashboardListRow, 'touch-manipulation min-w-0')}
                           >
@@ -2392,7 +2411,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                 </div>
                               </div>
                             )}
-                          </div>
+                          </RequestsListRowMotion>
                         );
                       })}
                     </div>
@@ -2728,7 +2747,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 })}
               </div>
             ))}
-        </div>
+        </RequestsTabPanel>
       </div>
 
       <Modal

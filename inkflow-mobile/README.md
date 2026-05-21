@@ -17,6 +17,12 @@ Shell **Expo** qui embarque le dashboard web (`app.ink-flow.me`) + routes native
 | `npm run typecheck` | Vérif TypeScript          |
 | `npm run ios` / `android` | Lanceur sim / appareil |
 
+### WebView dashboard (même build que le web)
+
+L’app charge **`https://app.ink-flow.me/dashboard`** (ou `EXPO_PUBLIC_WEB_APP_URL` en dev, ex. `http://localhost:3000` après `npm run dev` à la racine du monorepo).
+
+Deep links `inkflowpro://` → onglets dashboard (`agenda`, `requests`, `stock`, `messaging`, `finance`, `clients`, …). Haptique sidebar : le web envoie `inkflow_haptic_selection` au shell natif.
+
 **Expo Go** : pas de NFC Tap to Pay (Terminal natif). La modale propose **Stripe Checkout** (carte / Apple Pay) pour encaisser le solde tant que tu es connecté (session native synchronisée). Pour le **vrai** Tap to Pay iPhone : **development build ou prod** EAS + `.env` Supabase.
 
 Build production (EAS est en **devDependency** du projet — pas besoin d’installer `eas` en global) :

@@ -314,7 +314,7 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
               className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm text-zinc-800 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/80"
             >
               <MessageSquare className="h-4 w-4 shrink-0 text-zinc-500" />
-              <span className="min-w-0 flex-1 font-medium">Messagerie</span>
+              <span className="min-w-0 flex-1 font-medium">Suivi clients</span>
               <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
             </button>
             <button

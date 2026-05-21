@@ -18,6 +18,18 @@ import {
   type ComparatorPriceOffer,
 } from '../../lib/consumableComparator';
 import { COMPARATOR_CATEGORY_OPTIONS } from '../../lib/consumableCategories';
+import {
+  badgeDelta,
+  badgeDot,
+  badgeOptimal,
+  btnPrimary,
+  btnSecondary,
+  stockCard,
+  stockInput,
+  stockMuted,
+  stockSelect,
+} from './stockPanelStyles';
+import { cn } from '@/lib/utils';
 
 function latestPriceByPair(prices: ConsumablePriceRow[]): Map<string, ConsumablePriceRow> {
   const sorted = [...prices].sort((a, b) => {
@@ -60,6 +72,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
     validFrom: new Date().toISOString().slice(0, 10),
   });
   const [savingPrice, setSavingPrice] = useState(false);
+  const [shippingOpen, setShippingOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -203,7 +216,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-zinc-500 py-12">
+      <div className="flex items-center gap-2 text-zinc-500 py-12 dark:bg-black">
         <Loader2 className="w-5 h-5 animate-spin" />
         Chargement comparateur…
       </div>
@@ -211,12 +224,12 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4">
+    <div className="space-y-6 max-w-6xl dark:bg-black">
+      <div className={stockCard}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <BarChart3 className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
               Comparateur de consommables
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-xl">
@@ -225,7 +238,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
             </p>
           </div>
           <div
-            className="group relative flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 max-w-md"
+            className="group relative flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-black px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400 max-w-md"
             title="Chaque cellule = sous-total pour la quantité choisie + frais de port du fournisseur si le sous-total est sous le seuil de livraison gratuite (sinon port = 0). Utile pour comparer un achat réel."
           >
             <CircleHelp className="w-4 h-4 shrink-0 text-zinc-400" />
@@ -243,7 +256,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
             <select
               value={categorySlug}
               onChange={(e) => setCategorySlug(e.target.value)}
-              className="min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm min-w-[200px]"
+              className={cn(stockSelect, 'min-w-[200px]')}
             >
               <option value="">Toutes les catégories</option>
               {COMPARATOR_CATEGORY_OPTIONS.map((c) => (
@@ -264,88 +277,96 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
               step={1}
               value={orderUnits}
               onChange={(e) => setOrderUnits(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="min-h-[44px] w-28 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm tabular-nums"
+              className={cn(stockInput, 'min-h-[44px] w-28 tabular-nums')}
             />
           </div>
         </div>
       </div>
 
-      <details className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5">
-        <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white [&::-webkit-details-marker]:hidden">
-          <Truck className="w-4 h-4" />
+      <div className={cn(stockCard, 'overflow-hidden')}>
+        <button
+          type="button"
+          onClick={() => setShippingOpen((o) => !o)}
+          className="w-full flex items-center gap-2 px-5 py-4 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors"
+        >
+          <Truck className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
           Frais de port par fournisseur
-        </summary>
-        <p className="text-xs text-zinc-500 mt-2 mb-3">
-          Montants TTC. Laisse le seuil vide si tu ne connais pas la livraison gratuite (le port
-          s’applique alors à chaque commande dans le comparateur).
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-zinc-500 border-b border-zinc-200 dark:border-zinc-700">
-                <th className="py-2 pr-3">Fournisseur</th>
-                <th className="py-2 pr-3">Port (€)</th>
-                <th className="py-2 pr-3">Seuil port gratuit (€)</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {suppliers.map((s) => {
-                const draft =
-                  shippingEditing[s.id] ??
-                  ({
-                    fee: (s.default_shipping_fee_cents / 100).toFixed(2),
-                    threshold:
-                      s.free_shipping_threshold_cents != null
-                        ? (s.free_shipping_threshold_cents / 100).toFixed(2)
-                        : '',
-                  } as { fee: string; threshold: string });
-                return (
-                  <tr key={s.id} className="border-b border-zinc-100 dark:border-zinc-800">
-                    <td className="py-2 pr-3 text-zinc-800 dark:text-zinc-200">{s.name}</td>
-                    <td className="py-2 pr-3">
-                      <input
-                        className="w-24 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1.5 tabular-nums"
-                        value={draft.fee}
-                        onChange={(e) =>
-                          setShippingEditing((prev) => ({
-                            ...prev,
-                            [s.id]: { ...draft, fee: e.target.value },
-                          }))
-                        }
-                      />
-                    </td>
-                    <td className="py-2 pr-3">
-                      <input
-                        className="w-28 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1.5 tabular-nums"
-                        placeholder="—"
-                        value={draft.threshold}
-                        onChange={(e) =>
-                          setShippingEditing((prev) => ({
-                            ...prev,
-                            [s.id]: { ...draft, threshold: e.target.value },
-                          }))
-                        }
-                      />
-                    </td>
-                    <td className="py-2">
-                      <button
-                        type="button"
-                        onClick={() => void onSaveShipping(s.id)}
-                        className="min-h-[40px] px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium active:scale-[0.98] transition-all"
-                      >
-                        Enregistrer
-                      </button>
-                    </td>
+        </button>
+        {shippingOpen ? (
+          <div className="px-5 pb-5 border-t border-zinc-100 dark:border-zinc-900">
+            <p className={cn(stockMuted, 'mt-3 mb-3')}>
+              Montants TTC. Laisse le seuil vide si tu ne connais pas la livraison gratuite (le port
+              s’applique alors à chaque commande dans le comparateur).
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-zinc-500 border-b border-zinc-200 dark:border-zinc-700">
+                    <th className="py-2 pr-3">Fournisseur</th>
+                    <th className="py-2 pr-3">Port (€)</th>
+                    <th className="py-2 pr-3">Seuil port gratuit (€)</th>
+                    <th className="py-2" />
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </details>
+                </thead>
+                <tbody>
+                  {suppliers.map((s) => {
+                    const draft =
+                      shippingEditing[s.id] ??
+                      ({
+                        fee: (s.default_shipping_fee_cents / 100).toFixed(2),
+                        threshold:
+                          s.free_shipping_threshold_cents != null
+                            ? (s.free_shipping_threshold_cents / 100).toFixed(2)
+                            : '',
+                      } as { fee: string; threshold: string });
+                    return (
+                      <tr key={s.id} className="border-b border-zinc-100 dark:border-zinc-800">
+                        <td className="py-2 pr-3 text-zinc-800 dark:text-zinc-200">{s.name}</td>
+                        <td className="py-2 pr-3">
+                          <input
+                            className={cn(stockInput, 'w-24 py-1.5')}
+                            value={draft.fee}
+                            onChange={(e) =>
+                              setShippingEditing((prev) => ({
+                                ...prev,
+                                [s.id]: { ...draft, fee: e.target.value },
+                              }))
+                            }
+                          />
+                        </td>
+                        <td className="py-2 pr-3">
+                          <input
+                            className={cn(stockInput, 'w-28 py-1.5 tabular-nums')}
+                            placeholder="—"
+                            value={draft.threshold}
+                            onChange={(e) =>
+                              setShippingEditing((prev) => ({
+                                ...prev,
+                                [s.id]: { ...draft, threshold: e.target.value },
+                              }))
+                            }
+                          />
+                        </td>
+                        <td className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => void onSaveShipping(s.id)}
+                            className={cn(btnSecondary, 'min-h-[40px] px-3 text-xs')}
+                          >
+                            Enregistrer
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+      </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 overflow-hidden">
+      <div className={cn(stockCard, 'overflow-hidden p-0')}>
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
           <h4 className="font-semibold text-zinc-900 dark:text-white">Tableau de comparaison</h4>
           <span className="text-xs text-zinc-500">
@@ -362,8 +383,8 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
               <thead>
-                <tr className="text-left text-zinc-500 bg-zinc-50 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-700">
-                  <th className="py-3 px-3 sticky left-0 bg-zinc-50 dark:bg-zinc-900/95 z-10 min-w-[180px]">
+                <tr className="text-left text-zinc-500 bg-zinc-50 dark:bg-black border-b border-zinc-200 dark:border-zinc-900">
+                  <th className="py-3 px-3 sticky left-0 bg-zinc-50 dark:bg-black z-10 min-w-[180px]">
                     Produit
                   </th>
                   {supplierColumns.map((s) => (
@@ -371,7 +392,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
                       {s.name}
                     </th>
                   ))}
-                  <th className="py-3 px-3 whitespace-nowrap font-medium text-emerald-700 dark:text-emerald-400">
+                  <th className="py-3 px-3 whitespace-nowrap font-medium text-zinc-400">
                     Moins cher (total)
                   </th>
                   <th className="py-3 px-2 w-12" />
@@ -408,11 +429,12 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
                       return (
                         <td key={col.id} className="py-3 px-2 align-top">
                           <div
-                            className={`rounded-xl px-2 py-1.5 border ${
+                            className={cn(
+                              'rounded-xl px-2 py-1.5 border',
                               isBest
-                                ? 'border-emerald-500/60 bg-emerald-500/10 dark:bg-emerald-500/15'
-                                : 'border-zinc-200 dark:border-zinc-700'
-                            }`}
+                                ? 'border-zinc-600 bg-white/[0.06] dark:border-zinc-700'
+                                : 'border-zinc-200 dark:border-zinc-800'
+                            )}
                           >
                             <div className="font-semibold tabular-nums text-zinc-900 dark:text-white">
                               {formatEurFromCents(br.landedCents)}
@@ -424,8 +446,9 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
                                 : ' · port inclus ou gratuit'}
                             </div>
                             {isBest ? (
-                              <span className="inline-block mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-                                Meilleur prix
+                              <span className={cn(badgeOptimal, 'mt-1')}>
+                                <span className={badgeDot} aria-hidden />
+                                Optimal
                               </span>
                             ) : null}
                           </div>
@@ -438,7 +461,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
                           <span className="font-medium text-zinc-800 dark:text-zinc-200">
                             {supplierById.get(best.bestSupplierId)?.name ?? '—'}
                           </span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold tabular-nums">
+                          <span className="font-mono text-sm tabular-nums text-zinc-200">
                             {best.bestLandedCents != null
                               ? formatEurFromCents(best.bestLandedCents)
                               : '—'}
@@ -479,7 +502,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
       </div>
 
       {comparisonRows.length === 0 && filteredProducts.length > 0 ? (
-        <p className="text-sm text-amber-700 dark:text-amber-400">
+        <p className={stockMuted}>
           Aucune comparaison : renseigne au moins un prix par produit pour deux fournisseurs, ou
           change de filtre catégorie.
         </p>
@@ -502,7 +525,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
               <select
                 value={priceModal.supplierId}
                 onChange={(e) => setPriceModal({ ...priceModal, supplierId: e.target.value })}
-                className="w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm"
+                className={cn(stockSelect, 'w-full')}
               >
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -521,7 +544,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
                   inputMode="decimal"
                   value={priceForm.eur}
                   onChange={(e) => setPriceForm((f) => ({ ...f, eur: e.target.value }))}
-                  className="w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm tabular-nums"
+                  className={cn(stockInput, 'w-full min-h-[44px] tabular-nums')}
                   placeholder="ex. 24,90"
                 />
               </div>
@@ -534,7 +557,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
                   min={1}
                   value={priceForm.pack}
                   onChange={(e) => setPriceForm((f) => ({ ...f, pack: e.target.value }))}
-                  className="w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                  className={cn(stockInput, 'w-full min-h-[44px]')}
                 />
               </div>
             </div>
@@ -551,7 +574,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
               type="button"
               disabled={savingPrice}
               onClick={() => void submitNewPrice()}
-              className="w-full min-h-[44px] rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all disabled:opacity-50"
+              className={cn(btnPrimary, 'w-full disabled:opacity-50')}
             >
               {savingPrice ? 'Enregistrement…' : 'Enregistrer le prix'}
             </button>

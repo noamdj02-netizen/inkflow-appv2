@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Calendar, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { inkflowGestureNavTap, inkflowGestureTransition } from '@/lib/motion/inkflowGestures';
 import { BadgeNotification } from '@/components/ui/BadgeNotification';
 import { cn } from '@/lib/utils';
 import FloatingActionMenu, { type FloatingActionMenuOption } from './FloatingActionMenu';
@@ -53,8 +54,8 @@ function BottomNavItem({ item, reduceMotion }: BottomNavItemProps) {
       type="button"
       onClick={onSelect}
       aria-current={isActive ? 'page' : undefined}
-      whileTap={reduceMotion ? undefined : { scale: 0.94 }}
-      transition={{ duration: 0.12 }}
+      whileTap={inkflowGestureNavTap(reduceMotion)}
+      transition={inkflowGestureTransition()}
       className={cn(
         'relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-xl px-1 pt-1 pb-0.5',
         'touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black',

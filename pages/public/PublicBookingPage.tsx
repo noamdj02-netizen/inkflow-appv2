@@ -5,6 +5,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useClientFramerGestures } from '../../lib/clientFramerGestures';
+import { BookChoiceCard, BookStepTransition } from '../../components/booking/BookingMotion';
 import {
   ArrowLeft,
   User,
@@ -218,6 +219,18 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   const studio = studioInfo ?? { name: studioSlug, avatar: '', coverImage: '' };
 
+  const bookStepKey = artistSelectionPending
+    ? 'artist'
+    : bookingMode === 'select'
+      ? 'select'
+      : bookingMode === 'project'
+        ? projectSubmitted
+          ? 'project-done'
+          : 'project'
+        : selectedFlashId
+          ? 'flash-detail'
+          : 'flash';
+
   return (
     <div className="book-public-root bg-ink-bg">
       <SEO
@@ -360,16 +373,18 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           </span>
         </section>
 
+        <BookStepTransition stepKey={bookStepKey}>
         {/* — Étape tatoueur (studios multi-artistes) — */}
         {artistSelectionPending && (
           <section className="mb-8 flex flex-col gap-3" aria-label="Choix du tatoueur">
             <div className="flex flex-col gap-3">
               {publicArtists.map((artist) => (
-                <button
+                <BookChoiceCard
                   key={artist.id}
                   type="button"
                   onClick={() => selectArtist(artist)}
-                  className="group w-full min-h-[88px] rounded-2xl border border-ink-border border-l-[4px] border-l-emerald-500/90 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-center gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                  accentClass="border-l-emerald-500/90"
+                  className="min-h-[88px] rounded-2xl border border-ink-border border-l-[4px] bg-ink-surface p-4 sm:p-5 flex items-center gap-4 hover:border-ink-accent/40 hover:shadow-md"
                 >
                   <div className="w-14 h-14 rounded-full overflow-hidden bg-zinc-800 border border-ink-border flex-shrink-0 ring-1 ring-white/5">
                     {artist.avatar_url ? (
@@ -389,7 +404,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     strokeWidth={1.5}
                     aria-hidden
                   />
-                </button>
+                </BookChoiceCard>
               ))}
             </div>
           </section>
@@ -398,14 +413,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         {/* — Écran 0 : Sélection Flash / Projet — */}
         {!artistSelectionPending && bookingMode === 'select' && (
           <section className="mb-6 flex flex-col gap-3 sm:gap-4" aria-label="Type de prestation">
-            <button
+            <BookChoiceCard
               type="button"
               onClick={() => {
                 setBookingMode('flash');
                 setSelectedFlashId(null);
                 replaceUrlFlashParam(null);
               }}
-              className="group w-full min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] border-l-amber-500 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-stretch gap-3 sm:gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+              accentClass="border-l-amber-500"
+              className="min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] bg-ink-surface p-4 sm:p-5"
             >
               <div
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-amber-500/15"
@@ -431,15 +447,16 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 strokeWidth={1.5}
                 aria-hidden
               />
-            </button>
-            <button
+            </BookChoiceCard>
+            <BookChoiceCard
               type="button"
               onClick={() => {
                 setBookingMode('project');
                 setSelectedFlashId(null);
                 replaceUrlFlashParam(null);
               }}
-              className="group w-full min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] border-l-violet-500 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-stretch gap-3 sm:gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+              accentClass="border-l-violet-500"
+              className="min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] bg-ink-surface p-4 sm:p-5"
             >
               <div
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-600/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-blue-500/15"
@@ -465,7 +482,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 strokeWidth={1.5}
                 aria-hidden
               />
-            </button>
+            </BookChoiceCard>
           </section>
         )}
 
@@ -818,6 +835,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             </section>
           </>
         )}
+        </BookStepTransition>
       </div>
       </main>
       </div>

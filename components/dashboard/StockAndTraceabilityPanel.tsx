@@ -46,7 +46,28 @@ import { ConsumablesComparatorPanel } from './ConsumablesComparatorPanel';
 import { InventoryPrintLabelModal } from './InventoryPrintLabelModal';
 import { SupplierCatalogPanel } from './SupplierCatalogPanel';
 import { PermissionGate } from '../ui/PermissionGate';
+import { cn } from '@/lib/utils';
 import { COMPARATOR_CATEGORY_OPTIONS } from '../../lib/consumableCategories';
+import {
+  aiTerminal,
+  badgeDelta,
+  badgeDot,
+  badgeOptimal,
+  btnGhost,
+  btnPrimary,
+  btnSecondary,
+  listRow,
+  pillNavBtn,
+  pillNavWrap,
+  presetChip,
+  scanVideoWrap,
+  stockCard,
+  stockCardTitle,
+  stockInput,
+  stockMuted,
+  stockPage,
+  stockSelect,
+} from './stockPanelStyles';
 
 interface StockAndTraceabilityPanelProps {
   studioId: string | null;
@@ -79,6 +100,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
     'traceability'
   );
   const [cameraGateOpen, setCameraGateOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -547,9 +569,18 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
     }
   }, [enrichedPrices, toast]);
 
+  const sortedEnrichedPrices = useMemo(
+    () =>
+      [...enrichedPrices].sort((a, b) => {
+        const c = a.productName.localeCompare(b.productName, 'fr');
+        return c !== 0 ? c : a.eurPerUnit - b.eurPerUnit;
+      }),
+    [enrichedPrices]
+  );
+
   if (!useSupabase || !studioId) {
     return (
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 text-sm text-zinc-500">
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 p-6 text-sm text-zinc-500 dark:bg-black">
         Connecte Supabase pour gérer le stock et la traçabilité.
       </div>
     );
@@ -557,7 +588,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-zinc-500 py-12">
+      <div className="flex items-center gap-2 text-zinc-500 py-12 dark:bg-black">
         <Loader2 className="w-5 h-5 animate-spin" />
         Chargement…
       </div>
@@ -565,60 +596,45 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
   }
 
   return (
-    <div className="space-y-8 max-w-4xl animate-fade-in">
+    <div className={stockPage}>
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display flex items-center gap-2">
-          <Package className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+          <Package className="w-7 h-7 text-zinc-400 dark:text-zinc-500" strokeWidth={1.5} />
           Stock & traçabilité
         </h2>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1.5">
-          Consommables, prix fournisseurs, lots (QR) et mouvements (dont commande vocale
-          expérimentale).
+        <p className="text-zinc-500 dark:text-zinc-500 text-sm mt-1.5 max-w-xl">
+          Consommables, prix fournisseurs, lots (QR) et mouvements — commande vocale expérimentale.
         </p>
-        <div
-          className="mt-4 inline-flex flex-wrap gap-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1"
-          role="tablist"
-          aria-label="Sections stock"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={stockSubSection === 'traceability'}
-            onClick={() => setStockSubSection('traceability')}
-            className={`min-h-[40px] px-4 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
-              stockSubSection === 'traceability'
-                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                : 'text-zinc-600 dark:text-zinc-400 border border-transparent'
-            }`}
-          >
-            Stock & traçabilité
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={stockSubSection === 'comparator'}
-            onClick={() => setStockSubSection('comparator')}
-            className={`min-h-[40px] px-4 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
-              stockSubSection === 'comparator'
-                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                : 'text-zinc-600 dark:text-zinc-400 border border-transparent'
-            }`}
-          >
-            Comparateur
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={stockSubSection === 'catalog'}
-            onClick={() => setStockSubSection('catalog')}
-            className={`min-h-[40px] px-4 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
-              stockSubSection === 'catalog'
-                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                : 'text-zinc-600 dark:text-zinc-400 border border-transparent'
-            }`}
-          >
-            Catalogue
-          </button>
+        <div className="mt-4" role="tablist" aria-label="Sections stock">
+          <div className={pillNavWrap}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={stockSubSection === 'traceability'}
+              onClick={() => setStockSubSection('traceability')}
+              className={pillNavBtn(stockSubSection === 'traceability')}
+            >
+              Stock & traçabilité
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={stockSubSection === 'comparator'}
+              onClick={() => setStockSubSection('comparator')}
+              className={pillNavBtn(stockSubSection === 'comparator')}
+            >
+              Comparateur
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={stockSubSection === 'catalog'}
+              onClick={() => setStockSubSection('catalog')}
+              className={pillNavBtn(stockSubSection === 'catalog')}
+            >
+              Catalogue
+            </button>
+          </div>
         </div>
       </div>
 
@@ -632,19 +648,19 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
 
       {stockSubSection === 'traceability' ? (
         <>
-          <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4">
-            <h3 className="font-semibold text-zinc-900 dark:text-white">Produits</h3>
+          <section className={stockCard}>
+            <h3 className={stockCardTitle}>Produits</h3>
             <div className="flex flex-wrap gap-2">
               <input
                 value={newProductName}
                 onChange={(e) => setNewProductName(e.target.value)}
                 placeholder="Ex. Aiguilles 3RL"
-                className="flex-1 min-w-[200px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm"
+                className={cn(stockInput, 'flex-1 min-w-[200px]')}
               />
               <select
                 value={newProductCategory}
                 onChange={(e) => setNewProductCategory(e.target.value)}
-                className="min-w-[140px] min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm"
+                className={cn(stockSelect, 'min-w-[140px]')}
                 aria-label="Catégorie produit"
               >
                 <option value="other">Autre</option>
@@ -654,20 +670,16 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                onClick={() => void onAddProduct()}
-                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all"
-              >
+              <button type="button" onClick={() => void onAddProduct()} className={btnPrimary}>
                 <Plus className="w-4 h-4" />
                 Ajouter
               </button>
             </div>
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm max-h-40 overflow-y-auto">
+            <ul className="text-sm max-h-40 overflow-y-auto">
               {products.map((p) => (
-                <li key={p.id} className="py-2 flex justify-between gap-2">
-                  <span className="text-zinc-800 dark:text-zinc-200">{p.name}</span>
-                  <span className="tabular-nums text-zinc-500">
+                <li key={p.id} className={listRow}>
+                  <span className="text-zinc-800 dark:text-zinc-100">{p.name}</span>
+                  <span className="font-mono tabular-nums text-zinc-500 text-xs">
                     {p.qty_on_hand} {p.unit}
                   </span>
                 </li>
@@ -675,93 +687,90 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
             </ul>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4">
-            <h3 className="font-semibold text-zinc-900 dark:text-white">Fournisseurs & prix</h3>
+          <section className={stockCard}>
+            <h3 className={stockCardTitle}>Fournisseurs & prix</h3>
             <div className="flex flex-wrap gap-2">
               <input
                 value={newSupplierName}
                 onChange={(e) => setNewSupplierName(e.target.value)}
                 placeholder="Nom fournisseur"
-                className="flex-1 min-w-[160px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={cn(stockInput, 'flex-1 min-w-[160px]')}
               />
-              <button
-                type="button"
-                onClick={() => void onAddSupplier()}
-                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium active:scale-[0.98] transition-all"
-              >
+              <button type="button" onClick={() => void onAddSupplier()} className={btnSecondary}>
                 <Plus className="w-4 h-4" />
                 Fournisseur
               </button>
             </div>
 
-            <details className="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 px-3 py-2 sm:px-4 group">
-              <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 py-2 text-sm font-medium text-zinc-800 dark:text-zinc-200 [&::-webkit-details-marker]:hidden">
+            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800 dark:bg-black/40 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setPresetsOpen((o) => !o)}
+                className="w-full flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
+              >
                 <span>Suggestions fournisseurs tatouage</span>
-                <span className="text-xs font-normal text-zinc-500">
-                  Europe / France — clique pour développer
-                </span>
-              </summary>
-              <div className="pb-3 pt-1 space-y-3 border-t border-zinc-200/60 dark:border-zinc-800">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <button
-                    type="button"
-                    disabled={presetImporting || !studioId}
-                    onClick={() => void onAddAllPresetSuppliers()}
-                    className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
-                  >
-                    {presetImporting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Import…
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        Ajouter tous les manquants ({flattenTattooSupplierPresets().length})
-                      </>
-                    )}
-                  </button>
-                  <p className="text-xs text-zinc-500 max-w-md">
-                    Importe les noms en un clic ; tu peux aussi ajouter un fournisseur à la fois via
-                    les boutons ci-dessous.
-                  </p>
-                </div>
-                {TATTOO_SUPPLIER_PRESET_GROUPS.map((group) => (
-                  <div key={group.category}>
-                    <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-2">
-                      {group.category}
+                <span className={stockMuted}>Europe / France</span>
+              </button>
+              {presetsOpen ? (
+                <div className="px-4 pb-4 pt-0 space-y-4 border-t border-zinc-100 dark:border-zinc-900">
+                  <div className="flex flex-wrap gap-2 items-center pt-3">
+                    <button
+                      type="button"
+                      disabled={presetImporting || !studioId}
+                      onClick={() => void onAddAllPresetSuppliers()}
+                      className={btnPrimary}
+                    >
+                      {presetImporting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Import…
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          Tout importer ({flattenTattooSupplierPresets().length})
+                        </>
+                      )}
+                    </button>
+                    <p className={cn(stockMuted, 'max-w-md')}>
+                      Ajoute les noms manquants en un clic, ou un par un ci-dessous.
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {group.suppliers.map((p) => {
-                        const exists = supplierNamesLower.has(p.name.trim().toLowerCase());
-                        return (
-                          <button
-                            key={p.name}
-                            type="button"
-                            title={p.blurb}
-                            disabled={exists || !studioId}
-                            onClick={() => void onAddPresetSupplier(p.name)}
-                            className={`min-h-[40px] px-3 rounded-xl border text-xs font-medium transition-all active:scale-[0.98] ${
-                              exists
-                                ? 'border-zinc-200 dark:border-zinc-800 text-zinc-400 cursor-not-allowed bg-zinc-100/50 dark:bg-zinc-900/30'
-                                : 'border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-600'
-                            }`}
-                          >
-                            {exists ? `✓ ${p.name}` : `+ ${p.name}`}
-                          </button>
-                        );
-                      })}
-                    </div>
                   </div>
-                ))}
-              </div>
-            </details>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {TATTOO_SUPPLIER_PRESET_GROUPS.map((group) => (
+                      <div key={group.category}>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+                          {group.category}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {group.suppliers.map((p) => {
+                            const exists = supplierNamesLower.has(p.name.trim().toLowerCase());
+                            return (
+                              <button
+                                key={p.name}
+                                type="button"
+                                title={p.blurb}
+                                disabled={exists || !studioId}
+                                onClick={() => void onAddPresetSupplier(p.name)}
+                                className={presetChip(exists)}
+                              >
+                                {exists ? `✓ ${p.name}` : `+ ${p.name}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <select
                 value={priceProductId}
                 onChange={(e) => setPriceProductId(e.target.value)}
-                className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={stockSelect}
               >
                 <option value="">Produit…</option>
                 {products.map((p) => (
@@ -773,7 +782,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
               <select
                 value={priceSupplierId}
                 onChange={(e) => setPriceSupplierId(e.target.value)}
-                className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={stockSelect}
               >
                 <option value="">Fournisseur…</option>
                 {suppliers.map((s) => (
@@ -789,83 +798,73 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                 value={priceEur}
                 onChange={(e) => setPriceEur(e.target.value)}
                 placeholder="Prix €"
-                className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={stockInput}
               />
-              <button
-                type="button"
-                onClick={() => void onAddPrice()}
-                className="min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all"
-              >
+              <button type="button" onClick={() => void onAddPrice()} className={btnPrimary}>
                 Ajouter prix
               </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-zinc-500 border-b border-zinc-200 dark:border-zinc-700">
-                    <th className="py-2 pr-2">Produit</th>
-                    <th className="py-2 pr-2">Fournisseur</th>
-                    <th className="py-2 pr-2">Prix</th>
-                    <th className="py-2 pr-2">€ / unité</th>
-                    <th className="py-2">Ratio</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...enrichedPrices]
-                    .sort((a, b) => {
-                      const c = a.productName.localeCompare(b.productName, 'fr');
-                      return c !== 0 ? c : a.eurPerUnit - b.eurPerUnit;
-                    })
-                    .map((e) => (
-                      <tr
-                        key={e.row.id}
-                        className={`border-b border-zinc-100 dark:border-zinc-800 ${
-                          e.isBestForProduct ? 'bg-emerald-500/5 dark:bg-emerald-500/10' : ''
-                        }`}
-                      >
-                        <td className="py-2 pr-2 text-zinc-800 dark:text-zinc-200">
-                          {e.productName}
-                        </td>
-                        <td className="py-2 pr-2">{e.supplierName}</td>
-                        <td className="py-2 pr-2 tabular-nums">
-                          {e.priceEur.toFixed(2)} €{e.packSize > 1 ? ` / lot ${e.packSize}` : ''}
-                        </td>
-                        <td className="py-2 pr-2 tabular-nums text-zinc-700 dark:text-zinc-300">
-                          {e.eurPerUnit.toFixed(4)} €
-                        </td>
-                        <td className="py-2">
-                          {e.isBestForProduct ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 font-medium text-xs">
-                              Meilleur
-                            </span>
-                          ) : (
-                            <span className="text-amber-700 dark:text-amber-400 text-xs tabular-nums">
-                              +{e.pctAboveBest.toFixed(1)} %
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-              {priceMatrix.length === 0 ? (
-                <p className="text-sm text-zinc-500 py-4">
-                  Aucun prix — ajoute un premier tarif fournisseur.
-                </p>
-              ) : null}
-            </div>
 
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 space-y-3">
+            {priceMatrix.length === 0 ? (
+              <p className="text-sm text-zinc-500 py-2">Aucun tarif — ajoute un premier prix.</p>
+            ) : (
+              <ul className="rounded-xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-900">
+                {sortedEnrichedPrices.map((e) => (
+                  <li
+                    key={e.row.id}
+                    className={cn(
+                      'flex items-start justify-between gap-4 px-4 py-3',
+                      e.isBestForProduct && 'dark:bg-white/[0.02]'
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                        {e.productName}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{e.supplierName}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-mono text-sm tabular-nums text-zinc-800 dark:text-zinc-200">
+                        {e.priceEur.toFixed(2)} €
+                        {e.packSize > 1 ? (
+                          <span className="text-zinc-500 text-xs font-sans"> / {e.packSize}</span>
+                        ) : null}
+                      </p>
+                      <p className="font-mono text-[11px] tabular-nums text-zinc-500 mt-0.5">
+                        {e.eurPerUnit.toFixed(4)} €/u
+                      </p>
+                      <div className="mt-1.5 flex justify-end">
+                        {e.isBestForProduct ? (
+                          <span className={badgeOptimal}>
+                            <span className={badgeDot} aria-hidden />
+                            Optimal
+                          </span>
+                        ) : (
+                          <span className={badgeDelta}>+{e.pctAboveBest.toFixed(1)} %</span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div
+              className={cn(
+                stockCard,
+                'p-4 space-y-3 !shadow-none border-zinc-200/60 dark:border-zinc-800'
+              )}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  Comparaison IA (Gemini)
+                <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                  Comparaison IA
                 </h4>
                 <button
                   type="button"
                   disabled={aiLoading || enrichedPrices.length === 0}
                   onClick={() => void runPriceAiInsight()}
-                  className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] transition-all"
+                  className={btnSecondary}
                 >
                   {aiLoading ? (
                     <>
@@ -875,58 +874,57 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      Analyser les tarifs
+                      Analyser
                     </>
                   )}
                 </button>
               </div>
-              <p className="text-xs text-zinc-500">
-                Synthèse à partir des tarifs saisis (pas de recherche de prix sur internet). Si
-                l’analyse échoue : secret <code className="text-[10px]">GEMINI_API_KEY</code> sur
-                l’edge <code className="text-[10px]">call-gemini</code>.
+              <p className={stockMuted}>
+                Synthèse depuis tes tarifs saisis. Clé{' '}
+                <code className="text-[10px] text-zinc-400">GEMINI_API_KEY</code> sur{' '}
+                <code className="text-[10px] text-zinc-400">call-gemini</code>.
               </p>
               {enrichedPrices.length === 0 ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  Ajoute au moins un tarif fournisseur dans le tableau ci-dessus pour activer
-                  l’analyse.
-                </p>
+                <p className={stockMuted}>Ajoute un tarif pour activer l’analyse.</p>
               ) : null}
-              {aiInsight ? (
-                <div className="text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-3 max-h-64 overflow-y-auto">
-                  {aiInsight}
-                </div>
-              ) : null}
+              {aiInsight ? <div className={aiTerminal}>{aiInsight}</div> : null}
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4 border-l-4 border-l-zinc-200 500">
-            <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-              <QrCode className="w-5 h-5" />
+          <section className={stockCard}>
+            <h3 className={cn(stockCardTitle, 'flex items-center gap-2')}>
+              <QrCode className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
               Lots & QR
             </h3>
-            <video
-              ref={videoRef}
-              className={`w-full max-w-sm rounded-xl bg-black object-cover min-h-[200px] ${scanning ? '' : 'hidden'}`}
-              muted
-              playsInline
-              autoPlay
-            />
+            <div className={scanVideoWrap(scanning)}>
+              <video
+                ref={videoRef}
+                className={cn(
+                  'absolute inset-0 size-full object-cover',
+                  scanning ? 'block' : 'hidden'
+                )}
+                muted
+                playsInline
+                autoPlay
+              />
+              {!scanning ? (
+                <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-xs">
+                  Caméra inactive
+                </div>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-2">
               {!scanning ? (
                 <button
                   type="button"
                   onClick={() => setCameraGateOpen(true)}
-                  className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all"
+                  className={btnPrimary}
                 >
                   <Camera className="w-4 h-4" strokeWidth={1.5} />
                   Scanner un code
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={stopScan}
-                  className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-300 dark:border-zinc-600 text-sm active:scale-[0.98] transition-all"
-                >
+                <button type="button" onClick={stopScan} className={btnSecondary}>
                   Arrêter la caméra
                 </button>
               )}
@@ -934,52 +932,47 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                 type="button"
                 disabled={!studioId || !useSupabase}
                 onClick={() => setLabelModalOpen(true)}
-                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 text-sm font-medium disabled:opacity-50 active:scale-[0.98] transition-all"
+                className={btnSecondary}
               >
                 <Printer className="w-4 h-4" />
                 Créer une étiquette
               </button>
             </div>
-            <p className="text-xs text-zinc-500">
-              Chrome utilise le scan natif ; Safari et Firefox s’appuient sur le décodage logiciel
-              (QR / codes-barres courants). HTTPS et permission caméra requises. « Créer une
-              étiquette » ouvre une fenêtre où tu choisis aiguille, encre ou autre matériel, puis tu
-              enregistres et imprimes.
+            <p className={stockMuted}>
+              Scan natif sur Chrome ; décodage logiciel sur Safari/Firefox. HTTPS requis.
+              L’étiquette permet d’imprimer puis d’enregistrer le lot.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <input
                 value={lotManual.product_label}
                 onChange={(e) => setLotManual((l) => ({ ...l, product_label: e.target.value }))}
                 placeholder="Libellé matériel"
-                className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-950"
+                className={stockInput}
               />
               <input
                 type="date"
                 value={lotManual.expiry_date}
                 onChange={(e) => setLotManual((l) => ({ ...l, expiry_date: e.target.value }))}
-                className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-950"
+                className={stockInput}
               />
               <input
                 value={lotManual.lot_number}
                 onChange={(e) => setLotManual((l) => ({ ...l, lot_number: e.target.value }))}
                 placeholder="N° lot (saisie manuelle)"
-                className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-950 sm:col-span-2"
+                className={cn(stockInput, 'sm:col-span-2')}
               />
               <button
                 type="button"
                 onClick={() => void onManualLot()}
-                className="sm:col-span-2 min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium active:scale-[0.98] transition-all"
+                className={cn(btnSecondary, 'sm:col-span-2')}
               >
                 Enregistrer le lot (sans scan)
               </button>
             </div>
-            <ul className="text-sm space-y-2 max-h-48 overflow-y-auto">
+            <ul className="text-sm max-h-48 overflow-y-auto">
               {lots.map((lot) => (
-                <li
-                  key={lot.id}
-                  className="flex justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2"
-                >
-                  <span className="text-zinc-700 dark:text-zinc-300 truncate">
+                <li key={lot.id} className={listRow}>
+                  <span className="text-zinc-700 dark:text-zinc-300 truncate min-w-0">
                     {lot.product_label || lot.lot_number}
                     {lot.expiry_date ? ` · exp. ${lot.expiry_date}` : ''}
                   </span>
@@ -995,7 +988,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                         toast.error('Erreur');
                       }
                     }}
-                    className="text-zinc-400 hover:text-red-600 p-1 active:scale-[0.98] transition-all"
+                    className="text-zinc-400 hover:text-zinc-200 p-1 active:scale-[0.98] transition-all shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1004,20 +997,20 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
             </ul>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4">
-            <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-              <Volume2 className="w-5 h-5" />
-              Mouvements & vocal (expérimental)
+          <section className={stockCard}>
+            <h3 className={cn(stockCardTitle, 'flex items-center gap-2')}>
+              <Volume2 className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
+              Mouvements & vocal
             </h3>
-            <p className="text-xs text-zinc-500">
-              Chrome recommandé. Exemple : « retirer 5 gants nitrile » — le produit doit
-              correspondre au début du nom.
+            <p className={stockMuted}>
+              Chrome recommandé. Ex. « retirer 5 gants nitrile » — le nom doit correspondre au début
+              du libellé produit.
             </p>
             <div className="flex flex-wrap gap-2">
               <select
                 value={moveProductId}
                 onChange={(e) => setMoveProductId(e.target.value)}
-                className="flex-1 min-w-[160px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={cn(stockSelect, 'flex-1 min-w-[160px]')}
               >
                 <option value="">Produit…</option>
                 {products.map((p) => (
@@ -1031,31 +1024,27 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                 value={moveDelta}
                 onChange={(e) => setMoveDelta(e.target.value)}
                 placeholder="+/− qty"
-                className="w-28 rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={cn(stockInput, 'w-28')}
               />
               <input
                 value={moveReason}
                 onChange={(e) => setMoveReason(e.target.value)}
                 placeholder="Motif"
-                className="flex-1 min-w-[120px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-950"
+                className={cn(stockInput, 'flex-1 min-w-[120px]')}
               />
               <button
                 type="button"
                 onClick={() => void onMoveStock('manual')}
-                className="min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all"
+                className={btnPrimary}
               >
                 Enregistrer
               </button>
-              <button
-                type="button"
-                onClick={onVoiceCommand}
-                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-blue-500/50 text-blue-700 dark:text-blue-300 text-sm font-medium active:scale-[0.98] transition-all"
-              >
+              <button type="button" onClick={onVoiceCommand} className={btnSecondary}>
                 <Mic className="w-4 h-4" />
                 Commande vocale
               </button>
             </div>
-            <ul className="text-xs text-zinc-500 space-y-1 max-h-32 overflow-y-auto font-mono">
+            <ul className="text-xs text-zinc-500 space-y-1 max-h-32 overflow-y-auto font-mono dark:text-zinc-600">
               {movements.map((m) => (
                 <li key={m.id}>
                   {m.created_at.slice(0, 16)} · {m.source} · Δ{m.delta_qty}

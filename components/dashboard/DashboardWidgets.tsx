@@ -95,7 +95,7 @@ const SHORTCUT_OPTIONS: {
   },
   {
     id: 'messaging',
-    label: 'Messagerie',
+    label: 'Suivi clients',
     icon: <MessageSquare className="w-5 h-5" />,
     color: 'bg-zinc-100 text-zinc-600',
   },

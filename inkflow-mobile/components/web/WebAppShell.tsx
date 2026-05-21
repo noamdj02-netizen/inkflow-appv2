@@ -10,6 +10,11 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import WebView, { type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 import { WebAppLaunchOverlay } from '@/components/web/WebAppLaunchOverlay';
+import {
+  buildAllowedWebHosts,
+  mapProDashboardDeepLink,
+  resolveWebAppDashboardUrl,
+} from '@/lib/mapProDashboardDeepLink';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type {
   ShouldStartLoadRequest,
@@ -19,7 +24,9 @@ import type {
   WebViewProgressEvent,
 } from 'react-native-webview/lib/WebViewTypes';
 
-const WEB_APP_BASE_URL = 'https://app.ink-flow.me';
+const WEB_APP_BASE_URL = resolveWebAppDashboardUrl().replace(/\/dashboard\/?$/, '');
+const WEB_APP_URL = resolveWebAppDashboardUrl();
+const ALLOWED_WEB_HOSTS = buildAllowedWebHosts();
 
 function normalizeOpenUrl(url: string): string {
   try {
@@ -41,47 +48,12 @@ function shouldStayInWebView(url: string): boolean {
     return false;
   }
 }
-const WEB_APP_URL = `${WEB_APP_BASE_URL}/dashboard`;
 const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-const ALLOWED_WEB_HOSTS = new Set(['app.ink-flow.me']);
 const SYSTEM_SCHEMES = ['mailto:', 'tel:', 'sms:'];
 
 function mapDeepLinkToWebUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-
-    if (parsed.protocol === 'https:' && ALLOWED_WEB_HOSTS.has(parsed.hostname)) {
-      return parsed.toString();
-    }
-
-    if (parsed.protocol !== 'inkflowpro:') {
-      return null;
-    }
-
-    const target = parsed.hostname || parsed.pathname.replace('/', '');
-    const firstPathPart = parsed.pathname.split('/').filter(Boolean)[0];
-    const appointmentId =
-      ['appointment', 'appointments', 'session'].includes(target) ? firstPathPart : null;
-
-    const mapped = new URL('/dashboard', WEB_APP_BASE_URL);
-    if (target === 'agenda' || target === 'calendar') {
-      mapped.searchParams.set('tab', 'agenda');
-    } else if (target === 'requests' || target === 'demandes') {
-      mapped.searchParams.set('tab', 'requests');
-    } else if (target === 'stock') {
-      mapped.searchParams.set('tab', 'stock');
-      for (const [key, value] of parsed.searchParams.entries()) {
-        mapped.searchParams.set(key, value);
-      }
-    } else if (appointmentId) {
-      mapped.searchParams.set('appointment', appointmentId);
-    }
-
-    return mapped.toString();
-  } catch {
-    return null;
-  }
+  return mapProDashboardDeepLink(url, ALLOWED_WEB_HOSTS);
 }
 
 function shouldOpenExternally(url: string): boolean {
@@ -96,7 +68,8 @@ function shouldOpenExternally(url: string): boolean {
       return true;
     }
 
-    if (ALLOWED_WEB_HOSTS.has(parsed.hostname)) {
+    const host = parsed.hostname.replace(/\.+$/, '').toLowerCase();
+    if (ALLOWED_WEB_HOSTS.has(host)) {
       return false;
     }
 
@@ -113,7 +86,8 @@ function resolvePushTargetWebUrl(raw: unknown): string | null {
   if (s.startsWith('https://') || s.startsWith('http://')) {
     try {
       const u = new URL(s);
-      if (ALLOWED_WEB_HOSTS.has(u.hostname)) return u.toString();
+      const host = u.hostname.replace(/\.+$/, '').toLowerCase();
+      if (ALLOWED_WEB_HOSTS.has(host)) return u.toString();
     } catch {
       return null;
     }
@@ -266,6 +240,14 @@ export default function WebAppShell() {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         return;
       }
+      if (data?.type === 'inkflow_haptic_success') {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        return;
+      }
+      if (data?.type === 'inkflow_haptic_warning') {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
       if (data?.type === 'inkflow_native_supabase_sign_out') {
         if (isSupabaseConfigured() && supabase) {
           void supabase.auth.signOut().catch(() => {
@@ -396,7 +378,11 @@ export default function WebAppShell() {
         }
 
         const parsed = new URL(request.url);
-        if (parsed.protocol === 'https:' && ALLOWED_WEB_HOSTS.has(parsed.hostname)) {
+        const host = parsed.hostname.replace(/\.+$/, '').toLowerCase();
+        if (
+          (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+          ALLOWED_WEB_HOSTS.has(host)
+        ) {
           return true;
         }
       } catch {

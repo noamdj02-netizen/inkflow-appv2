@@ -24,6 +24,18 @@ import {
   suggestCatalogImportFromPastedContent,
   type CatalogImportDraftRow,
 } from '../../lib/geminiAI';
+import {
+  aiTerminal,
+  badgeDot,
+  badgeOptimal,
+  btnPrimary,
+  btnSecondary,
+  stockCard,
+  stockInput,
+  stockMuted,
+  stockSelect,
+} from './stockPanelStyles';
+import { cn } from '@/lib/utils';
 
 function eurToCents(s: string): number | null {
   const n = parseFloat(s.replace(',', '.'));
@@ -76,6 +88,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
   const [aiBusy, setAiBusy] = useState(false);
   const [aiDrafts, setAiDrafts] = useState<CatalogImportDraftRow[]>([]);
   const [aiSelected, setAiSelected] = useState<Set<number>>(new Set());
+  const [aiImportOpen, setAiImportOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -349,10 +362,10 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
   }
 
   return (
-    <div className="space-y-5 max-w-6xl">
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6">
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-          <Tag className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+    <div className="space-y-5 max-w-6xl dark:bg-black">
+      <div className={stockCard}>
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+          <Tag className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
           Catalogue fournisseurs
         </h3>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
@@ -365,197 +378,203 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
             type="button"
             onClick={openNew}
             disabled={suppliers.length === 0}
-            className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
+            className={cn(btnPrimary, 'disabled:opacity-50')}
           >
             <Plus className="w-4 h-4" />
             Ajouter une offre
           </button>
           {suppliers.length === 0 ? (
-            <span className="text-xs text-amber-700 dark:text-amber-400">
+            <span className={stockMuted}>
               Crée d’abord un fournisseur dans l’onglet Stock & traçabilité.
             </span>
           ) : null}
         </div>
       </div>
 
-      <details className="rounded-2xl border border-blue-200/60 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-950/20 px-4 py-2 sm:px-5">
-        <summary className="cursor-pointer list-none flex flex-wrap items-center gap-2 py-3 text-sm font-semibold text-zinc-900 dark:text-white [&::-webkit-details-marker]:hidden">
-          <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+      <div className={cn(stockCard, 'overflow-hidden')}>
+        <button
+          type="button"
+          onClick={() => setAiImportOpen((o) => !o)}
+          className="w-full flex flex-wrap items-center gap-2 px-5 py-4 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors"
+        >
+          <Sparkles className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.5} />
           Importer depuis un texte (IA — usage légal)
-        </summary>
-        <div className="border-t border-blue-200/50 dark:border-blue-900/40 pt-4 pb-2 space-y-4 text-sm text-zinc-600 dark:text-zinc-400">
-          <p className="text-xs leading-relaxed max-w-3xl">
-            InkFlow <strong>ne consulte pas les sites des fournisseurs</strong> : tu colles un
-            extrait que <strong>tu as le droit d’utiliser</strong> (export tableur, e-mail
-            commercial, facture, note interne). L’IA propose une structure ;{' '}
-            <strong>tu restes responsable</strong> de vérifier prix, promos et mentions avant
-            d’enregistrer. Limite ~14&nbsp;000 caractères par import.
-          </p>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={aiLegalOk}
-              onChange={(e) => setAiLegalOk(e.target.checked)}
-              className="mt-1 rounded border-zinc-300"
-            />
-            <span>
-              Je confirme que ce contenu provient de documents ou exports que je suis autorisé à
-              utiliser pour mon activité, et je comprends que les suggestions IA peuvent contenir
-              des erreurs.
-            </span>
-          </label>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-zinc-500">Fournisseur cible</label>
-              <select
-                value={aiSupplierId}
-                onChange={(e) => setAiSupplierId(e.target.value)}
-                disabled={suppliers.length === 0}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm"
-              >
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                disabled={aiBusy || suppliers.length === 0}
-                onClick={() => void runAiExtract()}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] transition-all w-full sm:w-auto"
-              >
-                {aiBusy ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analyse…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Extraire les lignes
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-zinc-500">
-              Colle ton texte (tableau, liste, mail…)
+        </button>
+        {aiImportOpen ? (
+          <div className="border-t border-zinc-100 dark:border-zinc-900 px-5 pt-4 pb-5 space-y-4 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-xs leading-relaxed max-w-3xl">
+              InkFlow <strong>ne consulte pas les sites des fournisseurs</strong> : tu colles un
+              extrait que <strong>tu as le droit d’utiliser</strong> (export tableur, e-mail
+              commercial, facture, note interne). L’IA propose une structure ;{' '}
+              <strong>tu restes responsable</strong> de vérifier prix, promos et mentions avant
+              d’enregistrer. Limite ~14&nbsp;000 caractères par import.
+            </p>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={aiLegalOk}
+                onChange={(e) => setAiLegalOk(e.target.checked)}
+                className="mt-1 rounded border-zinc-300"
+              />
+              <span>
+                Je confirme que ce contenu provient de documents ou exports que je suis autorisé à
+                utiliser pour mon activité, et je comprends que les suggestions IA peuvent contenir
+                des erreurs.
+              </span>
             </label>
-            <textarea
-              value={aiPaste}
-              onChange={(e) => setAiPaste(e.target.value)}
-              rows={8}
-              placeholder="Ex. colonnes copiées depuis Excel, ou corps d’un e-mail promo avec prix et dates…"
-              className="mt-1 w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
-            />
-          </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-zinc-500">Fournisseur cible</label>
+                <select
+                  value={aiSupplierId}
+                  onChange={(e) => setAiSupplierId(e.target.value)}
+                  disabled={suppliers.length === 0}
+                  className={cn(stockSelect, 'mt-1 w-full')}
+                >
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  disabled={aiBusy || suppliers.length === 0}
+                  onClick={() => void runAiExtract()}
+                  className={cn(btnPrimary, 'w-full sm:w-auto disabled:opacity-50')}
+                >
+                  {aiBusy ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analyse…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Extraire les lignes
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-zinc-500">
+                Colle ton texte (tableau, liste, mail…)
+              </label>
+              <textarea
+                value={aiPaste}
+                onChange={(e) => setAiPaste(e.target.value)}
+                rows={8}
+                placeholder="Ex. colonnes copiées depuis Excel, ou corps d’un e-mail promo avec prix et dates…"
+                className={cn(stockInput, 'mt-1 w-full font-mono')}
+              />
+            </div>
 
-          {aiDrafts.length > 0 ? (
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/80 overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
-                <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  {aiDrafts.length} ligne(s) — coche celles à importer
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700"
-                    onClick={() =>
-                      setAiSelected(
-                        aiSelected.size === aiDrafts.length
-                          ? new Set()
-                          : new Set(aiDrafts.map((_, i) => i))
-                      )
-                    }
-                  >
-                    {aiSelected.size === aiDrafts.length
-                      ? 'Tout désélectionner'
-                      : 'Tout sélectionner'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={aiBusy || aiSelected.size === 0}
-                    onClick={() => void importAiSelected()}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50"
-                  >
-                    Importer la sélection ({aiSelected.size})
-                  </button>
+            {aiDrafts.length > 0 ? (
+              <div className={cn(aiTerminal, 'overflow-hidden p-0')}>
+                <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-black">
+                  <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    {aiDrafts.length} ligne(s) — coche celles à importer
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={cn(btnSecondary, 'text-xs px-3 py-1.5')}
+                      onClick={() =>
+                        setAiSelected(
+                          aiSelected.size === aiDrafts.length
+                            ? new Set()
+                            : new Set(aiDrafts.map((_, i) => i))
+                        )
+                      }
+                    >
+                      {aiSelected.size === aiDrafts.length
+                        ? 'Tout désélectionner'
+                        : 'Tout sélectionner'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aiBusy || aiSelected.size === 0}
+                      onClick={() => void importAiSelected()}
+                      className={cn(btnPrimary, 'text-xs px-3 py-1.5 disabled:opacity-50')}
+                    >
+                      Importer la sélection ({aiSelected.size})
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-zinc-500 sticky top-0 bg-white dark:bg-zinc-950">
+                      <tr>
+                        <th className="w-8 p-2" />
+                        <th className="text-left p-2">Produit</th>
+                        <th className="text-left p-2">Prix TTC</th>
+                        <th className="text-left p-2">Promo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiDrafts.map((d, i) => (
+                        <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
+                          <td className="p-2">
+                            <input
+                              type="checkbox"
+                              checked={aiSelected.has(i)}
+                              onChange={() => toggleAiRow(i)}
+                              className="rounded border-zinc-300"
+                            />
+                          </td>
+                          <td className="p-2 text-zinc-800 dark:text-zinc-200">
+                            <div className="font-medium">{d.name}</div>
+                            <div className="text-zinc-500">
+                              {[d.brand, d.sku].filter(Boolean).join(' · ') || '—'} · {d.category} ·
+                              lot {d.pack_size}
+                            </div>
+                          </td>
+                          <td className="p-2 tabular-nums">
+                            {d.list_price_eur != null ? (
+                              <span className="text-zinc-400 line-through mr-1">
+                                {d.list_price_eur.toFixed(2)} €
+                              </span>
+                            ) : null}
+                            {d.price_eur.toFixed(2)} €
+                          </td>
+                          <td className="p-2 text-zinc-600 dark:text-zinc-400">
+                            {d.promo_price_eur != null ? (
+                              <span>
+                                {d.promo_price_eur.toFixed(2)} €
+                                {d.promo_label ? ` — ${d.promo_label}` : ''}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div className="max-h-72 overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="text-zinc-500 sticky top-0 bg-white dark:bg-zinc-950">
-                    <tr>
-                      <th className="w-8 p-2" />
-                      <th className="text-left p-2">Produit</th>
-                      <th className="text-left p-2">Prix TTC</th>
-                      <th className="text-left p-2">Promo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aiDrafts.map((d, i) => (
-                      <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
-                        <td className="p-2">
-                          <input
-                            type="checkbox"
-                            checked={aiSelected.has(i)}
-                            onChange={() => toggleAiRow(i)}
-                            className="rounded border-zinc-300"
-                          />
-                        </td>
-                        <td className="p-2 text-zinc-800 dark:text-zinc-200">
-                          <div className="font-medium">{d.name}</div>
-                          <div className="text-zinc-500">
-                            {[d.brand, d.sku].filter(Boolean).join(' · ') || '—'} · {d.category} ·
-                            lot {d.pack_size}
-                          </div>
-                        </td>
-                        <td className="p-2 tabular-nums">
-                          {d.list_price_eur != null ? (
-                            <span className="text-zinc-400 line-through mr-1">
-                              {d.list_price_eur.toFixed(2)} €
-                            </span>
-                          ) : null}
-                          {d.price_eur.toFixed(2)} €
-                        </td>
-                        <td className="p-2 text-zinc-600 dark:text-zinc-400">
-                          {d.promo_price_eur != null ? (
-                            <span>
-                              {d.promo_price_eur.toFixed(2)} €
-                              {d.promo_label ? ` — ${d.promo_label}` : ''}
-                            </span>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </details>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 flex flex-wrap gap-3 items-end">
+      <div className={cn(stockCard, 'p-4 flex flex-wrap gap-3 items-end')}>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher nom, marque, SKU, EAN…"
-            className="w-full min-h-[44px] pl-10 pr-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+            className={cn(stockInput, 'w-full min-h-[44px] pl-10 pr-3')}
           />
         </div>
         <select
           value={filterSupplier}
           onChange={(e) => setFilterSupplier(e.target.value)}
-          className="min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm min-w-[160px]"
+          className={cn(stockSelect, 'min-w-[160px]')}
         >
           <option value="">Tous les fournisseurs</option>
           {suppliers.map((s) => (
@@ -567,7 +586,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm min-w-[140px]"
+          className={cn(stockSelect, 'min-w-[140px]')}
         >
           <option value="">Toutes catégories</option>
           {COMPARATOR_CATEGORY_OPTIONS.map((c) => (
@@ -597,11 +616,11 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
         </label>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900/50">
+      <div className={cn(stockCard, 'overflow-hidden p-0')}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
-              <tr className="text-left text-zinc-500 bg-zinc-50 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-700">
+              <tr className="text-left text-zinc-500 bg-zinc-50 dark:bg-black border-b border-zinc-200 dark:border-zinc-900">
                 <th className="py-3 px-2 w-10">OK</th>
                 <th className="py-3 px-2 min-w-[200px]">Produit</th>
                 <th className="py-3 px-2">Fournisseur</th>
@@ -634,7 +653,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                     >
                       <td className="py-2 px-2">
                         <span
-                          className={`inline-block w-2 h-2 rounded-full ${it.is_active ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                          className={`inline-block w-2 h-2 rounded-full ${it.is_active ? 'bg-white/80' : 'bg-zinc-700'}`}
                           title={it.is_active ? 'Actif' : 'Inactif'}
                         />
                       </td>
@@ -659,14 +678,15 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                           {formatEurFromCents(eff.cents)}
                         </span>
                         {eff.isPromo ? (
-                          <span className="ml-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className={cn(badgeOptimal, 'ml-1')}>
+                            <span className={badgeDot} aria-hidden />
                             promo
                           </span>
                         ) : null}
                       </td>
                       <td className="py-2 px-2 text-xs text-zinc-600 dark:text-zinc-400 max-w-[140px]">
                         {it.promo_label ? (
-                          <span className="inline-flex items-center rounded-lg bg-amber-500/15 text-amber-800 dark:text-amber-300 px-2 py-0.5">
+                          <span className="inline-flex items-center rounded-lg bg-white/10 text-zinc-300 px-2 py-0.5 text-[10px]">
                             {it.promo_label}
                           </span>
                         ) : (
@@ -689,7 +709,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                               href={it.product_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300"
+                              className={cn(btnSecondary, 'min-w-[40px] min-h-[40px] p-0')}
                               title="Fiche fournisseur"
                             >
                               <ExternalLink className="w-4 h-4" />
@@ -700,7 +720,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                               type="button"
                               title="Pousser le prix effectif (promo comprise) vers Mes prix"
                               onClick={() => void pushPriceToStock(it)}
-                              className="text-[10px] px-2 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-medium"
+                              className={cn(btnSecondary, 'text-[10px] px-2 py-1.5')}
                             >
                               Prix → stock
                             </button>
@@ -708,7 +728,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                           <button
                             type="button"
                             onClick={() => openEdit(it)}
-                            className="inline-flex items-center justify-center min-w-[40px] min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700"
+                            className={cn(btnSecondary, 'min-w-[40px] min-h-[40px] p-0')}
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -743,7 +763,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <select
                 value={form.supplier_id}
                 onChange={(e) => setForm((f) => ({ ...f, supplier_id: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm"
+                className={cn(stockSelect, 'mt-1 w-full')}
               >
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -759,7 +779,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <select
                 value={form.linked_product_id}
                 onChange={(e) => setForm((f) => ({ ...f, linked_product_id: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 text-sm"
+                className={cn(stockSelect, 'mt-1 w-full')}
               >
                 <option value="">— Aucun —</option>
                 {products.map((p) => (
@@ -775,7 +795,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
             <input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+              className={cn(stockInput, 'mt-1 w-full min-h-[44px]')}
             />
           </div>
           <div className="grid sm:grid-cols-3 gap-3">
@@ -784,7 +804,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <input
                 value={form.brand}
                 onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
-                className="mt-1 w-full min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[40px]')}
               />
             </div>
             <div>
@@ -792,7 +812,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <input
                 value={form.sku}
                 onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-                className="mt-1 w-full min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[40px]')}
               />
             </div>
             <div>
@@ -800,7 +820,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <input
                 value={form.ean}
                 onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
-                className="mt-1 w-full min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[40px]')}
               />
             </div>
           </div>
@@ -810,7 +830,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <select
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px]')}
               >
                 <option value="other">Autre</option>
                 {COMPARATOR_CATEGORY_OPTIONS.map((c) => (
@@ -827,7 +847,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                 min={1}
                 value={form.pack_size}
                 onChange={(e) => setForm((f) => ({ ...f, pack_size: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px]')}
               />
             </div>
           </div>
@@ -839,7 +859,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <input
                 value={form.price_eur}
                 onChange={(e) => setForm((f) => ({ ...f, price_eur: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm tabular-nums"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px] tabular-nums')}
                 placeholder="ex. 19,90"
               />
             </div>
@@ -850,7 +870,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <input
                 value={form.list_price_eur}
                 onChange={(e) => setForm((f) => ({ ...f, list_price_eur: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm tabular-nums"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px] tabular-nums')}
                 placeholder="optionnel"
               />
             </div>
@@ -859,7 +879,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               <input
                 value={form.promo_price_eur}
                 onChange={(e) => setForm((f) => ({ ...f, promo_price_eur: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm tabular-nums"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px] tabular-nums')}
                 placeholder="optionnel"
               />
             </div>
@@ -869,7 +889,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
             <input
               value={form.promo_label}
               onChange={(e) => setForm((f) => ({ ...f, promo_label: e.target.value }))}
-              className="mt-1 w-full min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+              className={cn(stockInput, 'mt-1 w-full min-h-[40px]')}
               placeholder="ex. -20 % fin de série"
             />
           </div>
@@ -880,7 +900,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                 type="date"
                 value={form.promo_starts_at}
                 onChange={(e) => setForm((f) => ({ ...f, promo_starts_at: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px]')}
               />
             </div>
             <div>
@@ -889,7 +909,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
                 type="date"
                 value={form.promo_ends_at}
                 onChange={(e) => setForm((f) => ({ ...f, promo_ends_at: e.target.value }))}
-                className="mt-1 w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+                className={cn(stockInput, 'mt-1 w-full min-h-[44px]')}
               />
             </div>
           </div>
@@ -898,7 +918,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
             <input
               value={form.product_url}
               onChange={(e) => setForm((f) => ({ ...f, product_url: e.target.value }))}
-              className="mt-1 w-full min-h-[40px] rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 text-sm"
+              className={cn(stockInput, 'mt-1 w-full min-h-[40px]')}
               placeholder="https://…"
             />
           </div>
@@ -908,7 +928,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={2}
-              className="mt-1 w-full rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm"
+              className={cn(stockInput, 'mt-1 w-full')}
             />
           </div>
           <label className="flex items-center gap-2 text-sm">
@@ -923,7 +943,7 @@ export const SupplierCatalogPanel: React.FC<SupplierCatalogPanelProps> = ({ stud
             type="button"
             disabled={saving}
             onClick={() => void submit()}
-            className="w-full min-h-[44px] rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm active:scale-[0.98] transition-all disabled:opacity-50"
+            className={cn(btnPrimary, 'w-full disabled:opacity-50')}
           >
             {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>

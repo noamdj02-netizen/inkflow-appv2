@@ -1,11 +1,24 @@
-import type { Appointment, ProjectRequest } from '@/types';
-import type { ProjectInboxRow, StripeDepositRow, TodaySlot } from './types';
+import { getClientAvatarForAppointment } from '@/lib/appointmentClientDisplay';
+import type { Appointment, Client, ProjectRequest } from '@/types';
+import type { DayClientPreview, ProjectInboxRow, StripeDepositRow, TodaySlot } from './types';
 
 function depositRowStatus(depositPaid: boolean | undefined): StripeDepositRow['status'] {
   return depositPaid ? 'réussi' : 'en_cours';
 }
 
 const EXCLUDED_APT = new Set<Appointment['status']>(['cancelled', 'no_show']);
+
+/** Même règles que `PlanningSidebar` / mini-calendrier agenda. */
+export function countAgendaAppointmentsForDay(apps: Appointment[], dateYmd: string): number {
+  return apps.filter((a) => a.date === dateYmd && !EXCLUDED_APT.has(a.status)).length;
+}
+
+export function countAgendaAppointmentsForMonth(apps: Appointment[], ref: Date): number {
+  const y = ref.getFullYear();
+  const m = String(ref.getMonth() + 1).padStart(2, '0');
+  const prefix = `${y}-${m}`;
+  return apps.filter((a) => a.date.startsWith(prefix) && !EXCLUDED_APT.has(a.status)).length;
+}
 
 function combineLocalDateAndTime(dateStr: string, timeStr: string): Date {
   const t = (timeStr || '09:00').trim();
@@ -40,7 +53,10 @@ function projectUrgency(slotExpiresAt: string | null | undefined): ProjectInboxR
 }
 
 /** `todayAppointments` est déjà filtré sur la date du jour par `DashboardPro`. */
-export function mapTodayAppointmentsToSlots(apps: Appointment[]): TodaySlot[] {
+export function mapTodayAppointmentsToSlots(
+  apps: Appointment[],
+  clients: readonly Client[] = []
+): TodaySlot[] {
   const slots = apps
     .filter((a) => !EXCLUDED_APT.has(a.status))
     .map((row) => {
@@ -53,15 +69,79 @@ export function mapTodayAppointmentsToSlots(apps: Appointment[]): TodaySlot[] {
         end: end.toISOString(),
         title: row.service?.trim() || 'Séance',
         clientName: row.clientName?.trim() || 'Client',
+        avatarUrl: getClientAvatarForAppointment(row, clients),
         status: mapAppointmentStatus(row.status),
       };
     });
   return slots.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 }
 
+function formatShortDayLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function appointmentToDayPreview(row: Appointment, clients: readonly Client[]): DayClientPreview {
+  return {
+    appointmentId: row.id,
+    clientId: row.clientId,
+    clientName: row.clientName?.trim() || 'Client',
+    avatarUrl: getClientAvatarForAppointment(row, clients),
+    service: row.service?.trim() || 'Séance',
+    date: row.date,
+    dateLabel: formatShortDayLabel(row.date),
+    time: (row.time || '09:00').slice(0, 5),
+    status: mapAppointmentStatus(row.status),
+  };
+}
+
+function sortAppointmentsBySchedule(a: Appointment, b: Appointment): number {
+  const byDate = a.date.localeCompare(b.date);
+  return byDate !== 0 ? byDate : (a.time || '').localeCompare(b.time || '');
+}
+
+/**
+ * Journée vide : montre 2–3 clients des jours 2 et 3 du mois courant (ex. 2 & 3 mai),
+ * sinon les prochains RDV après aujourd’hui.
+ */
+export function mapPlanningDayPreviewClients(
+  apps: Appointment[],
+  clients: readonly Client[],
+  todayYmd: string,
+  highlightMonthDays: number[] = [2, 3],
+  limit = 3
+): DayClientPreview[] {
+  const monthPrefix = todayYmd.slice(0, 7);
+  const highlightDates = new Set(
+    highlightMonthDays.map((d) => `${monthPrefix}-${String(d).padStart(2, '0')}`)
+  );
+
+  const fromHighlight = apps
+    .filter((a) => highlightDates.has(a.date) && !EXCLUDED_APT.has(a.status))
+    .sort(sortAppointmentsBySchedule)
+    .slice(0, limit)
+    .map((row) => appointmentToDayPreview(row, clients));
+
+  if (fromHighlight.length >= limit) return fromHighlight;
+
+  const upcoming = apps
+    .filter((a) => a.date > todayYmd && !EXCLUDED_APT.has(a.status))
+    .sort(sortAppointmentsBySchedule)
+    .slice(0, limit - fromHighlight.length)
+    .map((row) => appointmentToDayPreview(row, clients));
+
+  return [...fromHighlight, ...upcoming];
+}
+
 /** Aligné sur `mapTodayAppointmentsToSlots` (hors cancelled / no_show). */
-export function countActiveTodayAppointmentSlots(apps: Appointment[]): number {
-  return mapTodayAppointmentsToSlots(apps).length;
+export function countActiveTodayAppointmentSlots(
+  apps: Appointment[],
+  clients: readonly Client[] = [],
+  dateYmd?: string
+): number {
+  if (dateYmd) return countAgendaAppointmentsForDay(apps, dateYmd);
+  return mapTodayAppointmentsToSlots(apps, clients).length;
 }
 
 /**

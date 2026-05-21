@@ -92,10 +92,11 @@ import { supabase } from '../../lib/supabase';
 import { createStripeExpressLoginLink } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
 import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
+import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
 import { DashboardBentoUnified } from './bento/DashboardBentoUnified';
 import { BentoHeroCard } from './bento/BentoHeroCard';
 import { BentoPilotageQuickRow } from './bento/BentoPilotageQuickRow';
-import { countActiveTodayAppointmentSlots } from './bento/mapper';
+import { countActiveTodayAppointmentSlots, countAgendaAppointmentsForDay } from './bento/mapper';
 
 const MS_PER_DAY = 86400000;
 
@@ -410,6 +411,8 @@ export interface DashboardOverviewTabProps {
   setActiveTab: (tab: TabId) => void;
   onAlertNavigate?: (alert: { id: string; type: string }) => void;
   setSelectedAppointment: (apt: Appointment | null) => void;
+  /** Fiche client + clôture encaissement (créneau synchronisé). */
+  onOpenAppointmentFromPreview?: (appointmentId: string) => void;
   onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
   setShowBookingModal: (show: boolean) => void;
   setSelectedFlash: (f: FlashDesign | null) => void;
@@ -473,6 +476,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   setActiveTab,
   onAlertNavigate,
   setSelectedAppointment,
+  onOpenAppointmentFromPreview,
   onUpdateAppointment: _onUpdateAppointment,
   setShowBookingModal,
   setSelectedFlash,
@@ -644,12 +648,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   }, [todayAppointments, upcomingAppointments]);
   /** Aligné sur `BentoAgendaTodayTile` (hors cancelled / no_show). */
   const activeTodaySlotsCount = useMemo(
-    () => countActiveTodayAppointmentSlots(todayAppointments),
-    [todayAppointments]
+    () => countAgendaAppointmentsForDay(appointments, today),
+    [appointments, today]
   );
   const vipClients = clients.filter((c) => (c.totalSpent ?? 0) >= 500).length;
-  const appointmentsThisMonth = appointments.filter((a) =>
-    a.date.startsWith(now.toISOString().slice(0, 7))
+  const currentMonthStr = today.slice(0, 7);
+  const appointmentsThisMonth = appointments.filter(
+    (a) => a.date.startsWith(currentMonthStr) && !['cancelled', 'no_show'].includes(a.status)
   ).length;
 
   const unpaidCount = appointments.filter((a) => !a.deposit && a.status !== 'cancelled').length;
@@ -668,7 +673,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }, [now]);
-  const currentMonthStr = now.toISOString().slice(0, 7);
 
   const crmMonthRangeLabel = useMemo(() => {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1432,7 +1436,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         else setActiveTab('settings');
       }}
       todayIso={today}
+      appointments={appointments}
       todayAppointments={todayAppointments}
+      clients={clients}
       pendingRequestsCount={pendingDemandesCount}
       recentDeposits={recentDeposits}
       projectRequests={projectRequests}
@@ -1446,6 +1452,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       onOpenAgenda={() => setActiveTab('agenda')}
       onOpenRequests={() => setActiveTab('requests')}
       onNewAppointment={() => setShowBookingModal(true)}
+      onNewClient={() => setActiveTab('clients')}
+      onOpenAppointmentPreview={
+        onOpenAppointmentFromPreview ??
+        ((appointmentId) => {
+          const apt = appointments.find((a) => a.id === appointmentId);
+          if (apt) setSelectedAppointment(apt);
+        })
+      }
       onOpenFlashTab={() => setActiveTab('flash')}
     />
   ) : null;
@@ -1458,7 +1472,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
         {!isMdUp && (
-          <motion.div className="ink-oled-stack ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-5 overflow-x-hidden bg-zinc-50 pb-8 antialiased font-sans [-webkit-font-smoothing:antialiased] dark:bg-black sm:gap-6">
+          <motion.div className="ink-oled-stack ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-5 overflow-x-hidden bg-zinc-50 pb-0 antialiased font-sans [-webkit-font-smoothing:antialiased] dark:bg-black sm:gap-6 sm:pb-8">
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
             <div className="px-0 pt-0 pb-0">
               <motion.div className="flex flex-col gap-4 sm:gap-3" {...iosSpring(0)}>
@@ -1780,12 +1794,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                             className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors active:bg-zinc-50 dark:active:bg-zinc-900/40"
                           >
                             <div className="flex min-w-0 items-center gap-3">
-                              <div
-                                className={`flex flex-col items-center justify-center size-11 rounded-xl font-mono tabular-nums ${tint.timeBg}`}
-                              >
-                                <span className={`text-sm font-bold tracking-tight ${tint.hour}`}>
-                                  {timeLabel}
-                                </span>
+                              <div className="relative size-11 shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-black/[0.04] dark:bg-zinc-800/90 dark:ring-white/[0.06]">
+                                <ClientPhotoAvatar
+                                  name={apt.clientName}
+                                  src={getClientAvatarForAppointment(apt, clients)}
+                                  className="size-full"
+                                  textClassName="text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-300"
+                                  imgClassName="rounded-full"
+                                />
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">

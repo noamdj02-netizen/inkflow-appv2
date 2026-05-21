@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CalendarDays,
   CheckCircle2,
@@ -11,6 +11,8 @@ import {
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { sendAftercareEmail } from '../../lib/sendNotification';
 import type { ConsentFormPreset } from '../../lib/consentFormPresets';
+import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
+import { formatAppointmentSlotLabel } from '../../lib/appointmentSessionSync';
 import type { Appointment } from '../../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { hapticSuccess } from '../../lib/haptics';
@@ -32,8 +34,14 @@ interface ClientPreviewDrawerProps {
   inkflowMessagingThreadId?: string | null;
   onOpenInkflowDiscussion?: () => void;
   onOpenCloseout?: (appointment: Appointment) => void;
+  /** Accueil Bento : ouvre l’encaissement sans fermer la fiche client. */
+  openCloseoutOnMount?: boolean;
   onOpenAgenda?: () => void;
   onPromptNewProject?: () => void;
+  /** Recharge les PDF dossier client après encaissement. */
+  documentsRefreshKey?: number;
+  /** Scroll vers la section Documents après encaissement réussi. */
+  documentsScrollTrigger?: number;
 }
 
 export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
@@ -50,10 +58,26 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   inkflowMessagingThreadId = null,
   onOpenInkflowDiscussion,
   onOpenCloseout,
+  openCloseoutOnMount = false,
   onOpenAgenda,
   onPromptNewProject,
+  documentsRefreshKey = 0,
+  documentsScrollTrigger = 0,
 }) => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const closeoutAutoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      closeoutAutoOpenedRef.current = false;
+      return;
+    }
+    if (!openCloseoutOnMount || closeoutAutoOpenedRef.current || !appointment || !onOpenCloseout) {
+      return;
+    }
+    closeoutAutoOpenedRef.current = true;
+    onOpenCloseout(appointment);
+  }, [isOpen, openCloseoutOnMount, appointment, onOpenCloseout]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,7 +121,6 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   const handleOpenCloseout = () => {
     if (!appointment || !onOpenCloseout) return;
     onOpenCloseout(appointment);
-    onClose();
   };
   const handleOpenAgenda = () => {
     if (!onOpenAgenda) return;
@@ -106,6 +129,12 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   };
 
   const showAppointmentActions = Boolean(appointment && onUpdateAppointment);
+  const remainingBalance = appointment != null ? appointmentRemainingBalanceEuros(appointment) : 0;
+  const showCompletedBalance =
+    appointment?.status === 'completed' &&
+    Boolean(onOpenCloseout) &&
+    remainingBalance >= 0.01 &&
+    !appointment.balancePaidAt?.trim();
   const phoneDisplay = (
     appointment?.clientPhone ||
     data.appointment.clientPhone ||
@@ -165,7 +194,9 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
               Aperçu client
             </h2>
             <p className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm mt-1 max-w-[16rem] leading-snug">
-              {artistName ? (
+              {appointment ? (
+                <span className="capitalize">{formatAppointmentSlotLabel(appointment)}</span>
+              ) : artistName ? (
                 <>
                   Rendez-vous avec{' '}
                   <span className="text-[var(--text-secondary)] font-medium">{artistName}</span>
@@ -205,6 +236,8 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
               onOpenInkflowDiscussion={onOpenInkflowDiscussion}
               onOpenAgenda={onOpenAgenda}
               onPromptNewProject={onPromptNewProject}
+              documentsRefreshKey={documentsRefreshKey}
+              documentsScrollTrigger={documentsScrollTrigger}
             />
           </div>
 
@@ -267,14 +300,26 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
                 </button>
               )}
               {appointment.status === 'completed' && (
-                <button
-                  type="button"
-                  onClick={handleComplete}
-                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98]"
-                >
-                  <CircleCheck className="w-4 h-4 shrink-0" />
-                  Renvoyer l’aftercare
-                </button>
+                <div className="flex flex-col gap-2">
+                  {showCompletedBalance && (
+                    <button
+                      type="button"
+                      onClick={handleOpenCloseout}
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all active:scale-[0.98]"
+                    >
+                      <ReceiptText className="w-4 h-4 shrink-0" />
+                      Encaisser le solde ({remainingBalance.toFixed(0)} €)
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleComplete}
+                    className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98]"
+                  >
+                    <CircleCheck className="w-4 h-4 shrink-0" />
+                    Renvoyer l’aftercare
+                  </button>
+                </div>
               )}
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {telHref ? (

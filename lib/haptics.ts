@@ -55,3 +55,13 @@ export function hapticTabChange(): void {
   if (!canVibrate()) return;
   navigator.vibrate(8);
 }
+
+export function hapticSuccessNative(): void {
+  if (postInkflowNativeMessage('inkflow_haptic_success')) return;
+  hapticSuccess();
+}
+
+export function hapticWarningNative(): void {
+  if (postInkflowNativeMessage('inkflow_haptic_warning')) return;
+  hapticWarning();
+}

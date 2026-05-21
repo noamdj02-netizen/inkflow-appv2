@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useInkflowGestures } from '@/lib/motion/inkflowGestures';
 import {
   MapPin, Phone, Mail, Clock, Instagram, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
@@ -133,9 +134,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [studioFavorite, setStudioFavorite] = useState(false);
   const activeTheme = getVitrineTheme(studio?.theme ?? 'light') ?? getVitrineTheme('light')!;
   const primaryColor = activeTheme?.accentColor ?? '#171717';
-  const vitrineReduce = useReducedMotion();
-  const vitrineTap = vitrineReduce ? undefined : { scale: 0.98 };
-  const vitrineTapSoft = vitrineReduce ? undefined : { scale: 0.99 };
+  const { tap: vitrineTap, tapSoft: vitrineTapSoft, reduced: vitrineReduce } =
+    useInkflowGestures();
 
   const loadVitrine = React.useCallback(() => {
     setLoading(true);

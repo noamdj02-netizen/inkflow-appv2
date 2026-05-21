@@ -75,6 +75,10 @@ interface ClientPreviewPanelProps {
   onOpenAgenda?: () => void;
   /** Redirige vers la boîte Demandes > Briefs (création / suivi). */
   onPromptNewProject?: () => void;
+  /** Recharge la liste des PDF dossier client (après encaissement). */
+  documentsRefreshKey?: number;
+  /** > 0 après encaissement : scroll vers Documents dans le drawer. */
+  documentsScrollTrigger?: number;
 }
 
 const STATUS_LABELS: Record<Appointment['status'], string> = {
@@ -336,9 +340,25 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
   onOpenInkflowDiscussion,
   onOpenAgenda,
   onPromptNewProject,
+  documentsRefreshKey = 0,
+  documentsScrollTrigger = 0,
 }) => {
   const toast = useToast();
   const reduceMotion = useReducedMotion();
+  const documentsSectionRef = React.useRef<HTMLElement | null>(null);
+  const [documentsHighlight, setDocumentsHighlight] = useState(false);
+
+  useEffect(() => {
+    if (documentsScrollTrigger < 1) return;
+    const el = documentsSectionRef.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      setDocumentsHighlight(true);
+      window.setTimeout(() => setDocumentsHighlight(false), 2200);
+    }, 320);
+    return () => window.clearTimeout(t);
+  }, [documentsScrollTrigger, reduceMotion]);
   const {
     appointment,
     client,
@@ -515,7 +535,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
     }
     if (primaryConsentTargetSynthetic) {
       toast.info(
-        'Ce rendez-vous est encore une demande. Crée un RDV dans l’agenda ou ouvre la messagerie pour envoyer le consentement.'
+        'Ce rendez-vous est encore une demande. Crée un RDV dans l’agenda ou ouvre le centre de suivi pour envoyer le consentement.'
       );
       onOpenInkflowDiscussion?.();
       return;
@@ -1029,7 +1049,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                       className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-300/80 bg-white px-4 text-sm font-semibold text-orange-950 transition-all active:scale-[0.98] dark:border-orange-500/40 dark:bg-zinc-900 dark:text-orange-100"
                     >
                       <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden />
-                      Ouvrir la messagerie
+                      Ouvrir le suivi client
                     </button>
                   ) : null}
                 </div>
@@ -1171,22 +1191,34 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         </motion.section>
 
         {/* —— Dossier : devis & reçus PDF —— */}
-        {client?.id && (
-          <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+        {(client?.id || appointment.clientId?.trim()) && (
+          <motion.section
+            ref={documentsSectionRef}
+            variants={sectionVariants}
+            className={`${cardSurface} p-6 transition-shadow duration-500 ${
+              documentsHighlight
+                ? 'ring-2 ring-zinc-300/80 dark:ring-zinc-600/80 shadow-[0_0_24px_rgba(255,255,255,0.06)]'
+                : ''
+            }`}
+          >
             <h4 className={`${SECTION_TITLE} flex items-center gap-2`}>
-              <FileText className="size-4 text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+              <FileText className={`size-4 ${ICON_FINE}`} strokeWidth={1.75} />
               Documents (devis & reçus)
             </h4>
             <div className="mt-4">
-              <ClientDossierDocuments studioId={studioId} clientId={client.id} />
+              <ClientDossierDocuments
+                studioId={studioId}
+                clientId={(client?.id || appointment.clientId || '').trim()}
+                refreshKey={documentsRefreshKey}
+              />
             </div>
           </motion.section>
         )}
 
-        {/* —— Discussion InkFlow —— */}
+        {/* —— Suivi client (historique d’activité, plus de chat intégré) —— */}
         {showInkflowClientDiscussion && onOpenInkflowDiscussion && (
           <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
-            <h4 className={SECTION_TITLE}>Messagerie</h4>
+            <h4 className={SECTION_TITLE}>Suivi client</h4>
             <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
               Ce client peut être contacté via l&apos;app client InkFlow.
             </p>
@@ -1196,7 +1228,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               className="mt-4 flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-semibold text-white transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-blue-500"
             >
               <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden />
-              {inkflowMessagingThreadId ? 'Ouvrir la discussion' : 'Aller à la messagerie'}
+              {inkflowMessagingThreadId ? 'Voir l’activité' : 'Centre de suivi'}
             </button>
           </motion.section>
         )}

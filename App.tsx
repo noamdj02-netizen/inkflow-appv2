@@ -20,6 +20,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { AppSplashGate } from './components/auth/AppSplashGate';
+import { AppPageTransition } from './components/motion/AppPageTransition';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -462,11 +463,19 @@ const Router: React.FC = () => {
   );
 
   const showGlobalOfflineBanner = currentPath !== '/dashboard' && !currentPath.startsWith('/admin');
+  const pathOnly = currentPath.split('?')[0];
+  const skipGlobalPageTransition = pathOnly === '/dashboard' || pathOnly.startsWith('/admin');
+
+  const pageShell = <Suspense fallback={<FullScreenSpinner />}>{PageWithGuard}</Suspense>;
 
   return (
     <>
       {showGlobalOfflineBanner ? <OfflineBanner /> : null}
-      <Suspense fallback={<FullScreenSpinner />}>{PageWithGuard}</Suspense>
+      {skipGlobalPageTransition ? (
+        pageShell
+      ) : (
+        <AppPageTransition routeKey={pathOnly}>{pageShell}</AppPageTransition>
+      )}
     </>
   );
 };

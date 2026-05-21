@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Slot } from 'radix-ui';
 
+import { inkflowGestureTap, inkflowGestureTransition } from '@/lib/motion/inkflowGestures';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
@@ -49,15 +51,33 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
   }) {
-  const Comp = asChild ? Slot.Root : 'button';
+  const reduceMotion = useReducedMotion();
+  const classes = cn(buttonVariants({ variant, size, className }));
+
+  if (asChild) {
+    return (
+      <Slot.Root
+        data-slot="button"
+        data-variant={variant}
+        data-size={size}
+        className={classes}
+        {...props}
+      />
+    );
+  }
+
+  const { type = 'button', ...buttonProps } = props;
 
   return (
-    <Comp
+    <motion.button
+      type={type}
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      whileTap={inkflowGestureTap(reduceMotion)}
+      transition={inkflowGestureTransition()}
+      className={classes}
+      {...buttonProps}
     />
   );
 }

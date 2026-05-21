@@ -1859,22 +1859,54 @@ textarea {
   }
 
   /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
-     Réserve bas : dock resserrée (~34px) + FAB, alignée au padding-bottom ajusté */
+     Réserve bas : dock fixe + FAB + badges (évite contenu masqué sous la barre). */
+  .dashboard-pro-shell {
+    --inkflow-mobile-dock-reserve: 7.5rem; /* ~120px : nav 48px + labels + safe-area plancher */
+  }
+
   .dashboard-pro-shell .app-shell-content {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-    /* Navigateur mobile : dock + FAB un peu plus hauts ; enveloppe Inkflow Pro = réserve réduite */
-    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
-    scroll-padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 1.25rem
+    ) !important;
+    scroll-padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 1.25rem
+    );
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Accueil Bento : contenu long (planning + clients) — marge bas un peu plus généreuse */
+  .dashboard-pro-shell .app-shell-content.dashboard-overview-bg {
+    padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 2rem
+    ) !important;
+    scroll-padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 2rem
+    );
+  }
+
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell {
+    --inkflow-mobile-dock-reserve: 4.75rem;
+  }
+
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-content {
-    /* Hauteur effective du dock = 40px (boutons) + max(8px, safe-area).
-       On laisse +8px de respiration sous le dernier élément scrollable. */
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
-    scroll-padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 1rem
+    ) !important;
+    scroll-padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 1rem
+    );
+  }
+
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-content.dashboard-overview-bg {
+    padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 1.5rem
+    ) !important;
+    scroll-padding-bottom: calc(
+      var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 1.5rem
+    );
   }
 
   /* Fond accueil mobile : neutre (pas de halos bleu / bande au-dessus du hero) */

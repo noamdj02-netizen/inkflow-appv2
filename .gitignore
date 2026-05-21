@@ -57,6 +57,10 @@ supabase/.temp
 # Sentry Config File
 .env.sentry-build-plugin
 
+# Artefact Figma (scripts/build-figma-logo-code.mjs) — ne pas bundler
+.figma-logo-code.js
+.tmp-logo-b64.txt
+
 # Repomix (skill repomix-explorer) — packs codebase pour analyse IA
 .repomix/
 repomix-output.xml

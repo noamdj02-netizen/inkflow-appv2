@@ -114,12 +114,15 @@ const HELP_COPY: Record<InkflowHelpContext, { title: string; intro: string; bloc
       ],
     },
     messaging: {
-      title: 'Messagerie',
-      intro: 'Échanges avec les prospects et clients.',
+      title: 'Centre de suivi',
+      intro: 'Historique des actions sur vos demandes (consentement, paiements).',
       blocks: [
         {
-          title: 'À savoir',
-          bullets: ['Instagram peut être connecté depuis Paramètres → Messagerie si disponible.'],
+          title: 'Contact client',
+          bullets: [
+            'Utilisez WhatsApp ou l’e-mail depuis chaque ligne — ce n’est plus un chat intégré.',
+            'Instagram DM : Paramètres → Instagram (optionnel), si vous l’utilisez.',
+          ],
         },
       ],
     },
