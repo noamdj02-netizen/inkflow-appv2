@@ -20,6 +20,27 @@ import type {
 } from 'react-native-webview/lib/WebViewTypes';
 
 const WEB_APP_BASE_URL = 'https://app.ink-flow.me';
+
+function normalizeOpenUrl(url: string): string {
+  try {
+    const u = new URL(url.trim());
+    u.hostname = u.hostname.replace(/\.+$/, '');
+    return u.toString();
+  } catch {
+    return url.trim();
+  }
+}
+
+function shouldStayInWebView(url: string): boolean {
+  try {
+    const u = new URL(normalizeOpenUrl(url));
+    const host = u.hostname.replace(/\.+$/, '').toLowerCase();
+    if (!ALLOWED_WEB_HOSTS.has(host)) return false;
+    return u.pathname.startsWith('/studio/') || u.pathname.startsWith('/book/');
+  } catch {
+    return false;
+  }
+}
 const WEB_APP_URL = `${WEB_APP_BASE_URL}/dashboard`;
 const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
@@ -179,24 +200,25 @@ async function registerExpoPushWithStudio(accessToken: string, studioId: string)
 }
 
 async function openExternalUrl(url: string): Promise<void> {
-  if (SYSTEM_SCHEMES.some((scheme) => url.startsWith(scheme))) {
-    await Linking.openURL(url);
+  const normalized = normalizeOpenUrl(url);
+  if (SYSTEM_SCHEMES.some((scheme) => normalized.startsWith(scheme))) {
+    await Linking.openURL(normalized);
     return;
   }
 
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(normalized);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       // Schémas type inkflowpro:// — jamais WebBrowser/Safari (page « adresse non valide »).
-      await Linking.openURL(url);
+      await Linking.openURL(normalized);
       return;
     }
   } catch {
-    await Linking.openURL(url);
+    await Linking.openURL(normalized);
     return;
   }
 
-  await WebBrowser.openBrowserAsync(url, {
+  await WebBrowser.openBrowserAsync(normalized, {
     presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
   });
 }
@@ -397,9 +419,14 @@ export default function WebAppShell() {
 
   const handleOpenWindow = useCallback((event: WebViewOpenWindowEvent) => {
     const { targetUrl } = event.nativeEvent;
-    if (targetUrl) {
-      void openExternalUrl(targetUrl);
+    if (!targetUrl) return;
+    const normalized = normalizeOpenUrl(targetUrl);
+    if (shouldStayInWebView(normalized)) {
+      setLoadError(null);
+      setWebAppUrl(normalized);
+      return;
     }
+    void openExternalUrl(normalized);
   }, []);
 
   const handleLoadStart = useCallback(() => {

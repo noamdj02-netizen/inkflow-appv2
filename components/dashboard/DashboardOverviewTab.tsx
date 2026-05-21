@@ -70,7 +70,7 @@ import { DashboardOverviewClientsPanel } from './overview/DashboardOverviewClien
 import { markOpenInboxAfterDemo, setDemoInboxPreviewActive } from '@/lib/demoInboxPreview';
 import { BADGES, BUTTONS, KPI_SHELLS, TYPOGRAPHY } from './DashboardOverviewDesignSystem';
 import { IconBox } from '../ui/IconBox';
-import { getVitrineShareUrl, LANDING_PRICING_URL } from '../../lib/urls';
+import { getVitrineShareUrl, LANDING_PRICING_URL, openStudioVitrine } from '../../lib/urls';
 import { getVitrineSlug } from '../../lib/vitrineStorage';
 import {
   DASHBOARD_OVERVIEW_HERO_ROTATE_MS,
@@ -1376,8 +1376,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       studioSlug != null && studioSlug.trim() !== ''
         ? studioSlug.trim()
         : getVitrineSlug(user?.studioName ?? '');
-    if (!slug) return;
-    window.open(getVitrineShareUrl(slug), '_blank', 'noopener,noreferrer');
+    openStudioVitrine(slug);
   }, [studioSlug, user?.studioName]);
 
   const vitrineShareUrl = useMemo(() => {

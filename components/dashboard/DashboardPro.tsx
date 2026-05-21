@@ -168,7 +168,7 @@ import {
 } from '../../lib/vitrineStorage';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
-import { getVitrineShareUrl } from '../../lib/urls';
+import { getVitrineShareUrl, openStudioVitrine } from '../../lib/urls';
 import { cn, safeJsonParse } from '../../lib/utils';
 import {
   dashboardListPanel,
@@ -1111,7 +1111,7 @@ export const DashboardPro: React.FC = () => {
             studioSlug != null && studioSlug !== ''
               ? studioSlug
               : getVitrineSlug(user?.studioName ?? '');
-          window.open(getVitrineShareUrl(slug), '_blank');
+          openStudioVitrine(slug);
         },
         Icon: <ExternalLink className="h-4 w-4" aria-hidden />,
       },
