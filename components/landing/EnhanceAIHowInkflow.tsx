@@ -2,48 +2,53 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Palette, Zap } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { LandingSectionHeader, LANDING_SURFACE } from './landingUi';
 
 export const EnhanceAIHowInkflow: React.FC = () => {
   const { t } = useLanguage();
   const items = [
-    { icon: Calendar, titleKey: 'how.item1.title', textKey: 'how.item1.text', gradient: 'from-blue-500 to-blue-600' },
-    { icon: Palette, titleKey: 'how.item2.title', textKey: 'how.item2.text', gradient: 'from-blue-500 to-sky-600' },
-    { icon: Zap, titleKey: 'how.item3.title', textKey: 'how.item3.text', gradient: 'from-sky-500 to-blue-600' },
+    { icon: Calendar, titleKey: 'how.item1.title', textKey: 'how.item1.text' },
+    { icon: Palette, titleKey: 'how.item2.title', textKey: 'how.item2.text' },
+    { icon: Zap, titleKey: 'how.item3.title', textKey: 'how.item3.text' },
   ];
-  return (
-    <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
-        >
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">{t('how.badge')}</p>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-neutral-800">
-            {t('how.title')}
-          </h2>
-        </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+  return (
+    <section
+      id="comment-ca-marche"
+      className="border-t border-zinc-200/60 bg-white px-4 py-16 sm:px-6 sm:py-24 lg:px-10 lg:py-28"
+    >
+      <div className="mx-auto max-w-[1400px]">
+        <LandingSectionHeader badge={t('how.badge')} title={t('how.title')} />
+
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
           {items.map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 24 }}
+            <motion.article
+              key={item.titleKey}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="group text-center"
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: i * 0.08 }}
+              className={`${LANDING_SURFACE} flex min-w-0 flex-col gap-5 p-6 sm:p-8 ${
+                i === 2 ? 'lg:col-span-2 lg:max-w-[calc(50%-1rem)]' : ''
+              }`}
             >
-              <div
-                className={`w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform duration-300`}
-              >
-                <item.icon className="w-10 h-10 text-white" />
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+                  <item.icon className="h-6 w-6" strokeWidth={2} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold tracking-tight text-zinc-950 sm:text-xl">
+                    {t(item.titleKey)}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-600 sm:text-base">
+                    {t(item.textKey)}
+                  </p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-neutral-800 mb-3">{t(item.titleKey)}</h3>
-              <p className="text-neutral-600 leading-relaxed">{t(item.textKey)}</p>
-            </motion.div>
+              <span className="font-mono text-[11px] font-medium tabular-nums text-zinc-400">
+                0{i + 1}
+              </span>
+            </motion.article>
           ))}
         </div>
       </div>

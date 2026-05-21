@@ -5,7 +5,7 @@ const faqs = [
   {
     question: "Comment fonctionne l'essai gratuit ?",
     answer:
-      "Vous pouvez tester InkFlow pendant 14 jours sans engagement. Aucune carte bancaire n'est requise pour commencer. À la fin de l'essai, vous choisissez le plan qui vous convient.",
+      "Vous pouvez tester InkFlow pendant 1 mois sans engagement. Aucune carte bancaire n'est requise pour commencer. À la fin de l'essai, vous choisissez le plan qui vous convient.",
   },
   {
     question: 'Puis-je connecter mon compte Stripe existant ?',
@@ -30,7 +30,7 @@ const faqs = [
   {
     question: 'Comment contacter le support ?',
     answer:
-      "Depuis l'app, lien Aide, mail support@ink-flow.me, ou le bouton Contact dans le menu. Pour un bug, précisez votre navigateur, l'URL et une capture d'écran si possible.",
+      "Depuis l'app, lien Aide, mail contact@ink-flow.me, ou Signaler un bug dans le dashboard. Pour un bug, précisez votre navigateur, l'URL et une capture d'écran si possible.",
   },
   {
     question: 'Puis-je annuler mon abonnement ?',

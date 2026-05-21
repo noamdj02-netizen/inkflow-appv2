@@ -17,6 +17,7 @@ import {
   Users,
   Settings,
   LogOut,
+  LifeBuoy,
   ChevronRight,
   ChevronLeft,
   X,
@@ -65,6 +66,10 @@ import { useInkflowNativeShellSessionBridge } from '../../hooks/useInkflowNative
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
+import { useDashboardQuickAccess } from '../../hooks/useDashboardQuickAccess';
+import { DashboardSidebarQuickAccess } from './DashboardSidebarQuickAccess';
+import type { QuickAccessItemId } from '../../lib/dashboardQuickAccess';
+import { countAgendaAppointmentsForDay } from './bento/mapper';
 import { useNotificationSync } from '../../hooks/useNotificationSync';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -123,6 +128,7 @@ import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
 import { PendingCriticalWritesBanner } from './PendingCriticalWritesBanner';
 import { isInkflowProShellClient } from '../../lib/nativeWebShell';
+import { optimizeDashboardHeroImageUrl } from '../../lib/optimizeDashboardHeroImageUrl';
 import { isJustSignedUp } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
@@ -329,7 +335,7 @@ const tabs: {
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
   { id: 'flash', label: 'Galerie Flash', icon: <Zap {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
-  { id: 'messaging', label: 'Messagerie', icon: <Inbox {...iconProps} /> },
+  { id: 'messaging', label: 'Suivi client', icon: <Inbox {...iconProps} /> },
   { id: 'portfolio', label: 'Portfolio', icon: <LayoutGrid {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
   // { id: 'referral', label: 'Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
@@ -342,7 +348,7 @@ const SIDEBAR_NAV_ROW =
 const SIDEBAR_NAV_ACTIVE =
   'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-l-blue-600';
 const SIDEBAR_NAV_IDLE =
-  'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 border-l-transparent';
+  'text-zinc-900 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 border-l-transparent';
 
 type SettingsTabId =
   | 'home'
@@ -550,7 +556,6 @@ export const DashboardPro: React.FC = () => {
     })
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarFavTab, setSidebarFavTab] = useState<'favorites' | 'recent'>('favorites');
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     finance: false,
     planning: false,
@@ -695,8 +700,9 @@ export const DashboardPro: React.FC = () => {
         };
       case 'messaging':
         return {
-          title: 'Messagerie',
-          description: 'Échanges avec vos clients et suivi des conversations.',
+          title: 'Suivi client',
+          description:
+            'Conversations, relances et historique des échanges avec vos clients avant et après la séance.',
         };
       case 'portfolio':
         return {
@@ -1017,6 +1023,27 @@ export const DashboardPro: React.FC = () => {
     };
   }, [dashboardPreferences, isCollaboratorUser, myArtistPermissions]);
 
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }, []);
+
+  const todaySessionCount = useMemo(
+    () => countAgendaAppointmentsForDay(appointments, todayIso),
+    [appointments, todayIso]
+  );
+
+  const quickAccess = useDashboardQuickAccess({
+    studioId: studioId ?? undefined,
+    userId: user?.id,
+    activeTab,
+    demandes,
+    todaySessionCount,
+    moduleFlags: { planning: moduleFlags.planning, finance: moduleFlags.finance },
+  });
+
   const visibleSettingsTabs = useMemo(() => {
     return SETTINGS_MAIN_TABS.filter((tab) => {
       if (
@@ -1050,6 +1077,47 @@ export const DashboardPro: React.FC = () => {
       action();
     },
     [isRestricted, subscriptionStatus, toast]
+  );
+
+  const handleQuickAccessNavigate = useCallback(
+    (id: QuickAccessItemId) => {
+      handleSidebarNav(() => {
+        switch (id) {
+          case 'overview':
+            setActiveTab('overview');
+            break;
+          case 'analytics':
+            setActiveTab('analytics');
+            break;
+          case 'requests':
+            setActiveTab('requests');
+            setRequestsSubTab('inbox');
+            break;
+          case 'agenda':
+            setActiveTab('agenda');
+            break;
+          case 'appointments':
+            setActiveTab('appointments');
+            break;
+          case 'clients':
+            setActiveTab('clients');
+            break;
+          case 'finance':
+            setActiveTab('finance');
+            setFinanceView('revenus');
+            break;
+          case 'messaging':
+            setActiveTab('messaging');
+            break;
+          case 'settings':
+            setActiveTab('settings');
+            setSettingsTab('home');
+            break;
+        }
+        setSidebarOpen(false);
+      });
+    },
+    [handleSidebarNav]
   );
 
   const mobileFabActionOptions = useMemo((): FloatingActionMenuOption[] => {
@@ -1096,7 +1164,7 @@ export const DashboardPro: React.FC = () => {
         Icon: <Package className="h-4 w-4" aria-hidden />,
       },
       {
-        label: 'Messagerie',
+        label: 'Suivi client',
         onClick: () => {
           handleSidebarNav(() => setActiveTab('messaging'));
         },
@@ -1898,6 +1966,19 @@ export const DashboardPro: React.FC = () => {
   }, [user?.email, user?.studioName, studioSlug, activeTab, settingsTab]);
 
   useEffect(() => {
+    const href = optimizeDashboardHeroImageUrl(vitrineData?.coverImage ?? null, 720);
+    if (!href || typeof document === 'undefined') return;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    document.head.appendChild(link);
+    return () => {
+      link.remove();
+    };
+  }, [vitrineData?.coverImage]);
+
+  useEffect(() => {
     if (!studioId || !useSupabase) return;
     const loadThreads = async () => {
       const { data: rows } = await supabase
@@ -2648,98 +2729,17 @@ export const DashboardPro: React.FC = () => {
             </button>
           </div>
 
-          {/* Favoris & Récents — pill container (aligné charte Paramètres / SaaS) */}
-          <div className="relative z-10 px-4 pt-4 pb-2">
-            <div
-              className="flex rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 gap-0.5 mb-2"
-              role="tablist"
-              aria-label="Raccourcis sidebar"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sidebarFavTab === 'favorites'}
-                onClick={() => setSidebarFavTab('favorites')}
-                className={`flex-1 min-h-[40px] rounded-xl text-xs font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 ${
-                  sidebarFavTab === 'favorites'
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
-                }`}
-              >
-                Favoris
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sidebarFavTab === 'recent'}
-                onClick={() => setSidebarFavTab('recent')}
-                className={`flex-1 min-h-[40px] rounded-xl text-xs font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 ${
-                  sidebarFavTab === 'recent'
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
-                }`}
-              >
-                Récents
-              </button>
-            </div>
-            <div className="space-y-0.5">
-              {sidebarFavTab === 'favorites' ? (
-                <>
-                  <button
-                    onClick={() =>
-                      handleSidebarNav(() => {
-                        setActiveTab('overview');
-                        setSidebarOpen(false);
-                      })
-                    }
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
-                    Vue d'ensemble
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleSidebarNav(() => {
-                        setActiveTab('agenda');
-                        setSidebarOpen(false);
-                      })
-                    }
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
-                    Rendez-vous
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() =>
-                      handleSidebarNav(() => {
-                        setActiveTab('clients');
-                        setSidebarOpen(false);
-                      })
-                    }
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400/50 flex-shrink-0" />
-                    Clients
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleSidebarNav(() => {
-                        setActiveTab('requests');
-                        setSidebarOpen(false);
-                      })
-                    }
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400/50 flex-shrink-0" />
-                    Demandes
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+          <DashboardSidebarQuickAccess
+            pins={quickAccess.pins}
+            recents={quickAccess.recents}
+            insight={quickAccess.insight}
+            activeQuickId={quickAccess.activeQuickId}
+            onNavigate={handleQuickAccessNavigate}
+            onTogglePin={quickAccess.togglePin}
+            getBadge={(id) =>
+              id === 'requests' && demandes.total > 0 ? demandes.total : undefined
+            }
+          />
 
           <div className="mx-4 border-t border-zinc-100 dark:border-zinc-800/50 my-1" />
 
@@ -3097,7 +3097,7 @@ export const DashboardPro: React.FC = () => {
                   }`}
                 >
                   <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left">Messagerie</span>
+                  <span className="flex-1 text-left">Suivi client</span>
                   {messagingUnreadTotal > 0 && (
                     <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
                       {messagingUnreadTotal > 99 ? '99+' : messagingUnreadTotal}
@@ -3379,6 +3379,13 @@ export const DashboardPro: React.FC = () => {
               <span>Parrainage</span>
             </a>
             */}
+            <a
+              href="/dashboard/signalement"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
+            >
+              <LifeBuoy className="w-4 h-4 flex-shrink-0" strokeWidth={1.75} />
+              <span>Signaler un bug</span>
+            </a>
             <button
               onClick={() => void logout()}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
@@ -3482,8 +3489,8 @@ export const DashboardPro: React.FC = () => {
                   ? 'px-2.5 gap-1 sm:gap-4 min-h-0 max-sm:py-0.5 sm:min-h-0 h-9 sm:h-14 max-md:border-b-0 max-md:shadow-none border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 md:shadow-[0_1px_0_0_rgba(15,23,42,0.06)] md:dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
                   : 'px-4 gap-2 sm:gap-4 min-h-[48px] sm:min-h-0 h-11 sm:h-14 max-md:border-b-0 max-md:shadow-none border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 md:shadow-[0_1px_0_0_rgba(15,23,42,0.06)] md:dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
                 : isInkflowProShell
-                  ? 'dashboard-pro-header-dark px-2.5 sm:px-5 md:px-6 gap-1.5 sm:gap-4 h-11 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
-                  : 'dashboard-pro-header-dark px-3 sm:px-5 md:px-6 gap-2 sm:gap-4 h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
+                  ? 'dashboard-pro-header-dark px-2.5 sm:px-5 md:px-6 gap-1.5 sm:gap-4 h-9 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
+                  : 'dashboard-pro-header-dark px-3 sm:px-5 md:px-6 gap-2 sm:gap-4 h-10 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
             }`}
           >
             <div
@@ -3496,7 +3503,7 @@ export const DashboardPro: React.FC = () => {
                   setSidebarOpen(true);
                   setHeaderMoreMenuOpen(false);
                 }}
-                className="lg:hidden p-2 -ml-0.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+                className="lg:hidden p-1.5 -ml-0.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors duration-150"
                 aria-label="Ouvrir le menu"
               >
                 <Menu
@@ -3666,6 +3673,15 @@ export const DashboardPro: React.FC = () => {
                         <HelpCircle className="w-5 h-5 shrink-0 text-zinc-500" />
                         Aide et raccourcis
                       </button>
+                      <a
+                        href="/dashboard/signalement"
+                        role="menuitem"
+                        onClick={() => setHeaderMoreMenuOpen(false)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/80 active:scale-[0.99] transition-colors"
+                      >
+                        <LifeBuoy className="w-5 h-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
+                        Signaler un bug
+                      </a>
                       <div className="border-t border-zinc-100 py-1 dark:border-zinc-800">
                         <AppearanceMenuOptions onSelect={() => setHeaderMoreMenuOpen(false)} />
                       </div>

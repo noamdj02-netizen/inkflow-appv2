@@ -63,8 +63,8 @@ export const HeroSection: React.FC = () => {
               </a>
             </div>
             <p className="mt-4 flex items-center justify-center lg:justify-start gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-              <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />
-              14 jours d&apos;essai
+              <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />1 mois d&apos;essai
+              gratuit
             </p>
           </div>
 

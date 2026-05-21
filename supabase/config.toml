@@ -118,3 +118,6 @@ verify_jwt = false
 # Facture PDF post-paiement — JWT ou service role (handler).
 [functions.generate-payment-invoice]
 verify_jwt = false
+
+[functions.submit-product-feedback]
+verify_jwt = false

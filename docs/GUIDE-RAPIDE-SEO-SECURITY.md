@@ -26,6 +26,7 @@ cp SEO-Component-InkFlow.tsx components/SEO.tsx
 ```
 
 Utilisez-le sur chaque page :
+
 ```tsx
 import SEO from '@/components/SEO';
 
@@ -56,6 +57,7 @@ cp Security-Middleware-InkFlow.ts middleware.ts
 ### ÉTAPE 4 : Variables d'environnement
 
 Créez `.env.local` :
+
 ```bash
 # Générez un secret fort
 openssl rand -base64 32
@@ -126,6 +128,7 @@ Mettez à jour `next.config.js` avec le contenu de `NextJS-Config-InkFlow.ts`
 ## 📊 TESTS À FAIRE
 
 ### SEO
+
 ```bash
 # Lighthouse
 lighthouse https://ink-flow.me --view
@@ -138,6 +141,7 @@ lighthouse https://ink-flow.me --view
 ```
 
 ### Sécurité
+
 ```bash
 # Audit npm
 npm audit
@@ -154,16 +158,18 @@ npm audit
 ## 🎨 EXEMPLES PAR PAGE
 
 ### Page d'accueil
+
 ```tsx
 <SEO
   title="InkFlow - Logiciel de gestion pour tatoueurs professionnels"
-  description="Gérez vos rendez-vous, clients et portfolio de tatouage en un seul endroit. Essai gratuit 14 jours."
+  description="Gérez vos rendez-vous, clients et portfolio de tatouage en un seul endroit. Essai gratuit 1 mois."
   canonical="/"
   schema={[organizationSchema, websiteSchema]}
 />
 ```
 
 ### Page vitrine tatoueur (publique)
+
 ```tsx
 <SEO
   title={`${studioName} - Tatoueur ${city}`}
@@ -175,10 +181,11 @@ npm audit
 ```
 
 ### Page dashboard (privée)
+
 ```tsx
 <SEO
   title="Tableau de bord"
-  noindex={true}  // Pas d'indexation
+  noindex={true} // Pas d'indexation
 />
 ```
 
@@ -198,12 +205,14 @@ Ces actions ont le meilleur ROI temps/impact :
 ## 📈 RÉSULTATS ATTENDUS
 
 ### SEO
+
 - ✅ Google indexe toutes vos pages
 - ✅ Rich snippets dans résultats Google
 - ✅ Score Lighthouse > 90
 - ✅ Trafic organique +50% en 3 mois
 
 ### Sécurité
+
 - ✅ Score A+ sur SecurityHeaders.com
 - ✅ Aucune vulnérabilité critique
 - ✅ Protection contre XSS, CSRF, injections
@@ -214,21 +223,25 @@ Ces actions ont le meilleur ROI temps/impact :
 ## 💡 PROCHAINES ÉTAPES
 
 ### Semaine 1
+
 - [ ] Implémenter SEO de base (meta tags, sitemap)
 - [ ] Configurer security headers
 - [ ] Ajouter rate limiting
 
 ### Semaine 2
+
 - [ ] Schema.org sur toutes pages
 - [ ] Input validation Zod
 - [ ] Tests Lighthouse
 
 ### Semaine 3
+
 - [ ] Optimiser images
 - [ ] CSRF protection
 - [ ] Cookie consent RGPD
 
 ### Semaine 4
+
 - [ ] Blog SEO (si applicable)
 - [ ] Monitoring sécurité
 - [ ] Audit complet
@@ -259,6 +272,7 @@ Ces actions ont le meilleur ROI temps/impact :
 Avant de déployer en production :
 
 **SEO**
+
 - [ ] Meta tags sur toutes pages
 - [ ] Sitemap soumis à Google Search Console
 - [ ] Robots.txt configuré
@@ -267,6 +281,7 @@ Avant de déployer en production :
 - [ ] Lighthouse score > 85
 
 **Sécurité**
+
 - [ ] HTTPS activé et forcé
 - [ ] Security headers configurés
 - [ ] Rate limiting sur API sensibles
@@ -277,6 +292,7 @@ Avant de déployer en production :
 - [ ] RGPD cookie consent
 
 **Performance**
+
 - [ ] Images optimisées
 - [ ] Code splitting
 - [ ] Fonts preload

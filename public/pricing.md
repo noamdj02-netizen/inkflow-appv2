@@ -1,7 +1,7 @@
 # Tarifs — InkFlow (France, EUR)
 
 > **Devise : EUR (€).** Tarifs indicatifs alignés sur la grille produit ; la présentation marketing : https://ink-flow.me/#pricing  
-> **Essai :** 14 jours gratuits, sans carte bancaire au départ.
+> **Essai :** 1 mois gratuit, sans carte bancaire au départ.
 
 ## Solo
 

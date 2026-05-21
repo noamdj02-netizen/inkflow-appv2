@@ -15,7 +15,7 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
           <div className="h-2.5 w-full bg-neutral-100 rounded" />
         </div>
         <div className="flex gap-1 mt-1">
-          <Mail className="w-3 h-3 text-blue-500" />
+          <Mail className="w-3 h-3 text-emerald-600" />
           <span className="text-[8px] text-neutral-500">email@studio.fr</span>
         </div>
         <div className="h-5 w-full bg-neutral-900 rounded mt-auto" />
@@ -44,7 +44,7 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
     return (
       <div className="w-full h-full p-3 bg-gradient-to-br from-neutral-50 to-white rounded-lg border border-neutral-200/80 flex flex-col gap-2">
         <div className="flex items-center gap-1.5">
-          <Copy className="w-3.5 h-3.5 text-blue-500" />
+          <Copy className="w-3.5 h-3.5 text-emerald-600" />
           <span className="text-[8px] font-medium text-neutral-600">{t('process.linkCopied')}</span>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -53,7 +53,7 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
           </div>
         </div>
         <div className="flex gap-1">
-          {['ig', 'wa', '📱'].map((l, i) => (
+          {['IG', 'WA', 'SMS'].map((l, i) => (
             <div
               key={i}
               className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-[8px]"
@@ -133,23 +133,23 @@ export const ProcessSection: React.FC = () => {
     },
   ];
   return (
-    <section id="process" className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Fond subtil */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white via-neutral-50/30 to-white pointer-events-none" />
-
+    <section
+      id="process"
+      className="relative overflow-hidden border-t border-zinc-200/60 bg-[#f6f5f2] px-4 py-16 sm:px-6 sm:py-24 lg:px-10 lg:py-28"
+    >
       <motion.div
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
-        className="relative max-w-7xl mx-auto"
+        className="relative mx-auto max-w-[1400px]"
       >
         {/* Header */}
         <motion.div variants={itemVariants} className="text-center mb-16 sm:mb-20">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight text-neutral-900">
+          <h2 className="font-hero-title mb-4 px-2 text-3xl font-bold tracking-tight text-zinc-950 sm:text-4xl md:text-[2.65rem]">
             {t('process.title')}
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-2">
+          <p className="mx-auto max-w-2xl px-2 text-base text-zinc-600 sm:text-lg">
             {t('process.subtitle')}
           </p>
         </motion.div>

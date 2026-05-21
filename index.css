@@ -355,6 +355,26 @@ video {
     sans-serif;
 }
 
+/* Landing marketing — mesh + fond éditorial (pas grille pointillée template) */
+.landing-hero {
+  background-color: #f6f5f2;
+}
+.landing-hero-mesh {
+  background:
+    radial-gradient(ellipse 55% 45% at 12% 18%, rgba(16, 185, 129, 0.09), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 88% 12%, rgba(244, 63, 94, 0.05), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 70% 85%, rgba(9, 9, 11, 0.04), transparent 55%),
+    linear-gradient(180deg, #f8f7f4 0%, #f3f2ef 48%, #f6f5f2 100%);
+}
+
+/* Mockup hero — asset PNG/WebP transparent (fond blanc retiré côté asset) */
+.landing-hero-mockup-stage {
+  width: 100%;
+}
+.landing-hero-mockup-img {
+  filter: drop-shadow(0 24px 48px rgba(9, 9, 11, 0.1));
+}
+
 /* Glassmorphism navbar — effet Framer (flou transparent) */
 .nav-glass {
   background: rgba(0, 0, 0, 0.6);
@@ -1762,7 +1782,19 @@ body:has(.public-page-scroll) {
 @media (max-width: 767px) {
   .app-shell-header {
     padding-top: env(safe-area-inset-top, 0px);
-    min-height: calc(58px + env(safe-area-inset-top, 0px));
+    min-height: calc(44px + env(safe-area-inset-top, 0px));
+  }
+
+  /* Fiche client / aperçu demande : masquer la topbar pour gagner de la hauteur */
+  html[data-inkflow-reading-overlay='true'] .dashboard-pro-shell .app-shell-header {
+    max-height: 0;
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    border-bottom-width: 0;
   }
 }
 
@@ -1861,7 +1893,7 @@ textarea {
   /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
      Réserve bas : dock fixe + FAB + badges (évite contenu masqué sous la barre). */
   .dashboard-pro-shell {
-    --inkflow-mobile-dock-reserve: 7.5rem; /* ~120px : nav 48px + labels + safe-area plancher */
+    --inkflow-mobile-dock-reserve: 4.75rem; /* pill dock + safe-area */
   }
 
   .dashboard-pro-shell .app-shell-content {
@@ -1888,7 +1920,7 @@ textarea {
   }
 
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell {
-    --inkflow-mobile-dock-reserve: 4.75rem;
+    --inkflow-mobile-dock-reserve: 4.25rem;
   }
 
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-content {
@@ -1932,8 +1964,8 @@ textarea {
   .dashboard-pro-shell .app-shell-header {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-    /* Mobile navigateur : garde un minimum lisible ; Inkflow Pro = 0 (hauteur pilotée par Tailwind h-10) */
-    min-height: 2.75rem;
+    /* Mobile navigateur : barre plus basse ; Inkflow Pro = hauteur Tailwind */
+    min-height: 2.5rem;
   }
 
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-header {
@@ -1957,7 +1989,7 @@ textarea {
     transform: none;
     bottom: 0;
     min-height: 0;
-    padding-top: 2px;
+    padding-top: 4px;
     padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
     padding-left: 0;
     padding-right: 0;
@@ -1968,19 +2000,32 @@ textarea {
     box-shadow: none;
   }
 
-  /* Inkflow Pro (Expo / WebView) — même barre pleine largeur, fond noir. */
-  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
+  .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav--pill {
+    border-top: none;
+    background: transparent;
+    padding-top: 6px;
+  }
+
+  :root[data-theme='dark'] .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav--pill {
+    background: transparent;
+    border-top: none;
+  }
+
+  /* Inkflow Pro (Expo / WebView) — même dock pill que navigateur mobile */
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav,
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell
+    .bottom-nav.dashboard-pro-mobile-bottom-nav--pill {
     width: 100%;
     max-width: none;
     min-height: 0;
-    padding-top: 2px;
+    padding-top: 6px;
     padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
     padding-left: 0;
     padding-right: 0;
     border-radius: 0;
-    background: #141416;
     border: none;
-    border-top: 1px solid #3f3f46;
+    border-top: none;
+    background: transparent;
     box-shadow: none;
   }
 
@@ -1994,6 +2039,12 @@ textarea {
     touch-action: manipulation;
     -webkit-overflow-scrolling: touch;
     min-height: 48px;
+  }
+
+  .dashboard-pro-shell
+    .dashboard-pro-mobile-bottom-nav--pill
+    .dashboard-pro-mobile-bottom-nav__inner {
+    min-height: 52px;
   }
 
   .dashboard-pro-shell .dashboard-pro-mobile-bottom-nav button {

@@ -21,7 +21,7 @@ export const SignupPage: React.FC = () => {
     >
       <SEO
         title="Créer un compte gratuit"
-        description="Créez votre compte studio en France : 14 jours pour tester résa en ligne, CRM, acomptes Stripe (EUR), page vitrine. Sans carte au départ."
+        description="Créez votre compte studio en France : 1 mois pour tester résa en ligne, CRM, acomptes Stripe (EUR), page vitrine. Sans carte au départ."
         canonical="/signup"
         keywords="inscription InkFlow, essai gratuit tatoueur France, créer compte studio tattoo, logiciel tatoueur"
         ogImageAlt="Inscription InkFlow"
@@ -77,7 +77,7 @@ export const SignupPage: React.FC = () => {
                   Ouvre ton compte studio
                 </h1>
                 <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                  Environ 1 minute · 14 jours d&apos;essai · Sans carte au départ
+                  Environ 1 minute · 1 mois d&apos;essai gratuit · Sans carte au départ
                 </p>
               </div>
 
@@ -95,7 +95,7 @@ export const SignupPage: React.FC = () => {
 
               {/* Garanties */}
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-400 dark:text-zinc-500">
-                {['14 jours gratuits', 'Pas de carte bancaire', 'Annulation facile'].map((g) => (
+                {['1 mois gratuit', 'Pas de carte bancaire', 'Annulation facile'].map((g) => (
                   <div key={g} className="flex items-center gap-1.5">
                     <svg
                       className="w-3.5 h-3.5 text-emerald-500"

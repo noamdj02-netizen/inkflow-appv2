@@ -240,17 +240,52 @@ Deno.serve(async (req: Request) => {
       }
     });
 
-    // Récupérer les réservations confirmées
+    // Réservations vitrine : en attente ou confirmées (créneau réservé côté client)
     const { data: bookings } = await supabase
       .from("inkflow_bookings")
       .select("requested_date, requested_time")
       .eq("studio_id", studioId)
       .gte("requested_date", today)
-      .in("status", ["confirmed", "accepted"]);
+      .in("status", ["pending", "confirmed", "accepted"]);
+
+    // Projets acceptés avec créneau proposé (en attente de confirmation client)
+    const { data: projectSlots } = await supabase
+      .from("inkflow_project_requests")
+      .select("proposed_slot, slot_expires_at")
+      .eq("studio_id", studioId)
+      .eq("status", "accepted")
+      .not("proposed_slot", "is", null);
 
     (bookings || []).forEach((r) => {
       const date = (r.requested_date as string)?.toString?.()?.split?.("T")?.[0];
       const time = normalizeTime((r.requested_time as string) ?? null);
+      if (date && time) {
+        addToBusy(busy, date, time);
+        existingAppointments.push({ date, time });
+      }
+    });
+
+    const tz = timezone?.trim?.() || "Europe/Paris";
+    const nowMs = Date.now();
+    (projectSlots || []).forEach((r) => {
+      const proposedRaw = (r.proposed_slot as string)?.toString?.()?.trim?.();
+      if (!proposedRaw) return;
+      const expiresRaw = (r.slot_expires_at as string)?.toString?.()?.trim?.();
+      if (expiresRaw) {
+        const exp = new Date(expiresRaw).getTime();
+        if (!Number.isNaN(exp) && exp < nowMs) return;
+      }
+      const d = new Date(proposedRaw);
+      if (Number.isNaN(d.getTime())) return;
+      const date = d.toLocaleDateString("en-CA", { timeZone: tz });
+      const time = normalizeTime(
+        d.toLocaleTimeString("en-GB", {
+          timeZone: tz,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+      );
       if (date && time) {
         addToBusy(busy, date, time);
         existingAppointments.push({ date, time });

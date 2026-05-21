@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Mail, AtSign, Loader2, Copy, MessageCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
-import type { ProjectRequest, Booking } from '../../types';
+import type { Appointment, ProjectRequest, Booking } from '../../types';
 import {
   fetchStudioAvailabilityMeta,
   getAvailableDates,
   getAvailableSlotsForDate,
+  withMergedAppointmentBusySlots,
   type StudioAvailabilityResponse,
 } from '../../lib/studioAvailability';
 import { instagramMessageUrl } from '../../lib/instagramUtils';
@@ -24,6 +25,8 @@ interface ProposeAlternativeDateModalProps {
   onClose: () => void;
   item: SheetItem | null;
   studioId: string | null;
+  /** RDV agenda — exclus des créneaux proposés */
+  appointments?: Appointment[];
   studioName: string;
   /** Réponse aux e-mails (compte connecté) */
   replyToEmail: string | null | undefined;
@@ -51,6 +54,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
   onClose,
   item,
   studioId,
+  appointments = [],
   studioName,
   replyToEmail,
   instagramHandle,
@@ -83,10 +87,11 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
     fetchStudioAvailabilityMeta(studioId)
       .then(({ availability: data, usedFallback }) => {
         if (!cancelled) {
-          setAvailability(data);
+          const merged = withMergedAppointmentBusySlots(data, appointments);
+          setAvailability(merged);
           setPlanningHint(
             usedFallback
-              ? 'Synchronisation du planning impossible pour l’instant : les dates et créneaux ci-dessous sont indicatifs (sans occupation réelle). Tu peux quand même envoyer la proposition ou copier pour Instagram.'
+              ? 'Synchronisation partielle : créneaux indicatifs (agenda local inclus). Tu peux quand même envoyer la proposition.'
               : null
           );
         }
@@ -97,7 +102,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
     return () => {
       cancelled = true;
     };
-  }, [isOpen, studioId]);
+  }, [isOpen, studioId, appointments]);
 
   const dateOptions = useMemo(() => {
     if (!availability) return [];

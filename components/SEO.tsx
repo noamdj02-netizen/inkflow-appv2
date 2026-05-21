@@ -47,7 +47,7 @@ function setLink(rel: string, href: string) {
 
 export const SEO: React.FC<SEOProps> = ({
   title = 'InkFlow - Logiciel de gestion pour tatoueurs',
-  description = 'Logiciel de gestion pour tatoueurs et studios en France : agenda partagé, réservations en ligne, acomptes Stripe (EUR), CRM clients, vitrine et galerie flash. Essai gratuit 14 jours, sans carte.',
+  description = 'Logiciel de gestion pour tatoueurs et studios en France : agenda partagé, réservations en ligne, acomptes Stripe (EUR), CRM clients, vitrine et galerie flash. Essai gratuit 1 mois, sans carte.',
   canonical,
   ogImage = DEFAULT_OG_IMAGE,
   ogImageAlt = 'InkFlow — logiciel de gestion pour tatoueurs et studios',
@@ -239,7 +239,7 @@ export const faqPageSchemaFr: object = {
       name: 'InkFlow est-il adapté aux tatoueurs en France ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Oui. InkFlow cible les professionnels du tatouage en France : interface en français, tarifs en euros, paiements via Stripe (cartes et acomptes), et données hébergées pour un usage conforme au RGPD. L'essai gratuit de 14 jours ne nécessite pas de carte bancaire.",
+        text: "Oui. InkFlow cible les professionnels du tatouage en France : interface en français, tarifs en euros, paiements via Stripe (cartes et acomptes), et données hébergées pour un usage conforme au RGPD. L'essai gratuit d'un mois ne nécessite pas de carte bancaire.",
       },
     },
     {

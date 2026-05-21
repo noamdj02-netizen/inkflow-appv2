@@ -26,6 +26,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.settings': 'Paramètres',
     'nav.more': 'Plus',
     'nav.login': 'Connexion',
+    'nav.demo': 'Démo',
     'nav.features': 'Fonctionnalités',
     'nav.pricing': 'Tarifs',
     'nav.reviews': 'Avis',
@@ -45,6 +46,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'hero.avatarAlt': 'Avatar tatoueur',
     'hero.badgeNewRdv': '+1 Nouveau RDV !',
     'landing.features.title': 'Fonctionnalités clés',
+    'landing.features.subtitle':
+      'Agenda, CRM, paiements Stripe et vitrine — des captures réelles du produit, pas des graphiques génériques.',
     'landing.features.key1': 'Prise de rendez-vous intelligente',
     'landing.features.key2': 'Messagerie intégrée',
     'landing.features.key3': 'Portfolio & Galerie Flash',
@@ -138,7 +141,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'process.newRdv': '+1 Nouveau RDV',
     'process.cta1': 'Commencer maintenant',
     'process.cta2': 'Voir la démo',
-    'process.trial': 'Essai gratuit de 14 jours • Pas de carte bancaire requise',
+    'process.trial': 'Essai gratuit 1 mois • Pas de carte bancaire requise',
+    'hero.trialTrust': "1 mois d'essai gratuit",
     // Pricing
     'pricing.title': 'Le logiciel résa pour tatoueurs — pas un généraliste salons',
     'pricing.subtitle':
@@ -171,7 +175,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'pricing.f15': 'Clients CRM illimités',
     'pricing.f16': 'Priorité onboarding & équipe-support élargie',
     'pricing.f17': 'Accès développeurs (API InkFlow)',
-    'pricing.trial14': "14 jours d'essai gratuit",
+    'pricing.trial14': "1 mois d'essai gratuit",
     'pricing.cancelAnytime': 'Annulation à tout moment',
     'pricing.noCommitment': "Pas d'engagement",
     // Testimonials
@@ -233,6 +237,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.settings': 'Settings',
     'nav.more': 'More',
     'nav.login': 'Login',
+    'nav.demo': 'Demo',
     'nav.features': 'Features',
     'nav.pricing': 'Pricing',
     'nav.reviews': 'Reviews',
@@ -251,6 +256,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'hero.avatarAlt': 'Tattoo artist avatar',
     'hero.badgeNewRdv': '+1 New Appointment!',
     'landing.features.title': 'Key features',
+    'landing.features.subtitle':
+      'Calendar, CRM, Stripe payments, and your public studio page — real product screens, not generic charts.',
     'landing.features.key1': 'Smart appointment booking',
     'landing.features.key2': 'Integrated messaging',
     'landing.features.key3': 'Portfolio & Flash Gallery',
@@ -336,7 +343,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'process.newRdv': '+1 New Appointment',
     'process.cta1': 'Start now',
     'process.cta2': 'View demo',
-    'process.trial': '14-day free trial • No credit card required',
+    'process.trial': '1-month free trial • No credit card required',
+    'hero.trialTrust': '1-month free trial',
     'pricing.title': 'Booking software built for tattoo studios',
     'pricing.subtitle':
       'Requests, slots, Stripe deposits, and client threads in one focused product — not generic salon software.',
@@ -369,7 +377,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'pricing.f15': 'Unlimited CRM clients',
     'pricing.f16': 'Priority onboarding & richer support playbook',
     'pricing.f17': 'Developer API access',
-    'pricing.trial14': '14-day free trial',
+    'pricing.trial14': '1-month free trial',
     'pricing.cancelAnytime': 'Cancel anytime',
     'pricing.noCommitment': 'No commitment',
     'testimonials.badge': '4.9/5 from 200+ reviews',

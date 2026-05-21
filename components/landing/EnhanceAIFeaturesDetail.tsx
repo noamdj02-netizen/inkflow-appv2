@@ -15,36 +15,25 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { LandingSectionHeader, LandingAppScreenshot, LANDING_SURFACE } from './landingUi';
 
 interface FeatureItem {
   icon: LucideIcon;
   label: string;
 }
 
-interface TimelineItem {
-  label: string;
-  value: number;
-  color: string;
-}
-
 interface DetailSectionConfig {
   title: string;
   description: string;
   features: FeatureItem[];
-  visualType: 'timeline' | 'stats' | 'list' | 'checklist';
-  visualData?: TimelineItem[] | string[] | { label: string; value: string }[];
-  visualTitle?: string;
-  visualIcon?: LucideIcon;
   reverse?: boolean;
-  files?: string[];
+  screenshot: {
+    src: string;
+    webpSrc?: string;
+    alt: string;
+  };
+  caption?: string;
 }
-
-const glassCardStyle = {
-  background: 'rgba(255, 255, 255, 0.7)',
-  backdropFilter: 'blur(20px)',
-  WebkitBackdropFilter: 'blur(20px)',
-  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255,255,255,0.5) inset',
-};
 
 function getSections(t: (k: string) => string): DetailSectionConfig[] {
   return [
@@ -57,15 +46,12 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
         { icon: Users, label: t('features.section1.f3') },
         { icon: BarChart3, label: t('features.section1.f4') },
       ],
-      visualType: 'timeline' as const,
-      visualTitle: t('features.section1.visualTitle'),
-      visualIcon: BarChart3,
-      visualData: [
-        { label: t('features.section1.v1'), value: 60, color: 'bg-blue-500' },
-        { label: t('features.section1.v2'), value: 40, color: 'bg-amber-400' },
-        { label: t('features.section1.v3'), value: 10, color: 'bg-emerald-500' },
-      ] as TimelineItem[],
-      files: [t('features.file1'), t('features.file2'), t('features.file3')],
+      screenshot: {
+        src: '/images/hero-dashboard-mockup.png',
+        webpSrc: '/images/hero-dashboard-mockup.webp',
+        alt: 'Tableau de bord InkFlow — agenda et encaissements',
+      },
+      caption: t('features.section1.visualTitle'),
     },
     {
       title: t('features.section2.title'),
@@ -76,11 +62,13 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
         { icon: Bell, label: t('features.section2.f3') },
         { icon: BarChart3, label: t('features.section2.f4') },
       ],
-      visualType: 'list' as const,
-      visualTitle: t('features.section2.visualTitle'),
-      visualIcon: Users,
-      visualData: [t('features.section2.v1'), t('features.section2.v2'), t('features.section2.v3')],
       reverse: true,
+      screenshot: {
+        src: '/images/mockup-profil.png',
+        webpSrc: '/images/mockup-profil.webp',
+        alt: 'Application InkFlow — fiche client et historique',
+      },
+      caption: t('features.section2.visualTitle'),
     },
     {
       title: t('features.section3.title'),
@@ -91,14 +79,12 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
         { icon: CheckCircle, label: t('features.section3.f3') },
         { icon: Bell, label: t('features.section3.f4') },
       ],
-      visualType: 'stats' as const,
-      visualTitle: t('features.section3.visualTitle'),
-      visualIcon: CreditCard,
-      visualData: [
-        { label: t('features.section3.v1'), value: t('features.section3.val1') },
-        { label: t('features.section3.v2'), value: t('features.section3.val2') },
-        { label: t('features.section3.v3'), value: t('features.section3.val3') },
-      ],
+      screenshot: {
+        src: '/images/hero-dashboard-mockup.png',
+        webpSrc: '/images/hero-dashboard-mockup.webp',
+        alt: 'InkFlow — paiements Stripe et suivi des acomptes',
+      },
+      caption: t('features.section3.visualTitle'),
     },
     {
       title: t('features.section4.title'),
@@ -109,116 +95,77 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
         { icon: Sparkles, label: t('features.section4.f3') },
         { icon: CreditCard, label: t('features.section4.f4') },
       ],
-      visualType: 'checklist' as const,
-      visualTitle: t('features.section4.visualTitle'),
-      visualIcon: Image,
-      visualData: [t('features.section4.v1'), t('features.section4.v2'), t('features.section4.v3')],
       reverse: true,
+      screenshot: {
+        src: '/images/mockup-profil.png',
+        webpSrc: '/images/mockup-profil.webp',
+        alt: 'Vitrine et réservation en ligne InkFlow',
+      },
+      caption: t('features.section4.visualTitle'),
     },
   ];
 }
 
-function VisualCard({ config }: { config: DetailSectionConfig }) {
-  const Icon = config.visualIcon ?? BarChart3;
-
+function FeatureScreenshot({ config, index }: { config: DetailSectionConfig; index: number }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, x: config.reverse ? -24 : 24 }}
+    <motion.figure
+      initial={{ opacity: 0, x: config.reverse ? -20 : 20 }}
       whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.6 }}
-      className="rounded-2xl p-6 shadow-xl border border-white/60"
-      style={glassCardStyle}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      className={`relative ${index === 0 ? 'lg:-mt-4' : index === 2 ? 'lg:mt-6' : ''}`}
     >
-      <div className="flex items-center gap-2 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-blue-600" />
-        </div>
-        <span className="font-semibold text-neutral-800">{config.visualTitle}</span>
+      <div className={`${LANDING_SURFACE} overflow-hidden p-2 sm:p-3`}>
+        <LandingAppScreenshot
+          src={config.screenshot.src}
+          webpSrc={config.screenshot.webpSrc}
+          alt={config.screenshot.alt}
+          className="aspect-[4/3] sm:aspect-[16/10]"
+          priority={index === 0}
+        />
       </div>
-
-      {config.visualType === 'timeline' && Array.isArray(config.visualData) && (
-        <div className="space-y-4 mb-6">
-          {(config.visualData as TimelineItem[]).map((t, i) => (
-            <div key={i}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-neutral-600">{t.label}</span>
-                <span className="font-semibold text-blue-600">{t.value}%</span>
-              </div>
-              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                <div className={`h-full ${t.color} rounded-full`} style={{ width: `${t.value}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {config.visualType === 'stats' && Array.isArray(config.visualData) && (
-        <div className="space-y-4 mb-6">
-          {(config.visualData as { label: string; value: string }[]).map((s, i) => (
-            <div key={i} className="flex justify-between items-center py-2 border-b border-neutral-100 last:border-0">
-              <span className="text-neutral-600">{s.label}</span>
-              <span className="font-bold text-blue-600">{s.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {config.visualType === 'list' && Array.isArray(config.visualData) && (
-        <div className="space-y-2 mb-6">
-          {(config.visualData as string[]).map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm text-neutral-600 py-2 border-b border-neutral-100 last:border-0">
-              <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-              {item}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {config.visualType === 'checklist' && Array.isArray(config.visualData) && (
-        <div className="space-y-2 pt-4">
-          {(config.visualData as string[]).map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm text-neutral-600">
-              <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              {item}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {config.visualType === 'timeline' && config.files && (
-        <div className="space-y-2 pt-4 border-t border-neutral-200/60">
-          {config.files.map((f, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm text-neutral-600">
-              <FileText className="w-4 h-4 text-blue-500" />
-              {f}
-            </div>
-          ))}
-        </div>
-      )}
-    </motion.div>
+      {config.caption ? (
+        <figcaption className="mt-4 text-sm font-medium text-zinc-500">{config.caption}</figcaption>
+      ) : null}
+      {index === 0 ? (
+        <motion.div
+          className="absolute -bottom-3 -left-2 rounded-2xl border border-zinc-200/90 bg-white px-3 py-2 shadow-[0_12px_28px_-12px_rgba(9,9,11,0.12)] sm:-left-4"
+          animate={{ y: [0, 4, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Agenda</p>
+          <p className="text-xs font-bold tabular-nums text-zinc-900">+3 RDV cette semaine</p>
+        </motion.div>
+      ) : null}
+    </motion.figure>
   );
 }
 
-function TextBlock({ config }: { config: DetailSectionConfig }) {
+function FeatureTextBlock({ config }: { config: DetailSectionConfig }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: config.reverse ? 24 : -24 }}
+      initial={{ opacity: 0, x: config.reverse ? 20 : -20 }}
       whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.6 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      className="min-w-0"
     >
-      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-neutral-800 mb-6 leading-tight">
+      <h2 className="font-hero-title text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl md:text-4xl">
         {config.title}
       </h2>
-      <p className="text-neutral-600 text-lg mb-8 leading-relaxed">{config.description}</p>
-      <ul className="space-y-4">
+      <p className="mt-4 max-w-[65ch] text-base leading-relaxed text-zinc-600 sm:text-lg">
+        {config.description}
+      </p>
+      <ul className="mt-8 space-y-3">
         {config.features.map((f, i) => (
-          <li key={i} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <f.icon className="w-5 h-5 text-blue-600" />
+          <li
+            key={i}
+            className="flex items-center gap-3 rounded-xl border border-transparent py-1 transition-colors hover:border-zinc-200/80 hover:bg-white/60"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+              <f.icon className="h-5 w-5 text-zinc-800" strokeWidth={2} />
             </div>
-            <span className="font-medium text-neutral-800">{f.label}</span>
+            <span className="font-medium text-zinc-800">{f.label}</span>
           </li>
         ))}
       </ul>
@@ -229,40 +176,45 @@ function TextBlock({ config }: { config: DetailSectionConfig }) {
 export const EnhanceAIFeaturesDetail: React.FC = () => {
   const { t } = useLanguage();
   const sections = getSections(t);
+
   return (
-    <>
+    <div id="fonctionnalites" className="w-full overflow-x-hidden bg-[#f6f5f2]">
+      <section className="border-t border-zinc-200/60 px-4 py-16 sm:px-6 sm:py-20 lg:px-10 lg:py-24">
+        <div className="mx-auto max-w-[1400px]">
+          <LandingSectionHeader
+            badge={t('nav.features')}
+            title={t('landing.features.title')}
+            description={t('landing.features.subtitle')}
+          />
+        </div>
+      </section>
+
       {sections.map((config, idx) => (
         <section
           key={idx}
-          className={`py-20 sm:py-28 px-4 sm:px-6 lg:px-8 w-full overflow-x-hidden ${
-            idx % 2 === 0 ? 'bg-gradient-to-b from-white to-neutral-50/50' : 'bg-neutral-50/50'
+          className={`px-4 py-14 sm:px-6 sm:py-20 lg:px-10 ${
+            idx % 2 === 1 ? 'bg-white/50' : 'bg-[#f6f5f2]'
           }`}
         >
-          <div className="max-w-7xl mx-auto">
-            <div
-              className={`grid lg:grid-cols-2 gap-12 lg:gap-16 items-center ${
-                config.reverse ? 'lg:flex-row-reverse' : ''
-              }`}
-            >
-              {config.reverse ? (
-                <>
-                  <div className="lg:order-2">
-                    <TextBlock config={config} />
-                  </div>
-                  <div className="lg:order-1">
-                    <VisualCard config={config} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <TextBlock config={config} />
-                  <VisualCard config={config} />
-                </>
-              )}
-            </div>
+          <div className="mx-auto grid max-w-[1400px] min-w-0 grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16 xl:gap-20">
+            {config.reverse ? (
+              <>
+                <div className="lg:order-2">
+                  <FeatureTextBlock config={config} />
+                </div>
+                <div className="lg:order-1">
+                  <FeatureScreenshot config={config} index={idx} />
+                </div>
+              </>
+            ) : (
+              <>
+                <FeatureTextBlock config={config} />
+                <FeatureScreenshot config={config} index={idx} />
+              </>
+            )}
           </div>
         </section>
       ))}
-    </>
+    </div>
   );
 };

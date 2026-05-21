@@ -17,13 +17,16 @@ export const EnhanceAIFAQ: React.FC = () => {
   const faqs = faqKeys.map((k) => ({ question: t(k.q), answer: t(k.a) }));
 
   return (
-    <section id="faq" className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white">
+    <section
+      id="faq"
+      className="border-t border-zinc-200/60 bg-white px-4 py-16 sm:px-6 sm:py-24 lg:px-10 lg:py-28"
+    >
       <div className="max-w-3xl mx-auto">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center text-2xl sm:text-3xl font-bold text-neutral-800 mb-12"
+          className="font-hero-title mb-12 text-center text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl"
         >
           {t('faq.title')}
         </motion.h2>
@@ -36,16 +39,16 @@ export const EnhanceAIFAQ: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.05 }}
-              className="border border-neutral-200/80 rounded-xl overflow-hidden hover:border-neutral-300/80 transition-colors"
+              className="overflow-hidden rounded-2xl border border-zinc-200/80 transition-colors hover:border-zinc-300/80"
             >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left min-h-[56px]"
                 aria-expanded={openIndex === index}
               >
-                <span className="font-semibold text-neutral-800 pr-4">{faq.question}</span>
+                <span className="pr-4 font-semibold text-zinc-900">{faq.question}</span>
                 <span
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 transition-transform duration-300 ${
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-800 transition-transform duration-300 ${
                     openIndex === index ? 'rotate-45' : ''
                   }`}
                 >
@@ -62,7 +65,7 @@ export const EnhanceAIFAQ: React.FC = () => {
                     className="overflow-hidden"
                   >
                     <div className="px-5 pb-5 pt-0">
-                      <p className="text-neutral-600 leading-relaxed">{faq.answer}</p>
+                      <p className="leading-relaxed text-zinc-600">{faq.answer}</p>
                     </div>
                   </motion.div>
                 )}

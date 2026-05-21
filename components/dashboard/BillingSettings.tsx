@@ -412,7 +412,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
     if (!studioId || !canEndInkflowStudioTrial) return;
     const ok = window.confirm(
       "Mettre fin à l'essai gratuit Inkflow maintenant ?\n\n" +
-        "Ton accès passera en mode restreint (comme après expiration des 14 jours) jusqu'à ce que tu souscrives à un plan. " +
+        "Ton accès passera en mode restreint (comme après expiration de ton mois d'essai) jusqu'à ce que tu souscrives à un plan. " +
         'Tu pourras toujours choisir un plan plus tard depuis cette page.'
     );
     if (!ok) return;
@@ -535,7 +535,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-zinc-900 dark:text-white">Période d'essai</p>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Profitez de toutes les fonctionnalités Pro pendant 14 jours, sans carte bancaire.
+                Profitez de toutes les fonctionnalités Pro pendant 1 mois, sans carte bancaire.
                 Choisissez votre plan ci-dessous pour continuer après l'essai.
               </p>
               <div className="mt-3">
@@ -718,7 +718,9 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
             <Sparkles className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
           </div>
           <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-white">14 jours d'essai</p>
+            <p className="text-sm font-medium text-zinc-900 dark:text-white">
+              1 mois d&apos;essai gratuit
+            </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Gratuit, sans CB</p>
           </div>
         </div>

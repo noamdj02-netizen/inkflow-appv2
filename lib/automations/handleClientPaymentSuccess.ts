@@ -10,6 +10,8 @@ import { supabase } from '../supabase';
 import type { Appointment, User } from '../../types';
 import { appointmentRemainingBalanceEuros } from '../appointmentBalance';
 import { generateFacturePdf } from '../generateFacturePdf';
+import { invokeGeneratePaymentInvoice } from '../generatePaymentInvoiceEdge';
+import { isPdfDownloadConstrainedEnvironment, openPdfForUser } from '../studioDataExport';
 import { markBalanceAsPaid } from '../supabaseDashboard';
 import {
   factureDocumentNumber,
@@ -180,6 +182,10 @@ export async function handleClientPaymentSuccess(
         ? await fetchAnyBalanceInvoice(studioId, appointmentId)
         : await fetchExistingInvoice(studioId, appointmentId, paymentKind);
     if (existing?.storage_path && existing.public_url) {
+      const opened =
+        downloadPdf && isPdfDownloadConstrainedEnvironment()
+          ? openPdfForUser(existing.public_url)
+          : false;
       return {
         ok: true,
         skipped: true,
@@ -187,7 +193,7 @@ export async function handleClientPaymentSuccess(
         storagePath: existing.storage_path,
         publicUrl: existing.public_url,
         savedToDossier: true,
-        downloaded: false,
+        downloaded: opened,
       };
     }
   }
@@ -212,15 +218,85 @@ export async function handleClientPaymentSuccess(
     ? { ...appointment, clientId: resolvedClientId }
     : appointment;
 
-  const pdfResult = await generateFacturePdf({
-    appointment: appointmentForPdf,
-    artist,
-    studioId,
-    paymentKind,
-    amountPaidNow: paidNow,
-    studioSiret: (studioRow?.siret as string) || null,
-    downloadPdf,
-  });
+  const useServerPdf = downloadPdf && isPdfDownloadConstrainedEnvironment();
+  let pdfResult: Awaited<ReturnType<typeof generateFacturePdf>>;
+
+  if (useServerPdf) {
+    const edge = await invokeGeneratePaymentInvoice({
+      studioId,
+      appointmentId,
+      paymentKind,
+      amountPaidEur: paidNow > 0 ? paidNow : undefined,
+      paymentReference: paymentReference?.trim(),
+    });
+    if (!edge.ok) {
+      return {
+        ok: false,
+        reason: edge.error || 'Génération PDF impossible',
+        savedToDossier: false,
+        downloaded: false,
+      };
+    }
+    const opened = edge.publicUrl && downloadPdf ? openPdfForUser(edge.publicUrl) : false;
+    pdfResult = {
+      savedToDossier: Boolean(edge.savedToDossier && edge.storagePath),
+      downloaded: opened,
+      documentNumber: edge.documentNumber || '',
+      filename: edge.filename || 'recu.pdf',
+      publicUrl: edge.publicUrl || undefined,
+      storagePath: edge.storagePath || undefined,
+    };
+    if (edge.skipped && edge.publicUrl && downloadPdf && !opened) {
+      openPdfForUser(edge.publicUrl);
+      pdfResult.downloaded = true;
+    }
+  } else {
+    try {
+      pdfResult = await generateFacturePdf({
+        appointment: appointmentForPdf,
+        artist,
+        studioId,
+        paymentKind,
+        amountPaidNow: paidNow,
+        studioSiret: (studioRow?.siret as string) || null,
+        downloadPdf,
+      });
+      if (
+        downloadPdf &&
+        pdfResult.publicUrl &&
+        !pdfResult.downloaded &&
+        isPdfDownloadConstrainedEnvironment()
+      ) {
+        openPdfForUser(pdfResult.publicUrl);
+        pdfResult.downloaded = true;
+      }
+    } catch (e) {
+      const edge = await invokeGeneratePaymentInvoice({
+        studioId,
+        appointmentId,
+        paymentKind,
+        amountPaidEur: paidNow > 0 ? paidNow : undefined,
+        paymentReference: paymentReference?.trim(),
+      });
+      if (!edge.ok) {
+        return {
+          ok: false,
+          reason: e instanceof Error ? e.message : 'Génération PDF impossible',
+          savedToDossier: false,
+          downloaded: false,
+        };
+      }
+      const opened = edge.publicUrl && downloadPdf ? openPdfForUser(edge.publicUrl) : false;
+      pdfResult = {
+        savedToDossier: Boolean(edge.savedToDossier && edge.storagePath),
+        downloaded: opened,
+        documentNumber: edge.documentNumber || '',
+        filename: edge.filename || 'recu.pdf',
+        publicUrl: edge.publicUrl || undefined,
+        storagePath: edge.storagePath || undefined,
+      };
+    }
+  }
 
   const docNum =
     pdfResult.documentNumber ||

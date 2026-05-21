@@ -2934,6 +2934,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         onClose={() => setAcceptProjectTarget(null)}
         projectRequest={acceptProjectTarget}
         studioId={studioId}
+        appointments={appointments}
         demoMode={demoMode}
         onSuccess={() => onProjectRequestsInvalidate?.()}
       />
@@ -2943,6 +2944,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         onClose={() => setProposeDateItem(null)}
         item={proposeDateItem}
         studioId={studioId}
+        appointments={appointments}
         studioName={user?.studioName || 'Le studio'}
         replyToEmail={user?.email}
         instagramHandle={

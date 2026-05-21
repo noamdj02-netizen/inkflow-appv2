@@ -15,6 +15,9 @@ export interface WeeklySchedule {
   sunday?: DaySchedule;
 }
 
+import type { Appointment } from '../types';
+import { appointmentsToBusySlots, mergeBusySlots } from './bookingBusySlots';
+
 export interface StudioAvailabilityResponse {
   busySlots: Record<string, string[]>;
   /** Créneaux fixes configurés par le studio. Vide = utiliser DEFAULT_TIME_SLOTS. */
@@ -23,7 +26,7 @@ export interface StudioAvailabilityResponse {
   bookingWindowDays: number;
   /** Jours désactivés (0=dim … 6=sam). null = utiliser DEFAULT_OFF_DAYS. */
   offDays: number[] | null;
-  
+
   // Nouveaux paramètres avancés
   /** Durée d'un créneau en minutes (30, 60, 90, 120) */
   slotDuration: number;
@@ -61,7 +64,9 @@ export function createFallbackAvailabilityResponse(): StudioAvailabilityResponse
   };
 }
 
-function normalizeAvailabilityPayload(data: StudioAvailabilityResponse): StudioAvailabilityResponse {
+function normalizeAvailabilityPayload(
+  data: StudioAvailabilityResponse
+): StudioAvailabilityResponse {
   return {
     busySlots: data.busySlots || {},
     customSlots: data.customSlots || [],
@@ -89,11 +94,15 @@ export type FetchStudioAvailabilityMeta = {
  * Appel via `fetch` et clé **anon** (comme `createCheckoutSession`) : évite d’envoyer le JWT de session,
  * souvent cause de `FunctionsHttpError` sur les pages publiques (JWT expiré ou autre projet).
  */
-export async function fetchStudioAvailabilityMeta(studioId: string): Promise<FetchStudioAvailabilityMeta> {
+export async function fetchStudioAvailabilityMeta(
+  studioId: string
+): Promise<FetchStudioAvailabilityMeta> {
   const baseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
   const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   if (!baseUrl || !anonKey) {
-    console.warn('[InkFlow] get-studio-availability: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY manquants.');
+    console.warn(
+      '[InkFlow] get-studio-availability: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY manquants.'
+    );
     return {
       availability: createFallbackAvailabilityResponse(),
       usedFallback: true,
@@ -109,24 +118,37 @@ export async function fetchStudioAvailabilityMeta(studioId: string): Promise<Fet
       },
       body: JSON.stringify({ studioId }),
     });
-    const data = (await res.json().catch(() => ({}))) as StudioAvailabilityResponse | { error?: string };
+    const data = (await res.json().catch(() => ({}))) as
+      | StudioAvailabilityResponse
+      | { error?: string };
     if (!res.ok) {
       const msg =
-        typeof data === 'object' && data && 'error' in data && typeof (data as { error?: string }).error === 'string'
+        typeof data === 'object' &&
+        data &&
+        'error' in data &&
+        typeof (data as { error?: string }).error === 'string'
           ? (data as { error: string }).error
           : `HTTP ${res.status}`;
       throw new Error(msg);
     }
     if (!data || typeof data !== 'object') throw new Error('Aucune donnée retournée');
     if ('error' in data && !('busySlots' in data)) {
-      throw new Error(typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : 'Erreur serveur');
+      throw new Error(
+        typeof (data as { error?: string }).error === 'string'
+          ? (data as { error: string }).error
+          : 'Erreur serveur'
+      );
     }
     return {
       availability: normalizeAvailabilityPayload(data as StudioAvailabilityResponse),
       usedFallback: false,
     };
   } catch (e) {
-    console.warn('[InkFlow] get-studio-availability indisponible, repli sur dispos par défaut.', studioId, e);
+    console.warn(
+      '[InkFlow] get-studio-availability indisponible, repli sur dispos par défaut.',
+      studioId,
+      e
+    );
     return {
       availability: createFallbackAvailabilityResponse(),
       usedFallback: true,
@@ -139,7 +161,9 @@ export async function fetchStudioAvailabilityMeta(studioId: string): Promise<Fet
  * Utilise l'Edge Function get-studio-availability.
  * Ne rejette jamais : en cas d’échec, retourne {@link createFallbackAvailabilityResponse} (log console).
  */
-export async function fetchStudioAvailability(studioId: string): Promise<StudioAvailabilityResponse> {
+export async function fetchStudioAvailability(
+  studioId: string
+): Promise<StudioAvailabilityResponse> {
   const { availability } = await fetchStudioAvailabilityMeta(studioId);
   return availability;
 }
@@ -151,7 +175,15 @@ export const DEFAULT_TIME_SLOTS = ['10:00', '12:00', '14:00', '16:00', '18:00'];
 export const DEFAULT_OFF_DAYS = [0, 1];
 
 /** Noms des jours indexés par leur index (0=dim) */
-export const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+export const DAY_NAMES = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
 
 /**
  * Retourne les créneaux disponibles pour une date donnée en tenant compte
@@ -164,15 +196,15 @@ export function getAvailableSlotsForDate(
   const dateStr = date.toISOString().split('T')[0];
   const dayIndex = date.getDay();
   const busyForDate = availability.busySlots[dateStr] || [];
-  
+
   // Si le jour est bloqué ou complet
   if (busyForDate.includes('__blocked__') || busyForDate.includes('__full__')) {
     return [];
   }
-  
+
   // Déterminer les créneaux possibles
   let slots: string[];
-  
+
   if (availability.dynamicSlotsByDay && availability.dynamicSlotsByDay[dayIndex]) {
     // Utiliser les créneaux dynamiques pré-calculés par l'Edge Function
     slots = availability.dynamicSlotsByDay[dayIndex];
@@ -183,9 +215,9 @@ export function getAvailableSlotsForDate(
     // Utiliser les créneaux par défaut
     slots = DEFAULT_TIME_SLOTS;
   }
-  
+
   // Filtrer les créneaux occupés
-  return slots.filter(slot => !busyForDate.includes(slot));
+  return slots.filter((slot) => !busyForDate.includes(slot));
 }
 
 /**
@@ -199,26 +231,42 @@ export function getAvailableDates(
   const offDays = availability.offDays ?? DEFAULT_OFF_DAYS;
   const windowDays = availability.bookingWindowDays || 60;
   const advanceDays = availability.advanceBookingDays || 0;
-  
+
   // Commencer après le délai minimum de réservation
   const actualStart = new Date(startDate);
   actualStart.setDate(actualStart.getDate() + advanceDays);
-  
+
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + windowDays);
-  
+
   for (let d = new Date(actualStart); d <= endDate; d.setDate(d.getDate() + 1)) {
     const dayIndex = d.getDay();
-    
+
     // Ignorer les jours fermés
     if (offDays.includes(dayIndex)) continue;
-    
+
     // Vérifier si le jour a des créneaux disponibles
     const slots = getAvailableSlotsForDate(new Date(d), availability);
     if (slots.length > 0) {
       dates.push(new Date(d));
     }
   }
-  
+
   return dates;
+}
+
+/**
+ * Fusionne le planning serveur (Edge) avec les RDV déjà chargés dans le dashboard
+ * (agenda, demandes) pour éviter les doubles réservations en saisie manuelle.
+ */
+export function withMergedAppointmentBusySlots(
+  availability: StudioAvailabilityResponse,
+  appointments: Appointment[] | undefined
+): StudioAvailabilityResponse {
+  if (!appointments?.length) return availability;
+  const localBusy = appointmentsToBusySlots(appointments);
+  return {
+    ...availability,
+    busySlots: mergeBusySlots(availability.busySlots, localBusy),
+  };
 }

@@ -186,7 +186,7 @@ const FloatingActionMenu = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: reduceMotion ? 0.01 : 0.2 }}
-              className="fixed inset-0 z-[48] cursor-default border-0 bg-black/65 dark:bg-black/70"
+              className="fixed inset-0 z-[48] cursor-default border-0 bg-transparent"
               aria-label="Fermer le menu d'actions"
               onClick={() => setIsOpen(false)}
             />

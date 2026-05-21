@@ -179,7 +179,7 @@ Deno.serve(async (req: Request) => {
       "customer_email": emailNorm,
       "line_items[0][price]": priceId,
       "line_items[0][quantity]": "1",
-      "subscription_data[trial_period_days]": "14",
+      "subscription_data[trial_period_days]": "30",
       "subscription_data[metadata][studio_id]": resolvedStudioId,
       "subscription_data[metadata][plan]": payload.plan,
       "subscription_data[metadata][subscription_id]": subscriptionId,

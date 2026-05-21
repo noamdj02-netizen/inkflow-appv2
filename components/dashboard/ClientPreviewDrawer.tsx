@@ -16,6 +16,7 @@ import { formatAppointmentSlotLabel } from '../../lib/appointmentSessionSync';
 import type { Appointment } from '../../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { hapticSuccess } from '../../lib/haptics';
+import { setReadingOverlayActive } from '../../lib/readingOverlay';
 
 interface ClientPreviewDrawerProps {
   isOpen: boolean;
@@ -81,11 +82,15 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    setReadingOverlayActive(true);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      setReadingOverlayActive(false);
+    };
   }, [isOpen, onClose]);
 
   if (!data) return null;

@@ -36,7 +36,7 @@ const TESTIMONIALS: Testimonial[] = [
     studio: 'Encre Sacrée, Paris 11e',
     avatar: AVATAR_F[0],
     avatarFallback: 'S',
-    avatarBg: 'bg-blue-700',
+    avatarBg: 'bg-zinc-800',
     rating: 5,
     text: "Les no-shows avaient diminué de 80% depuis que je demande les acomptes via Inkflow. Le lien de paiement Stripe s'envoie automatiquement, mes clients adorent.",
     metric: '−80% de no-shows',
@@ -60,7 +60,7 @@ const TESTIMONIALS: Testimonial[] = [
     avatarFallback: 'L',
     avatarBg: 'bg-violet-600',
     rating: 5,
-    text: "La messagerie centralisée a changé ma vie. Plus besoin de jongler entre Instagram et mon agenda. Les demandes arrivent qualifiées, je réponds en un clic.",
+    text: 'La messagerie centralisée a changé ma vie. Plus besoin de jongler entre Instagram et mon agenda. Les demandes arrivent qualifiées, je réponds en un clic.',
     metric: 'Réponses 2x plus rapides',
     plan: 'Pro',
   },
@@ -82,7 +82,7 @@ const TESTIMONIALS: Testimonial[] = [
     avatarFallback: 'C',
     avatarBg: 'bg-rose-600',
     rating: 5,
-    text: "Enfin une app pensée pour les tatoueurs. La page vitrine, les RDV, les acomptes : tout est au même endroit. Je recommande à tous les collègues.",
+    text: 'Enfin une app pensée pour les tatoueurs. La page vitrine, les RDV, les acomptes : tout est au même endroit. Je recommande à tous les collègues.',
     metric: 'Tout-en-un qui tient la route',
     plan: 'Pro',
   },
@@ -207,7 +207,10 @@ export const TestimonialsSection: React.FC = () => {
                   onTouchStart={() => setIsPaused(true)}
                   onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
                 >
-                  <div className="absolute top-5 right-5 sm:top-6 sm:right-6 text-5xl sm:text-6xl text-blue-100 dark:text-blue-500/20 font-serif leading-none select-none pointer-events-none" aria-hidden>
+                  <div
+                    className="pointer-events-none absolute right-5 top-5 select-none font-serif text-5xl leading-none text-zinc-100 sm:right-6 sm:top-6 sm:text-6xl dark:text-zinc-500/20"
+                    aria-hidden
+                  >
                     &ldquo;
                   </div>
                   <p className="relative text-zinc-700 dark:text-zinc-300 italic text-[15px] sm:text-base leading-relaxed mb-5 flex-1 pr-2">
@@ -230,17 +233,30 @@ export const TestimonialsSection: React.FC = () => {
                           if (fallback) fallback.classList.remove('hidden');
                         }}
                       />
-                      <span className={`absolute inset-0 hidden flex items-center justify-center text-white font-bold text-base ${t.avatarBg}`}>
+                      <span
+                        className={`absolute inset-0 hidden flex items-center justify-center text-white font-bold text-base ${t.avatarBg}`}
+                      >
                         {t.avatarFallback}
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">{t.name}</p>
-                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{t.studio}</p>
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">
+                        {t.name}
+                      </p>
+                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                        {t.studio}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0" aria-label={`${t.rating} étoiles`}>
+                    <div
+                      className="flex items-center gap-0.5 shrink-0"
+                      aria-label={`${t.rating} étoiles`}
+                    >
                       {Array.from({ length: t.rating }).map((_, i) => (
-                        <Star key={i} className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400 text-amber-400 drop-shadow-sm" aria-hidden />
+                        <Star
+                          key={i}
+                          className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400 text-amber-400 drop-shadow-sm"
+                          aria-hidden
+                        />
                       ))}
                     </div>
                     <span className="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide shrink-0 hidden sm:inline-block">

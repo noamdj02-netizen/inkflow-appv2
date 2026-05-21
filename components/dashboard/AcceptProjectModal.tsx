@@ -1,23 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Loader2, CheckCircle, Clock, Mail, Info } from 'lucide-react';
 import { Modal } from '../ui/Modal';
-import type { ProjectRequest } from '../../types';
+import type { Appointment, ProjectRequest } from '../../types';
 import {
   fetchStudioAvailabilityMeta,
   getAvailableDates,
   getAvailableSlotsForDate,
+  withMergedAppointmentBusySlots,
   type StudioAvailabilityResponse,
 } from '../../lib/studioAvailability';
 import { formatSlotLabel } from '../../lib/alternativeDateProposal';
 import { buildProjectAcceptTimestamps } from '../../lib/projectRequestSlot';
 import { acceptProjectRequest } from '../../lib/projectRequestActions';
 import { useToast } from '../../contexts/ToastContext';
+import { setReadingOverlayActive } from '../../lib/readingOverlay';
 
 export interface AcceptProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectRequest: ProjectRequest | null;
   studioId: string | null;
+  /** RDV agenda / demandes — fusionnés avec le planning serveur pour exclure les créneaux pris */
+  appointments?: Appointment[];
   /** Compte démo : pas d’appel API réel */
   demoMode?: boolean;
   onSuccess?: () => void;
@@ -28,6 +32,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
   onClose,
   projectRequest,
   studioId,
+  appointments = [],
   demoMode = false,
   onSuccess,
 }) => {
@@ -39,6 +44,12 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
   const [selectedYmd, setSelectedYmd] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setReadingOverlayActive(true);
+    return () => setReadingOverlayActive(false);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !studioId) {
@@ -55,10 +66,11 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
     fetchStudioAvailabilityMeta(studioId)
       .then(({ availability: data, usedFallback }) => {
         if (!cancelled) {
-          setAvailability(data);
+          const merged = withMergedAppointmentBusySlots(data, appointments);
+          setAvailability(merged);
           setPlanningHint(
             usedFallback
-              ? 'Planning partiel : créneaux indicatifs. Tu peux quand même envoyer la proposition au client.'
+              ? 'Planning partiel : créneaux indicatifs (agenda local inclus). Tu peux quand même envoyer la proposition au client.'
               : null
           );
         }
@@ -69,7 +81,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, studioId]);
+  }, [isOpen, studioId, appointments]);
 
   const dateOptions = useMemo(() => {
     if (!availability) return [];
@@ -138,7 +150,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Accepter un projet" size="md">
       <div className="mx-auto w-full max-w-lg space-y-6 text-[var(--text-primary)]">
         {/* Client — carte légère, accent gauche */}
-        <div className="rounded-2xl border border-zinc-200/90 border-l-4 border-l-zinc-200 500 bg-zinc-50/90 py-4 pl-4 pr-4 shadow-sm dark:border-zinc-800 dark:border-l-blue-500 dark:bg-zinc-900/40">
+        <div className="rounded-2xl border border-zinc-200/90 border-l-4 border-l-blue-500 bg-zinc-50/90 py-4 pl-4 pr-4 shadow-sm dark:border-zinc-800 dark:border-l-blue-500 dark:bg-zinc-900/40">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-500">
             Client
           </p>

@@ -1,5 +1,5 @@
-/** Support produit — affiché dans l’app (footer, aide, CTA). */
-export const SUPPORT_EMAIL = 'support@ink-flow.me';
+/** Contact produit — affiché dans l’app (footer, aide, signalements). */
+export const SUPPORT_EMAIL = 'contact@ink-flow.me';
 
 export const supportMailto = (subject?: string) =>
   subject

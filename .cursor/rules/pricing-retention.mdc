@@ -36,7 +36,7 @@ La **doc technique** parle souvent de **Solo** / **Studio** / **Enterprise** (`P
 |--------|----------|
 | **J+7** trial | « Comment ça se passe ? » |
 | **J+12** trial | « 3 jours pour tester les features Pro » |
-| **J+14** (veille fin essai) | « Ton essai se termine demain » |
+| **J+29** (veille fin essai, essai 1 mois) | « Ton essai se termine demain » |
 | **Churn détecté** | « Qu’est-ce qui s’est passé ? » (exit survey + offre sauvetage si policy OK) |
 
 Implémentation type : **Edge Function** + **cron** / **pg_cron** + table d’**idempotence** (pas deux fois le même mail le même jour). **Canal canon** emails : **Resend** (`supabase/functions/_shared/resend.ts`).

@@ -3,7 +3,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ExternalLink, Loader2, Sparkles, X } from 'lucide-react';
 import { LANDING_PRICING_URL } from '@/lib/urls';
 import { cn } from '@/lib/utils';
+import { optimizeDashboardHeroImageUrl } from '@/lib/optimizeDashboardHeroImageUrl';
 import { Button } from '@/components/ui/button';
+import { BentoHeroCover } from './BentoHeroCover';
 import { glassPanel, microHover, subscriptionPill } from './bentoStyles';
 
 const HERO_TIP_DISMISS_KEY = 'inkflow-hero-tip-dismissed';
@@ -145,23 +147,23 @@ export function BentoHeroCard({
     </div>
   );
 
+  const avatarSrc = useMemo(
+    () => optimizeDashboardHeroImageUrl(userAvatarUrl, 128),
+    [userAvatarUrl]
+  );
+
   return (
-    <motion.header {...motionProps} className={cn('w-full max-md:mt-2', className)}>
+    <header className={cn('w-full max-md:mt-2', className)}>
       {showMobileImmersive ? (
         <>
-          <div className="relative isolate w-full overflow-hidden rounded-b-[2.5rem] bg-zinc-950 md:hidden">
-            {headerBackgroundUrl ? (
-              <img
-                src={headerBackgroundUrl}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="pointer-events-none absolute inset-0 z-0 size-full object-cover object-[center_24%]"
-              />
-            ) : null}
+          <div className="relative isolate w-full min-h-[7.5rem] overflow-hidden rounded-b-[2.5rem] bg-zinc-950 md:hidden">
+            <BentoHeroCover url={headerBackgroundUrl} />
             <div className="pointer-events-none absolute inset-0 z-[1] bg-black/35" aria-hidden />
 
-            <div className="relative z-[2] px-5 pb-4 pt-[max(3rem,env(safe-area-inset-top,0px))]">
+            <motion.div
+              {...motionProps}
+              className="relative z-[2] px-5 pb-4 pt-[max(3rem,env(safe-area-inset-top,0px))]"
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
@@ -202,8 +204,16 @@ export function BentoHeroCard({
                     )}
                     aria-label="Profil"
                   >
-                    {userAvatarUrl ? (
-                      <img src={userAvatarUrl} alt="" className="size-full object-cover" />
+                    {avatarSrc ? (
+                      <img
+                        src={avatarSrc}
+                        alt=""
+                        width={40}
+                        height={40}
+                        decoding="async"
+                        loading="eager"
+                        className="size-full max-w-none object-cover"
+                      />
                     ) : (
                       <span className="flex size-full items-center justify-center bg-zinc-900/60 text-sm font-bold text-white">
                         {firstName ? firstName[0].toUpperCase() : '?'}
@@ -217,7 +227,7 @@ export function BentoHeroCard({
                   </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {heroTips.length > 0 && !tipDismissed ? (
               <motion.div
@@ -261,8 +271,10 @@ export function BentoHeroCard({
           <div className={cn('hidden md:block', glassPanel, 'p-4 sm:p-6')}>{desktopStack}</div>
         </>
       ) : (
-        <div className={cn(glassPanel, 'p-4 sm:p-6')}>{desktopStack}</div>
+        <motion.header {...motionProps}>
+          <div className={cn(glassPanel, 'p-4 sm:p-6')}>{desktopStack}</div>
+        </motion.header>
       )}
-    </motion.header>
+    </header>
   );
 }

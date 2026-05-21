@@ -1,4 +1,5 @@
 import type { Appointment, Client } from '../types';
+import { isInkflowProShellClient } from './nativeWebShell';
 
 /** Échappe un champ pour CSV (RFC-style, guillemets si besoin). */
 export function csvEscapeCell(value: string | number | boolean | null | undefined): string {
@@ -108,9 +109,56 @@ export function downloadTextFile(
   downloadBlobAsFile(filename, blob);
 }
 
-/** Télécharge un Blob (PDF, CSV custom, etc.) sans `window.open` — évite blocage popup / async. */
-export function downloadBlobAsFile(filename: string, blob: Blob): void {
+/** iOS Safari, PWA standalone et WebView Inkflow Pro bloquent souvent `<a download>`. */
+export function isPdfDownloadConstrainedEnvironment(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const ios =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)')?.matches === true ||
+      // @ts-expect-error — propriété iOS legacy
+      window.navigator.standalone === true);
+  const inkflowShell = isInkflowProShellClient();
+  return ios || standalone || inkflowShell;
+}
+
+/** Ouvre un PDF (URL publique ou blob) — fallback mobile quand le téléchargement direct échoue. */
+export function openPdfForUser(url: string, options?: { revokeAfterMs?: number }): boolean {
+  if (typeof window === 'undefined' || !url) return false;
+  try {
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (w) return true;
+  } catch {
+    /* continue */
+  }
+  try {
+    window.location.assign(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Télécharge un Blob (PDF, CSV custom, etc.) avec repli ouverture onglet sur mobile. */
+export function downloadBlobAsFile(filename: string, blob: Blob): boolean {
   const url = URL.createObjectURL(blob);
+  const constrained = isPdfDownloadConstrainedEnvironment();
+
+  if (constrained && typeof navigator.share === 'function') {
+    const file = new File([blob], filename, { type: blob.type || 'application/pdf' });
+    void navigator
+      .share({ files: [file], title: filename })
+      .then(() => URL.revokeObjectURL(url))
+      .catch(() => {
+        openPdfForUser(url, { revokeAfterMs: 60_000 });
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      });
+    return true;
+  }
+
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -118,5 +166,13 @@ export function downloadBlobAsFile(filename: string, blob: Blob): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+
+  if (constrained) {
+    openPdfForUser(url, { revokeAfterMs: 60_000 });
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return true;
+  }
+
   setTimeout(() => URL.revokeObjectURL(url), 2500);
+  return true;
 }

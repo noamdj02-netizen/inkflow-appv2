@@ -38,6 +38,11 @@ const SignupPage = lazy(() =>
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
 );
+const InkflowFeedbackPage = lazy(() =>
+  import('./pages/dashboard/InkflowFeedbackPage').then((m) => ({
+    default: m.InkflowFeedbackPage,
+  }))
+);
 const PublicStudioPagePro = lazy(() =>
   import('./pages/public/PublicStudioPagePro').then((m) => ({ default: m.PublicStudioPagePro }))
 );
@@ -278,6 +283,11 @@ const Router: React.FC = () => {
       getProps: (m) => ({ slug: m[1] }),
     },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
+    {
+      path: '/dashboard/signalement',
+      component: InkflowFeedbackPage,
+      requiresAuth: true,
+    },
     /** Deep link agenda (login → retour sur le jour demandé) */
     { path: '/agenda', component: AgendaDeepLinkPage },
     /** Slash final optionnel — évite 404 si l’URL est /auth/callback/client/ */

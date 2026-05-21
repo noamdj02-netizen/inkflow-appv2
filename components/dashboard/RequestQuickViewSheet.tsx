@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { setReadingOverlayActive } from '../../lib/readingOverlay';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -109,6 +110,12 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
   onOpenFullClientFiche,
 }) => {
   const toast = useToast();
+
+  useEffect(() => {
+    if (isOpen) setReadingOverlayActive(true);
+    return () => setReadingOverlayActive(false);
+  }, [isOpen]);
+
   if (!item) return null;
 
   const isProject = item._type === 'project';
@@ -150,7 +157,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           max-lg:shadow-none lg:shadow-[-8px_0_32px_-12px_rgba(0,0,0,0.12)] dark:lg:shadow-[-8px_0_32px_-12px_rgba(0,0,0,0.45)]
           lg:ring-1 lg:ring-zinc-100/90 dark:lg:ring-zinc-800/40
           pb-0 lg:pb-0
-          max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:top-auto max-lg:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-bottom)))] max-lg:rounded-t-2xl max-lg:border max-lg:border-b-0
+          max-lg:inset-x-0 max-lg:top-0 max-lg:bottom-0 max-lg:max-h-[100dvh] max-lg:rounded-none max-lg:border-0
           lg:right-0 lg:top-0 lg:bottom-0 lg:h-[100dvh] lg:max-h-[100dvh] lg:rounded-none lg:border-l lg:border-t-0
           ${isOpen ? 'max-lg:translate-y-0 lg:translate-x-0' : 'max-lg:translate-y-full lg:translate-x-full'}`}
       >

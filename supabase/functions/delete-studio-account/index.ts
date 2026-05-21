@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
   const ip = clientIpFromRequest(req);
   if (!allowRateLimit(`delete-account:${ip}`, RATE_MAX, RATE_WINDOW_MS)) {
     return new Response(
-      JSON.stringify({ error: "Trop de tentatives. Réessayez plus tard ou contactez support@ink-flow.me." }),
+      JSON.stringify({ error: "Trop de tentatives. Réessayez plus tard ou contactez contact@ink-flow.me." }),
       { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }

@@ -818,7 +818,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
             Connecter Instagram
           </a>
           <p className="text-xs text-zinc-400 dark:text-zinc-600">
-            Paramètres → Messagerie pour configurer la connexion
+            Paramètres → Messagerie (Instagram) pour configurer la connexion
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { setReadingOverlayActive } from '../../lib/readingOverlay';
 import { FileText, Loader2, X } from 'lucide-react';
 import type { Appointment, FlashDesign, User } from '../../types';
 import { handleClientPaymentSuccess } from '../../lib/automations';
@@ -71,6 +72,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   const balanceSettled = balanceMarkedPaid || remaining < 0.01;
   const canCollectPayment = !balanceSettled && remaining >= 0.01 && Boolean(studioId);
   const actionsBusy = isManualLoading || isLinkLoading;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setReadingOverlayActive(true);
+    return () => setReadingOverlayActive(false);
+  }, [isOpen]);
 
   const persistFlashPriceIfNeeded = useCallback(async (): Promise<{
     apt: Appointment;
@@ -195,10 +202,14 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
         skipIfExists: false,
       });
       if (result.ok) {
-        if (result.skipped && result.publicUrl) {
-          toast.info('Reçu déjà dans le dossier client.');
-        } else if (result.downloaded || result.savedToDossier) {
-          toast.success('Reçu PDF prêt — visible dans Documents (aperçu client).');
+        if (result.downloaded) {
+          toast.success('Reçu PDF ouvert — enregistre-le depuis le partage si besoin.');
+        } else if (result.skipped && result.publicUrl) {
+          toast.info('Reçu déjà dans le dossier client (Documents).');
+        } else if (result.savedToDossier) {
+          toast.success('Reçu archivé dans Documents (aperçu client).');
+        } else {
+          toast.success('Reçu généré.');
         }
         if (result.savedToDossier) {
           onPostBalancePaymentSync?.();
@@ -301,7 +312,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
               ) : (
                 <FileText className="size-4" aria-hidden />
               )}
-              <span>{isInvoiceLoading ? 'Génération…' : '📄 Télécharger le reçu PDF'}</span>
+              <span>{isInvoiceLoading ? 'Génération…' : 'Télécharger le reçu PDF'}</span>
             </button>
           ) : (
             <>

@@ -1,6 +1,6 @@
 # Séquence e-mail — Accueil studio InkFlow (tatoueurs, France)
 
-**Type :** Welcome / onboarding (post-inscription, essai 14 jours)  
+**Type :** Welcome / onboarding (post-inscription, essai 1 mois)  
 **Public :** Propriétaire de compte studio (tatoueur), interface en français  
 **Objectif principal :** Activation (vitrine + créneaux + 1er RDV ou test Stripe) et conversion fin d’essai sans harceler.
 
@@ -8,23 +8,23 @@
 
 ## Synthèse
 
-| Champ | Valeur |
-|--------|--------|
-| **Déclencheur** | Compte confirmé + studio créé, statut d’essai (`trialing`) ou équivalent |
-| **Durée** | 7 e-mails sur **14 jours** (aligné sur la durée d’essai) |
-| **Sortie de séquence** | Désinscription lien marketing ; compte **abonnement actif** (skip relances « choisir un plan ») ; compte **restreint** post-essai (stop ou bascule séquence « win-back » séparée) |
+| Champ                   | Valeur                                                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Déclencheur**         | Compte confirmé + studio créé, statut d’essai (`trialing`) ou équivalent                                                                                                                 |
+| **Durée**               | 7 e-mails sur **30 jours** (aligné sur la durée d’essai)                                                                                                                                 |
+| **Sortie de séquence**  | Désinscription lien marketing ; compte **abonnement actif** (skip relances « choisir un plan ») ; compte **restreint** post-essai (stop ou bascule séquence « win-back » séparée)        |
 | **Coordination in-app** | La checklist et le bandeau essai dans le dashboard **complètent** les mails : pas de répétition mot pour mot — chaque mail = **un angle** (quick win, paiement, preuve, urgence légère). |
 
 ---
 
 ## Métriques à suivre
 
-| Métrique | Cible indicative |
-|----------|------------------|
-| Taux d’ouverture (par envoi) | Baseline puis +10 % après A/B sujets |
-| Clic « Tableau de bord » / CTA principal | > 3 % sur segment froid |
-| Activation : vitrine publiée + ≥1 créneau ou 1 RDV (événement produit) | À corréler avec Resend + analytics |
-| Conversion essai → payant | KPI business |
+| Métrique                                                               | Cible indicative                     |
+| ---------------------------------------------------------------------- | ------------------------------------ |
+| Taux d’ouverture (par envoi)                                           | Baseline puis +10 % après A/B sujets |
+| Clic « Tableau de bord » / CTA principal                               | > 3 % sur segment froid              |
+| Activation : vitrine publiée + ≥1 créneau ou 1 RDV (événement produit) | À corréler avec Resend + analytics   |
+| Conversion essai → payant                                              | KPI business                         |
 
 ---
 
@@ -67,7 +67,7 @@
 >
 > Ensuite, ajoute **un flash** ou un visuel : ça rend la page crédible du premier coup.
 >
-> **CTA :** [Paramètres vitrine]({{APP_URL}}/dashboard) *(adapter le deep link si vous avez un hash/query pour ouvrir l’onglet vitrine)*  
+> **CTA :** [Paramètres vitrine]({{APP_URL}}/dashboard) _(adapter le deep link si vous avez un hash/query pour ouvrir l’onglet vitrine)_  
 > **Micro-preuve :** Des studios passent moins de temps sur les relances une fois la vitrine à jour.
 
 ---
@@ -104,7 +104,7 @@
 >
 > InkFlow sert surtout à **centraliser** : demandes, agenda, messages et fiches clients. Moins de dispersion entre les apps, plus de visibilité sur ce qui est confirmé ou en attente.
 >
-> *(Option : insérer ici une phrase **réelle** du type « Studio X à [ville] utilise la réservation en ligne depuis… » si vous avez l’accord.)*
+> _(Option : insérer ici une phrase **réelle** du type « Studio X à [ville] utilise la réservation en ligne depuis… » si vous avez l’accord.)_
 >
 > **CTA :** [Voir mon agenda]({{APP_URL}}/dashboard)
 
@@ -149,7 +149,7 @@
 
 ---
 
-## E-mail 7 — Dernier jour d’essai (J+14, si toujours `trialing`)
+## E-mail 7 — Dernier jour d’essai (J+30, si toujours `trialing`)
 
 **Rôle :** Dernière ligne droite, ton clair, pas agressif.
 
@@ -172,12 +172,12 @@
 
 ## Implémentation technique (prochaine étape)
 
-| Étape | Action |
-|-------|--------|
-| 1 | Mettre à jour le **copy** de `send-tattooer-welcome` pour coller à l’**e-mail 1** (sujet + corps). |
-| 2 | Créer une table `inkflow_marketing_email_log` (studio_id, template_key, sent_at) ou équivalent + **pg_cron** / Edge Function planifiée pour J+1, J+3… **ou** brancher un outil (Customer.io, Resend Broadcasts + segments) si vous préférez no-code. |
-| 3 | **Segments :** n’envoyer mails 6–7 que si `subscription_status = trialing` et `trial_ends_at` dans la fenêtre. |
-| 4 | Lien **désinscription** en footer (obligatoire pour mails marketing FR) — page simple `/preferences-email` ou liste Resend. |
+| Étape | Action                                                                                                                                                                                                                                               |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Mettre à jour le **copy** de `send-tattooer-welcome` pour coller à l’**e-mail 1** (sujet + corps).                                                                                                                                                   |
+| 2     | Créer une table `inkflow_marketing_email_log` (studio_id, template_key, sent_at) ou équivalent + **pg_cron** / Edge Function planifiée pour J+1, J+3… **ou** brancher un outil (Customer.io, Resend Broadcasts + segments) si vous préférez no-code. |
+| 3     | **Segments :** n’envoyer mails 6–7 que si `subscription_status = trialing` et `trial_ends_at` dans la fenêtre.                                                                                                                                       |
+| 4     | Lien **désinscription** en footer (obligatoire pour mails marketing FR) — page simple `/preferences-email` ou liste Resend.                                                                                                                          |
 
 ---
 
@@ -187,4 +187,4 @@
 
 ---
 
-*Document généré pour alignement produit / copy — à faire valider juridiquement et métier avant envoi massif.*
+_Document généré pour alignement produit / copy — à faire valider juridiquement et métier avant envoi massif._

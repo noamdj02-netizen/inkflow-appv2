@@ -9,7 +9,7 @@
 
 ## Essai et accès
 
-- **14 jours d’essai gratuit**, sans carte bancaire au départ
+- **1 mois d’essai gratuit**, sans carte bancaire au départ
 - Application web (navigateur), PWA possible
 
 ## Pages utiles (sources officielles)
