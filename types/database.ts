@@ -1807,6 +1807,7 @@ export type Database = {
           health_data: Json;
           id: string;
           ip_address: string | null;
+          project_request_id: string | null;
           signature_text: string | null;
           studio_id: string;
           updated_at: string;
@@ -1825,6 +1826,7 @@ export type Database = {
           health_data?: Json;
           id?: string;
           ip_address?: string | null;
+          project_request_id?: string | null;
           signature_text?: string | null;
           studio_id: string;
           updated_at?: string;
@@ -1843,6 +1845,7 @@ export type Database = {
           health_data?: Json;
           id?: string;
           ip_address?: string | null;
+          project_request_id?: string | null;
           signature_text?: string | null;
           studio_id?: string;
           updated_at?: string;
@@ -1861,6 +1864,13 @@ export type Database = {
             columns: ['booking_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_bookings';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_health_forms_project_request_id_fkey';
+            columns: ['project_request_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_project_requests';
             referencedColumns: ['id'];
           },
           {

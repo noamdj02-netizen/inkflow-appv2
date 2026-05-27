@@ -27,7 +27,7 @@ export function CityLinks({ cities }: { cities: CityPage[] }) {
         {cities.map((c) => (
           <a
             key={c.slug}
-            href={`/discover/${c.slug}`}
+            href={`/explorer/${c.slug}`}
             style={{
               display: 'flex',
               flexDirection: 'column',

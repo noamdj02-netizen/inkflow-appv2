@@ -129,7 +129,7 @@ import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
 import { PendingCriticalWritesBanner } from './PendingCriticalWritesBanner';
 import { isInkflowProShellClient } from '../../lib/nativeWebShell';
 import { optimizeDashboardHeroImageUrl } from '../../lib/optimizeDashboardHeroImageUrl';
-import { isJustSignedUp } from '../../lib/welcomeStorage';
+import { isJustSignedUp, replayWelcomeOnboardingLocal } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
 import {
@@ -957,6 +957,7 @@ export const DashboardPro: React.FC = () => {
   const clearOpenRequestSheetProjectId = useCallback(() => setOpenRequestSheetProjectId(null), []);
   const clearOpenRequestSheetBookingId = useCallback(() => setOpenRequestSheetBookingId(null), []);
   const [welcomeComplete, setWelcomeComplete] = useState(false);
+  const [, setWelcomeReplayTick] = useState(0);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
   const [requestsInitialTab, setRequestsInitialTab] = useState<
     'inbox' | 'rdv' | 'bookings' | 'projects' | 'history' | null
@@ -2591,6 +2592,26 @@ export const DashboardPro: React.FC = () => {
     studioSlug &&
     user?.email;
 
+  useEffect(() => {
+    if (!welcomeUserKey || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const shouldReplayWelcome =
+      params.get('replay_welcome') === '1' ||
+      params.get('welcome') === '1' ||
+      params.get('onboarding') === '1';
+    if (!shouldReplayWelcome) return;
+
+    replayWelcomeOnboardingLocal(welcomeUserKey);
+    setWelcomeComplete(false);
+    setWelcomeReplayTick((v) => v + 1);
+
+    params.delete('replay_welcome');
+    params.delete('welcome');
+    params.delete('onboarding');
+    const q = params.toString();
+    window.history.replaceState({}, '', q ? `/dashboard?${q}` : '/dashboard');
+  }, [welcomeUserKey]);
+
   const paymentSuccessTattooerName = user?.name?.trim() || user?.studioName?.trim() || '';
 
   const paymentSuccessVitrineUrl = useMemo(() => {
@@ -3927,6 +3948,7 @@ export const DashboardPro: React.FC = () => {
                                   }
                                 }}
                                 setSelectedAppointment={setSelectedAppointment}
+                                onOpenCloseoutAppointment={setSessionCloseoutAppointment}
                                 onUpdateAppointment={handleOverviewUpdateAppointment}
                                 setShowBookingModal={setShowBookingModal}
                                 setSelectedFlash={setSelectedFlash}

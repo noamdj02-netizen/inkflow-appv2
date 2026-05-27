@@ -13,10 +13,9 @@ import {
 import { getVitrineDataBySlugAsync } from '../lib/vitrineStorage';
 import { toLocalDateString } from '../lib/utils';
 import {
-  fetchStudioAvailability,
+  fetchStudioAvailabilityMeta,
   DEFAULT_TIME_SLOTS,
   DEFAULT_OFF_DAYS,
-  type StudioAvailabilityResponse,
 } from '../lib/studioAvailability';
 import { createCheckoutSession } from '../lib/stripeClient';
 import { createProjectRequest } from '../lib/supabaseProjectRequests';
@@ -156,6 +155,8 @@ export function useBookingFlow(studioSlug: string) {
   const [bookingWindowDays, setBookingWindowDays] = useState<number>(60);
   const [studioOffDays, setStudioOffDays] = useState<number[] | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilityUnavailable, setAvailabilityUnavailable] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [advanceBookingDays, setAdvanceBookingDays] = useState(0);
   const [dynamicSlotsByDay, setDynamicSlotsByDay] = useState<Record<number, string[]> | null>(null);
 
@@ -360,24 +361,48 @@ export function useBookingFlow(studioSlug: string) {
     if (!studioId || studioId === 'loading') return;
     let cancelled = false;
     setAvailabilityLoading(true);
+    setAvailabilityUnavailable(false);
+    setAvailabilityError(null);
     if (supabaseEnabled) {
-      fetchStudioAvailability(studioId)
-        .then((response: StudioAvailabilityResponse) => {
+      fetchStudioAvailabilityMeta(studioId)
+        .then(({ availability, usedFallback }) => {
           if (!cancelled) {
-            setBusySlots(response.busySlots || {});
-            setStudioSlots(response.customSlots || []);
-            if (response.bookingWindowDays && response.bookingWindowDays > 0) {
-              setBookingWindowDays(response.bookingWindowDays);
+            setBusySlots(availability.busySlots || {});
+            setStudioSlots(availability.customSlots || []);
+            if (availability.bookingWindowDays && availability.bookingWindowDays > 0) {
+              setBookingWindowDays(availability.bookingWindowDays);
             }
-            if (response.offDays !== null) setStudioOffDays(response.offDays);
-            if (response.advanceBookingDays) setAdvanceBookingDays(response.advanceBookingDays);
-            if (response.dynamicSlotsByDay) setDynamicSlotsByDay(response.dynamicSlotsByDay);
+            if (availability.offDays !== null) setStudioOffDays(availability.offDays);
+            if (availability.advanceBookingDays)
+              setAdvanceBookingDays(availability.advanceBookingDays);
+            if (availability.dynamicSlotsByDay)
+              setDynamicSlotsByDay(availability.dynamicSlotsByDay);
+            setAvailabilityUnavailable(usedFallback);
+            if (usedFallback) {
+              setAvailabilityError(
+                'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de choisir un creneau.'
+              );
+              setForm((prev) =>
+                prev.selectedDate || prev.selectedTime
+                  ? { ...prev, selectedDate: '', selectedTime: '' }
+                  : prev
+              );
+            }
           }
         })
         .catch(() => {
           if (!cancelled) {
             setBusySlots({});
             setStudioSlots([]);
+            setAvailabilityUnavailable(true);
+            setAvailabilityError(
+              'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de choisir un creneau.'
+            );
+            setForm((prev) =>
+              prev.selectedDate || prev.selectedTime
+                ? { ...prev, selectedDate: '', selectedTime: '' }
+                : prev
+            );
           }
         })
         .finally(() => {
@@ -385,6 +410,8 @@ export function useBookingFlow(studioSlug: string) {
         });
     } else {
       setBusySlots({});
+      setAvailabilityUnavailable(false);
+      setAvailabilityError(null);
       setAvailabilityLoading(false);
     }
     return () => {
@@ -548,6 +575,7 @@ export function useBookingFlow(studioSlug: string) {
 
   const canPay =
     paymentsOnline === true &&
+    !availabilityUnavailable &&
     Boolean(selectedFlashId && selectedFlash && depositAmount != null) &&
     resolvedPlacement.length > 0 &&
     Boolean(form.firstName) &&
@@ -559,7 +587,10 @@ export function useBookingFlow(studioSlug: string) {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
+  const handleProjectRequestSubmit = async (
+    data: ProjectRequestFormData,
+    healthData?: HealthFormData
+  ) => {
     if (!studioId || studioId === 'loading') {
       setProjectError('Studio introuvable. Réessayez dans un instant.');
       return;
@@ -567,7 +598,11 @@ export function useBookingFlow(studioSlug: string) {
     setProjectError(null);
     try {
       const prefix = selectedArtistLabel ? `Tatoueur souhaité : ${selectedArtistLabel}\n\n` : '';
-      await createProjectRequest({ ...data, description: prefix + data.description }, studioId);
+      await createProjectRequest(
+        { ...data, description: prefix + data.description },
+        studioId,
+        healthData
+      );
       setProjectSubmitted(true);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erreur lors de l'envoi. Veuillez réessayer.";
@@ -638,6 +673,13 @@ export function useBookingFlow(studioSlug: string) {
       !form.selectedTime
     )
       return;
+    if (availabilityUnavailable) {
+      setPaymentError(
+        availabilityError ||
+          'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de payer.'
+      );
+      return;
+    }
     if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
     if (!resolvedPlacement) return;
     if (!studioId || studioId === 'loading') return;
@@ -834,6 +876,13 @@ export function useBookingFlow(studioSlug: string) {
       !form.selectedTime
     )
       return;
+    if (availabilityUnavailable) {
+      setPaymentError(
+        availabilityError ||
+          'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de payer.'
+      );
+      return;
+    }
     if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
     if (!resolvedPlacement) return;
     if (!studioId || studioId === 'loading') return;
@@ -897,6 +946,8 @@ export function useBookingFlow(studioSlug: string) {
     handleProjectRequestSubmit,
     // Availability
     availabilityLoading,
+    availabilityUnavailable,
+    availabilityError,
     availableDates,
     availableSlots,
     calendarMonth,
