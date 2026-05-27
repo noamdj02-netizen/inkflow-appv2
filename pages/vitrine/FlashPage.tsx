@@ -216,7 +216,7 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
         style={{ background: CX.bg, color: CX.text }}
       >
         <p className="text-lg font-semibold mb-4">{error ?? 'Flash introuvable'}</p>
-        <a href="/discover" className="text-sm underline" style={{ color: CX.accent }}>
+        <a href="/explorer" className="text-sm underline" style={{ color: CX.accent }}>
           Retour à l'exploration
         </a>
       </div>

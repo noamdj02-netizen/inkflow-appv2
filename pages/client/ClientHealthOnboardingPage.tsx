@@ -6,14 +6,20 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
-import { HealthQuestionnaireForm, type HealthFormData } from '../../components/booking/HealthQuestionnaireForm';
-import { upsertClientHealthProfile, fetchClientHealthProfile, isHealthFormComplete } from '../../lib/clientHealthProfile';
+import {
+  HealthQuestionnaireForm,
+  type HealthFormData,
+} from '../../components/booking/HealthQuestionnaireForm';
+import {
+  upsertClientHealthProfile,
+  fetchClientHealthProfile,
+  isHealthFormComplete,
+} from '../../lib/clientHealthProfile';
 import { useToast } from '../../contexts/ToastContext';
 import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
 /** Même « system grouped » que le portail client (index.css / dashboard) */
-const PAGE_BG =
-  'linear-gradient(180deg, #e8eaef 0%, #f2f2f7 10%, #f2f2f7 100%)';
+const PAGE_BG = 'linear-gradient(180deg, #e8eaef 0%, #f2f2f7 10%, #f2f2f7 100%)';
 
 export const ClientHealthOnboardingPage: React.FC = () => {
   const toast = useToast();
@@ -27,9 +33,11 @@ export const ClientHealthOnboardingPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
-        window.location.replace('/client');
+        window.location.replace('/discover/login');
         return;
       }
       const u = session.user;
@@ -57,7 +65,9 @@ export const ClientHealthOnboardingPage: React.FC = () => {
   }, []);
 
   const handleComplete = async (data: HealthFormData) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       toast.error('Session expirée.');
       return;
@@ -86,7 +96,7 @@ export const ClientHealthOnboardingPage: React.FC = () => {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <SEO title="Questionnaire santé — My Inkflow" canonical="/client/compte-sante" noindex />
+      <SEO title="Questionnaire santé — My Inkflow" canonical="/discover" noindex />
       <header
         className="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200/90 bg-[#f2f2f7]/85 px-5 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-[#f2f2f7]/70"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 12 }}

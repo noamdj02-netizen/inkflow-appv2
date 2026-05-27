@@ -3,6 +3,8 @@ import { Bell, Settings, Smartphone } from 'lucide-react';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
 import { isLikelyIos, isStandalonePwa } from '../../lib/pushClientContext';
 import { useToast } from '../../contexts/ToastContext';
+import { isInkflowProShellClient } from '../../lib/nativeWebShell';
+import { supabase } from '../../lib/supabase';
 
 interface PushNotificationsSettingsProps {
   studioId: string | null;
@@ -23,8 +25,10 @@ export const PushNotificationsSettings: React.FC<PushNotificationsSettingsProps>
   studioId,
 }) => {
   const toast = useToast();
+  const [nativeRequestLoading, setNativeRequestLoading] = React.useState(false);
   const { subscribe, isSupported, supportReason, permission, loading, error } =
     usePushSubscription(studioId);
+  const isNativeShell = isInkflowProShellClient();
 
   const handleSubscribe = async () => {
     const ok = await subscribe();
@@ -32,6 +36,100 @@ export const PushNotificationsSettings: React.FC<PushNotificationsSettingsProps>
       toast.success('Notifications push activées — vous recevrez des alertes même app fermée.');
     else if (error) toast.error(error);
   };
+
+  const handleNativeAuthorize = async () => {
+    if (!studioId) {
+      toast.error('Studio indisponible pour activer les notifications mobiles.');
+      return;
+    }
+    if (typeof window === 'undefined') return;
+    const bridge = (
+      window as Window & {
+        ReactNativeWebView?: { postMessage: (payload: string) => void };
+      }
+    ).ReactNativeWebView;
+    if (!bridge) {
+      toast.error("Le pont mobile Inkflow Pro n'est pas disponible sur cet appareil.");
+      return;
+    }
+
+    setNativeRequestLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token?.trim();
+      if (!accessToken) {
+        toast.error('Session introuvable. Reconnectez-vous puis réessayez.');
+        return;
+      }
+
+      bridge.postMessage(
+        JSON.stringify({
+          type: 'inkflow_native_push_register',
+          accessToken,
+          studioId,
+        })
+      );
+
+      toast.success(
+        "Demande envoyée à Inkflow Pro. Autorisez les notifications système si l'iPhone l'affiche."
+      );
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Impossible de demander l'autorisation mobile.";
+      toast.error(message);
+    } finally {
+      setNativeRequestLoading(false);
+    }
+  };
+
+  if (isNativeShell) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Bell className="w-5 h-5 text-zinc-600 dark:text-zinc-400" aria-hidden />
+          <h4 className="font-semibold text-zinc-900 dark:text-white">Notifications push</h4>
+        </div>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Recevez des alertes natives Inkflow Pro sur votre iPhone ou Android, même lorsque
+          l&apos;application est fermée.
+        </p>
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 p-4 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2">
+              <Smartphone className="w-4 h-4 text-zinc-700 dark:text-zinc-200" aria-hidden />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                Autorisation mobile
+              </p>
+              <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Touchez le bouton ci-dessous pour afficher la demande d&apos;autorisation native et
+                enregistrer cet appareil pour les nouveaux RDV, messages et rappels.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleNativeAuthorize}
+            disabled={nativeRequestLoading}
+            className="min-h-[44px] rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+          >
+            {nativeRequestLoading ? 'Demande en cours…' : "Demander l'autorisation sur mobile"}
+          </button>
+
+          <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Si vous avez déjà refusé, ouvrez <strong>Réglages → Notifications → Inkflow Pro</strong>
+            , puis revenez ici et réessayez.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isSupported) {
     const vapidHint =

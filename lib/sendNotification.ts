@@ -141,7 +141,7 @@ export interface SendBookingConfirmationParams {
   smsConfirmationOptIn?: boolean;
   /** Adresse du studio pour la pièce jointe .ics (optionnel) */
   studioAddress?: string;
-  /** URL absolue hub `/mon-compte` (profil santé). Secondaire dans l’e-mail. */
+  /** URL absolue hub `/discover` (profil santé). Secondaire dans l’e-mail. */
   clientPortalUrl?: string;
 }
 

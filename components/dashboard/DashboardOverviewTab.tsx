@@ -97,6 +97,9 @@ import { DashboardBentoUnified } from './bento/DashboardBentoUnified';
 import { BentoHeroCard } from './bento/BentoHeroCard';
 import { BentoPilotageQuickRow } from './bento/BentoPilotageQuickRow';
 import { countActiveTodayAppointmentSlots, countAgendaAppointmentsForDay } from './bento/mapper';
+import { useLiveActiveAppointment } from '@/hooks/useLiveActiveAppointment';
+import { MobileActiveSessionCard } from './MobileActiveSessionCard';
+import { TodaySessionCockpit } from './TodaySessionCockpit';
 
 const MS_PER_DAY = 86400000;
 
@@ -413,6 +416,8 @@ export interface DashboardOverviewTabProps {
   setSelectedAppointment: (apt: Appointment | null) => void;
   /** Fiche client + clôture encaissement (créneau synchronisé). */
   onOpenAppointmentFromPreview?: (appointmentId: string) => void;
+  /** Carte mobile active : ouvre directement la clôture / encaissement. */
+  onOpenCloseoutAppointment?: (apt: Appointment) => void;
   onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
   setShowBookingModal: (show: boolean) => void;
   setSelectedFlash: (f: FlashDesign | null) => void;
@@ -477,6 +482,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   onAlertNavigate,
   setSelectedAppointment,
   onOpenAppointmentFromPreview,
+  onOpenCloseoutAppointment,
   onUpdateAppointment: _onUpdateAppointment,
   setShowBookingModal,
   setSelectedFlash,
@@ -634,18 +640,67 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     toast.success('Ouvre l’onglet Stripe — connecte-toi si demandé.');
   }, [studioId, stripeExpressOpening, toast, onSetupNavigate]);
 
+  const {
+    activeAppointment: liveActiveAppointment,
+    liveAppointments,
+    hasOverlap,
+  } = useLiveActiveAppointment(todayAppointments, today);
+
+  const syncedTodayAppointments = useMemo<Appointment[]>(
+    () =>
+      liveAppointments.map(
+        ({
+          liveState,
+          startAtMs: _startAtMs,
+          endAtMs: _endAtMs,
+          priorityScore: _priorityScore,
+          ...apt
+        }) => ({
+          ...apt,
+          status:
+            liveState === 'active' || liveState === 'grace_active' || liveState === 'late'
+              ? 'in_progress'
+              : apt.status,
+        })
+      ),
+    [liveAppointments]
+  );
+
+  const showMobileActiveSessionCard = Boolean(
+    liveActiveAppointment &&
+    ['upcoming_soon', 'active', 'grace_active', 'late'].includes(liveActiveAppointment.liveState)
+  );
+
+  const handleOpenActiveSessionClient = useCallback(
+    (appointment: Appointment) => {
+      setSelectedAppointment(appointment);
+    },
+    [setSelectedAppointment]
+  );
+
+  const handleCollectActiveSession = useCallback(
+    (appointment: Appointment) => {
+      if (onOpenCloseoutAppointment) {
+        onOpenCloseoutAppointment(appointment);
+        return;
+      }
+      setSelectedAppointment(appointment);
+    },
+    [onOpenCloseoutAppointment, setSelectedAppointment]
+  );
+
   const upcomingAppointments = appointments
     .filter((a) => a.date > today && ['pending', 'confirmed'].includes(a.status))
     .sort((a, b) => a.date.localeCompare(b.date));
   /** Aperçu hero : jusqu’à 2 RDV (aujourd’hui puis à venir). */
   const heroPreviewRdvs = useMemo(() => {
-    const todaySorted = [...todayAppointments].sort((a, b) =>
+    const todaySorted = [...syncedTodayAppointments].sort((a, b) =>
       (a.time || '').localeCompare(b.time || '')
     );
     const fromToday = todaySorted.slice(0, 2);
     if (fromToday.length >= 2) return fromToday;
     return [...fromToday, ...upcomingAppointments.slice(0, 2 - fromToday.length)];
-  }, [todayAppointments, upcomingAppointments]);
+  }, [syncedTodayAppointments, upcomingAppointments]);
   /** Aligné sur `BentoAgendaTodayTile` (hors cancelled / no_show). */
   const activeTodaySlotsCount = useMemo(
     () => countAgendaAppointmentsForDay(appointments, today),
@@ -1437,7 +1492,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       }}
       todayIso={today}
       appointments={appointments}
-      todayAppointments={todayAppointments}
+      todayAppointments={syncedTodayAppointments}
       clients={clients}
       pendingRequestsCount={pendingDemandesCount}
       recentDeposits={recentDeposits}
@@ -1461,6 +1516,38 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         })
       }
       onOpenFlashTab={() => setActiveTab('flash')}
+      afterHeroSlot={
+        showMobileActiveSessionCard && liveActiveAppointment ? (
+          <div className="mt-3 px-4 md:hidden">
+            <MobileActiveSessionCard
+              appointment={liveActiveAppointment}
+              hasOverlap={hasOverlap}
+              onCollect={handleCollectActiveSession}
+              onOpenClient={handleOpenActiveSessionClient}
+            />
+            <div className="mt-3">
+              <TodaySessionCockpit
+                today={today}
+                appointments={syncedTodayAppointments}
+                activeAppointment={liveActiveAppointment}
+                clients={clients}
+                flashDesigns={flashDesigns}
+                stripeConnectReady={paymentsSetupComplete === true}
+                onSyncAppointmentPrice={
+                  _onUpdateAppointment
+                    ? (appointment, updates) => _onUpdateAppointment(appointment, updates)
+                    : undefined
+                }
+                onSelectAppointment={(apt) => setSelectedAppointment(apt)}
+                onOpenCloseout={onOpenCloseoutAppointment ?? ((apt) => setSelectedAppointment(apt))}
+                onOpenStockTrace={() => setActiveTab('stock')}
+                onOpenAgenda={() => setActiveTab('agenda')}
+                mobileMinimalChrome
+              />
+            </div>
+          </div>
+        ) : null
+      }
     />
   ) : null;
 
@@ -1507,6 +1594,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     }}
                   />
                 )}
+
+                {!showArtistBento && showMobileActiveSessionCard && liveActiveAppointment ? (
+                  <motion.div variants={mobileSectionVariants} className="px-4">
+                    <MobileActiveSessionCard
+                      appointment={liveActiveAppointment}
+                      hasOverlap={hasOverlap}
+                      onCollect={handleCollectActiveSession}
+                      onOpenClient={handleOpenActiveSessionClient}
+                    />
+                  </motion.div>
+                ) : null}
 
                 <div className="flex min-w-0 flex-col gap-4 px-4">
                   {!showArtistBento ? (

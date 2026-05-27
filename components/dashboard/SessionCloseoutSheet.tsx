@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { setReadingOverlayActive } from '../../lib/readingOverlay';
-import { FileText, Loader2, X } from 'lucide-react';
+import { CreditCard, FileText, Loader2, X } from 'lucide-react';
 import type { Appointment, FlashDesign, User } from '../../types';
 import { handleClientPaymentSuccess } from '../../lib/automations';
 import { createCheckoutSession } from '../../lib/stripeClient';
@@ -12,6 +12,7 @@ import {
 } from '../../lib/flashAppointmentPrice';
 import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { getCanonicalAppOrigin } from '../../lib/urls';
 
 export interface SessionCloseoutSheetProps {
   isOpen: boolean;
@@ -185,6 +186,30 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
     }
   }, [persistFlashPriceIfNeeded, studioId, studioSlug, stripeConnectReady, toast]);
 
+  const handleTapToPay = useCallback(async () => {
+    const prep = await persistFlashPriceIfNeeded();
+    if (!prep || !studioId) return;
+    const { apt, remainingEuros } = prep;
+    if (remainingEuros < 0.01) return;
+    if (!stripeConnectReady) {
+      toast.error('Active Stripe Connect dans Paramètres → Paiements.');
+      return;
+    }
+
+    try {
+      const origin = getCanonicalAppOrigin().replace(/\/$/, '');
+      const params = new URLSearchParams({
+        appointment: apt.id,
+        studio: studioId,
+        amountEuros: remainingEuros.toFixed(2),
+      });
+      onClose();
+      window.location.assign(`${origin}/tap-to-pay?${params.toString()}`);
+    } catch {
+      toast.error("Impossible d'ouvrir Tap to Pay.");
+    }
+  }, [persistFlashPriceIfNeeded, studioId, stripeConnectReady, toast, onClose]);
+
   const handleDownloadInvoicePdf = useCallback(async () => {
     if (!appointment || !studioId) return;
     setIsInvoiceLoading(true);
@@ -318,16 +343,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
             <>
               <button
                 type="button"
-                disabled={!canCollectPayment || actionsBusy}
-                onClick={() => void handleManualCollect()}
+                disabled={!canCollectPayment || !stripeConnectReady || actionsBusy}
+                onClick={() => void handleTapToPay()}
                 className={btnPrimaryCollect}
               >
-                {isManualLoading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                <span>
-                  {isManualLoading
-                    ? 'Enregistrement…'
-                    : `Encaisser ${remainingLabel} € (Espèces, Virement…) + Reçu PDF`}
-                </span>
+                <CreditCard className="size-4" aria-hidden />
+                <span>{`Tap to Pay Stripe sur iPhone · ${remainingLabel} €`}</span>
               </button>
 
               <button
@@ -341,6 +362,20 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
                   {isLinkLoading
                     ? 'Ouverture du lien…'
                     : '🔗 Envoyer un lien de paiement Stripe (Apple Pay, CB…)'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!canCollectPayment || actionsBusy}
+                onClick={() => void handleManualCollect()}
+                className={btnSecondaryOutline}
+              >
+                {isManualLoading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                <span>
+                  {isManualLoading
+                    ? 'Enregistrement…'
+                    : `Marquer payé manuellement (${remainingLabel} €) + Reçu PDF`}
                 </span>
               </button>
             </>

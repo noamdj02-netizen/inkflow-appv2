@@ -212,7 +212,7 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
       <SEO
         title="Bienvenue — Espace client Inkflow"
         description="Découvre ton espace client : rendez-vous, messages et suivi tatouage."
-        canonical="/client/bienvenue"
+        canonical="/discover/bienvenue"
         keywords="espace client tatouage, My Inkflow, onboarding"
         ogImageAlt="Bienvenue espace client Inkflow"
         noindex
@@ -256,7 +256,7 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
             </div>
           </div>
           <a
-            href="/client"
+            href="/discover/login"
             className="inline-flex shrink-0 items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-blue-600 min-h-[44px] transition-colors hover:bg-blue-50/90 hover:text-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
           >
             Connexion
@@ -361,7 +361,7 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
                     </p>
                   </div>
                   <a
-                    href="/client?from=onboarding"
+                    href="/discover/login?from=onboarding"
                     className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold text-white shadow-md transition-all hover:opacity-[0.96] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 motion-reduce:transition-none"
                     style={{
                       background: D.accent,
@@ -372,7 +372,7 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
                     <ArrowRight className="h-5 w-5 shrink-0" aria-hidden />
                   </a>
                   <a
-                    href="/client"
+                    href="/discover/login"
                     className="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:bg-zinc-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50"
                   >
                     J’ai déjà un compte

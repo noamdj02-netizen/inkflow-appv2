@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Appointment, Client, ProjectRequest } from '@/types';
 import {
@@ -52,6 +52,7 @@ export interface DashboardBentoUnifiedProps {
   onNewClient?: () => void;
   onOpenAppointmentPreview?: (appointmentId: string) => void;
   onOpenFlashTab: () => void;
+  afterHeroSlot?: ReactNode;
   className?: string;
 }
 
@@ -91,6 +92,7 @@ export function DashboardBentoUnified({
   onNewClient,
   onOpenAppointmentPreview,
   onOpenFlashTab,
+  afterHeroSlot,
   className = '',
 }: DashboardBentoUnifiedProps) {
   const reduceMotion = useReducedMotion();
@@ -177,6 +179,8 @@ export function DashboardBentoUnified({
         avatarUploading={avatarUploading}
         onAvatarPress={onAvatarPress}
       />
+
+      {afterHeroSlot}
 
       <BentoPilotageQuickRow
         todayAppointmentsCount={todayAgendaCount}

@@ -57,7 +57,7 @@ function ClientStudioEmbed({
 
   useEffect(() => {
     if (access === 'no-session') {
-      window.location.replace('/client');
+      window.location.replace('/discover/login');
     }
   }, [access]);
 
@@ -163,7 +163,7 @@ export function ClientVitrineEmbedPage() {
       iframePath="/dashboard?vitrine=1"
       pageTitle="Ma vitrine"
       seoTitle="Personnaliser ma vitrine · My Inkflow"
-      canonicalPath="/client/vitrine"
+      canonicalPath="/dashboard?tab=settings"
     />
   );
 }
@@ -174,7 +174,7 @@ export function ClientFlashToolsEmbedPage() {
       iframePath="/dashboard?tab=flash"
       pageTitle="Flashs studio"
       seoTitle="Gérer les flashs · My Inkflow"
-      canonicalPath="/client/studio/flash"
+      canonicalPath="/dashboard?tab=flash"
     />
   );
 }

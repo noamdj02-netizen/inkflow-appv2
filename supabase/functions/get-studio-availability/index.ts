@@ -44,6 +44,7 @@ interface AvailabilitySettings {
   offDays?: number[];
   bookingWindowDays?: number;
   blockedRanges?: BlockedRange[];
+  closedDates?: string[];
   slotDuration?: number;
   bufferTime?: number;
   overrunMargin?: number;
@@ -212,6 +213,14 @@ Deno.serve(async (req: Request) => {
       ? settings.blockedRanges.filter((r) => r && typeof r.start === "string" && typeof r.end === "string")
       : [];
 
+    const closedDates = new Set(
+      Array.isArray(settings.closedDates)
+        ? settings.closedDates
+            .filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d.trim()))
+            .map((d) => d.trim())
+        : [],
+    );
+
     for (const range of blockedRanges) {
       const start = new Date(range.start);
       const end = new Date(range.end);
@@ -220,6 +229,12 @@ Deno.serve(async (req: Request) => {
         if (!busy[dateStr]) busy[dateStr] = new Set();
         busy[dateStr].add("__blocked__");
       }
+    }
+
+    // Dates fermées (jours précis) : bloque la journée entière
+    for (const dateStr of closedDates) {
+      if (!busy[dateStr]) busy[dateStr] = new Set();
+      busy[dateStr].add("__blocked__");
     }
 
     // Récupérer les RDV existants

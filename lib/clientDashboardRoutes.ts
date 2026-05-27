@@ -2,11 +2,11 @@
  * Chemins stables de l’espace client (alignés sur le state onglet de ClientDashboard).
  * — À utiliser dans tout le front : liens, redirects, e-mails React, CTA.
  *
- * Origine d’app (Framer vs app, magic link) : `lib/urls.ts` — `getCanonicalAppOrigin`, `APP_URL`.
+ * Portail client canonique: `/discover`.
  */
 export type ClientDashboardTab = 'home' | 'explore' | 'favorites' | 'map' | 'rdv' | 'profile';
 
-export const PATH_CLIENT_DASHBOARD = '/client/dashboard' as const;
+export const PATH_CLIENT_DASHBOARD = '/discover' as const;
 
 export const CLIENT_DASHBOARD_TABS: ClientDashboardTab[] = [
   'home',
@@ -30,10 +30,7 @@ export function readClientDashboardTabFromLocation(): ClientDashboardTab {
 }
 
 /** URL absolue pour e-mails / partages (suffixe = path, origin sans slash final). */
-export function absoluteUrlForClientDashboardTab(
-  origin: string,
-  t: ClientDashboardTab,
-): string {
+export function absoluteUrlForClientDashboardTab(origin: string, t: ClientDashboardTab): string {
   const base = origin.replace(/\/$/, '');
   return `${base}${pathForClientDashboardTab(t)}`;
 }

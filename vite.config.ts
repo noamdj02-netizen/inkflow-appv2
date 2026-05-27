@@ -180,6 +180,7 @@ export default defineConfig(({ mode }) => {
             '**/*.css',
             '**/index.html',
             '**/apple-splash-*.png',
+            '**/images/azzzzssss.png',
           ],
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB (images landing > 2 MB)
         },

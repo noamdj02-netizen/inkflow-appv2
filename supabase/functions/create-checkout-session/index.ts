@@ -169,6 +169,32 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Verrouillage anti-no-show: si le studio impose un acompte, on garde cette info côté serveur
+    // (la vitrine publique masque les options "sans paiement" en conséquence).
+    // En cas d'échec de lecture, on applique le comportement le plus sûr: acompte requis.
+    let requireDeposit = true;
+    try {
+      const { data: ps } = await supabase
+        .from("inkflow_payment_settings")
+        .select("settings")
+        .eq("studio_id", payload.studioId)
+        .maybeSingle();
+      const settings = (ps?.settings ?? {}) as Record<string, unknown>;
+      if (typeof settings.requireDeposit === "boolean") requireDeposit = settings.requireDeposit;
+    } catch {
+      // ignore -> default safe (true)
+    }
+
+    if (requireDeposit && payload.type === "balance" && !payload.appointmentId?.trim()) {
+      return new Response(
+        JSON.stringify({
+          error: "Acompte requis: impossible d'encaisser un solde sans rendez-vous.",
+          code: "deposit_required",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const placementMeta = trimMeta(payload.placement, META_MAX);
     const notesMeta = trimMeta(payload.clientNotes, META_MAX);
     const instagramMeta = trimMeta(payload.clientInstagram, META_MAX);
@@ -218,6 +244,7 @@ Deno.serve(async (req: Request) => {
       "metadata[studio_id]": payload.studioId,
       "metadata[appointment_id]": payload.appointmentId || "",
       "metadata[type]": payload.type,
+      "metadata[require_deposit]": requireDeposit ? "true" : "false",
       "metadata[client_name]": payload.clientName,
       "metadata[client_email]": payload.clientEmail,
       "metadata[service_name]": payload.serviceName,

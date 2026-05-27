@@ -8,6 +8,7 @@ import {
   FileText,
   Calendar,
   Clock,
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
   MapPin,
@@ -20,7 +21,7 @@ import { getCurrentClientAvatarUrlForBooking } from '../../lib/clientPortalProfi
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 import { toLocalDateString } from '../../lib/utils';
 import {
-  fetchStudioAvailability,
+  fetchStudioAvailabilityMeta,
   DEFAULT_TIME_SLOTS,
   DEFAULT_OFF_DAYS,
 } from '../../lib/studioAvailability';
@@ -293,6 +294,8 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   const [step, setStep] = useState<1 | 2>(1);
   const [busySlots, setBusySlots] = useState<Record<string, string[]>>({});
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilityUnavailable, setAvailabilityUnavailable] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
 
@@ -329,14 +332,32 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   useEffect(() => {
     let cancelled = false;
     setAvailabilityLoading(true);
-    fetchStudioAvailability(studioId)
-      .then(({ busySlots }) => {
-        if (!cancelled) setBusySlots(busySlots);
+    setAvailabilityUnavailable(false);
+    setAvailabilityError(null);
+    fetchStudioAvailabilityMeta(studioId)
+      .then(({ availability, usedFallback }) => {
+        if (!cancelled) {
+          setBusySlots(availability.busySlots);
+          setAvailabilityUnavailable(usedFallback);
+          if (usedFallback) {
+            setAvailabilityError(
+              'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de choisir un creneau.'
+            );
+            setValue('requestedDate', '');
+            setValue('requestedTime', '');
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) {
           setBusySlots({});
-          toast.error('Impossible de charger les créneaux disponibles');
+          setAvailabilityUnavailable(true);
+          setAvailabilityError(
+            'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de choisir un creneau.'
+          );
+          setValue('requestedDate', '');
+          setValue('requestedTime', '');
+          toast.error('Impossible de charger les creneaux disponibles');
         }
       })
       .finally(() => {
@@ -345,7 +366,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [studioId, toast]);
+  }, [setValue, studioId, toast]);
 
   const getAvailableSlotsForDate = (dateStr: string): string[] => {
     const taken = busySlots[dateStr] || [];
@@ -389,6 +410,13 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   };
 
   const onSubmit = async (data: FormData) => {
+    if (availabilityUnavailable) {
+      onError?.(
+        availabilityError ||
+          'Les disponibilites en ligne sont temporairement indisponibles. Rechargez la page avant de choisir un creneau.'
+      );
+      return;
+    }
     let fullDescription = data.description.trim();
     const extras: string[] = [];
     if (data.bodyPlacement?.trim()) {
@@ -452,7 +480,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     }
   };
 
-  const canSubmit = !!requestedDate && !!requestedTime;
+  const canSubmit = !availabilityUnavailable && !!requestedDate && !!requestedTime;
 
   const availableSlotsForSelected = requestedDate ? getAvailableSlotsForDate(requestedDate) : [];
 
@@ -606,6 +634,33 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
                 className={`py-8 rounded-xl border ${isDark ? 'border-zinc-700 bg-zinc-800/30' : 'border-neutral-200 bg-neutral-50'} flex items-center justify-center`}
               >
                 <div className="w-6 h-6 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : availabilityUnavailable ? (
+              <div
+                className={`rounded-xl border px-4 py-4 ${
+                  isDark
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                    : 'border-amber-200 bg-amber-50 text-amber-950'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`rounded-full p-2 ${
+                      isDark ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">Creneaux temporairement indisponibles</p>
+                    <p
+                      className={`mt-1 text-sm ${isDark ? 'text-amber-100/80' : 'text-amber-900/80'}`}
+                    >
+                      {availabilityError ||
+                        'Impossible de verifier les disponibilites en direct pour le moment. Rechargez la page puis reessayez.'}
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : (
               <div

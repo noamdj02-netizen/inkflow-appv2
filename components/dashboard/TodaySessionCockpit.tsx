@@ -30,6 +30,8 @@ import { cn } from '../../lib/utils';
 interface TodaySessionCockpitProps {
   today: string;
   appointments: Appointment[];
+  /** RDV actif calculé en temps réel (useLiveActiveAppointment). */
+  activeAppointment?: Appointment | null;
   clients: Client[];
   flashDesigns?: FlashDesign[];
   stripeConnectReady: boolean;
@@ -82,6 +84,7 @@ function statusLabel(status: Appointment['status']): string {
 export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   today,
   appointments,
+  activeAppointment: activeAppointmentProp,
   clients,
   flashDesigns = [],
   stripeConnectReady,
@@ -102,13 +105,14 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   );
 
   const focusAppointment = useMemo(() => {
+    if (activeAppointmentProp) return activeAppointmentProp;
     const active = todaysAppointments.find((appointment) => appointment.status === 'in_progress');
     if (active) return active;
     const next = todaysAppointments.find((appointment) =>
       ['pending', 'confirmed'].includes(appointment.status)
     );
     return next ?? todaysAppointments[0] ?? null;
-  }, [todaysAppointments]);
+  }, [activeAppointmentProp, todaysAppointments]);
 
   const focusClient = focusAppointment ? clientForAppointment(focusAppointment, clients) : null;
   const canonicalFlashPrice = focusAppointment

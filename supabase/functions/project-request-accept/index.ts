@@ -17,6 +17,10 @@ interface Body {
   artist_message?: string | null;
 }
 
+const SLOT_TIMEZONE = "Europe/Paris";
+const ACTIVE_APPOINTMENT_STATUSES = ["pending", "confirmed", "in_progress", "completed"] as const;
+const ACTIVE_BOOKING_STATUSES = ["pending", "confirmed", "accepted"] as const;
+
 function jsonResponse(
   body: Record<string, unknown>,
   status: number,
@@ -32,6 +36,90 @@ function parseIso(s: string | undefined): Date | null {
   if (!s || typeof s !== "string" || !s.trim()) return null;
   const d = new Date(s.trim());
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function normalizeTime(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function getSlotDateParts(slot: Date, timeZone = SLOT_TIMEZONE): { date: string; time: string } {
+  return {
+    date: slot.toLocaleDateString("en-CA", { timeZone }),
+    time: normalizeTime(
+      slot.toLocaleTimeString("en-GB", {
+        timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+    ) || "00:00",
+  };
+}
+
+async function isSlotStillAvailable(
+  supabase: ReturnType<typeof createSupabaseUserClient>,
+  studioId: string,
+  projectRequestId: string,
+  proposedSlot: Date,
+): Promise<boolean> {
+  const { date, time } = getSlotDateParts(proposedSlot);
+
+  const { data: appointments, error: appointmentsError } = await supabase
+    .from("inkflow_appointments")
+    .select("id, time")
+    .eq("studio_id", studioId)
+    .eq("date", date)
+    .in("status", [...ACTIVE_APPOINTMENT_STATUSES]);
+
+  if (appointmentsError) throw appointmentsError;
+  if ((appointments || []).some((row) => normalizeTime((row.time as string | null) ?? null) === time)) {
+    return false;
+  }
+
+  const { data: bookings, error: bookingsError } = await supabase
+    .from("inkflow_bookings")
+    .select("id, requested_time")
+    .eq("studio_id", studioId)
+    .eq("requested_date", date)
+    .in("status", [...ACTIVE_BOOKING_STATUSES]);
+
+  if (bookingsError) throw bookingsError;
+  if (
+    (bookings || []).some(
+      (row) => normalizeTime((row.requested_time as string | null) ?? null) === time,
+    )
+  ) {
+    return false;
+  }
+
+  const { data: projectRequests, error: projectRequestsError } = await supabase
+    .from("inkflow_project_requests")
+    .select("id, proposed_slot, slot_expires_at")
+    .eq("studio_id", studioId)
+    .eq("status", "accepted")
+    .neq("id", projectRequestId)
+    .not("proposed_slot", "is", null);
+
+  if (projectRequestsError) throw projectRequestsError;
+
+  const nowMs = Date.now();
+  for (const row of projectRequests || []) {
+    const expiresAt = parseIso((row.slot_expires_at as string | null) ?? undefined);
+    if (expiresAt && expiresAt.getTime() < nowMs) continue;
+    const otherSlot = parseIso((row.proposed_slot as string | null) ?? undefined);
+    if (!otherSlot) continue;
+    const otherParts = getSlotDateParts(otherSlot);
+    if (otherParts.date === date && otherParts.time === time) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function buildClientEmail(params: {
@@ -154,6 +242,31 @@ Deno.serve(async (req: Request) => {
       409,
       corsHeaders,
     );
+  }
+
+  try {
+    const slotStillAvailable = await isSlotStillAvailable(
+      userSb,
+      row.studio_id,
+      projectRequestId,
+      proposed,
+    );
+    if (!slotStillAvailable) {
+      return jsonResponse(
+        {
+          error:
+            "Ce créneau n'est plus disponible. Rechargez les disponibilités avant de proposer une autre date.",
+          code: "slot_conflict",
+        },
+        409,
+        corsHeaders,
+      );
+    }
+  } catch (slotError) {
+    console.error("[project-request-accept] slot-check", slotError);
+    const message =
+      slotError instanceof Error ? slotError.message : "Impossible de vérifier la disponibilité";
+    return jsonResponse({ error: message, code: "slot_check_failed" }, 400, corsHeaders);
   }
 
   const { error: upErr } = await userSb

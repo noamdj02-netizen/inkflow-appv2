@@ -66,6 +66,11 @@ const PublicBookingRecapPage = lazy(() =>
 const ClientAccountHubPage = lazy(() =>
   import('./pages/public/ClientAccountHubPage').then((m) => ({ default: m.ClientAccountHubPage }))
 );
+const ClientWelcomeOnboardingPage = lazy(() =>
+  import('./pages/client/ClientWelcomeOnboardingPage').then((m) => ({
+    default: m.ClientWelcomeOnboardingPage,
+  }))
+);
 const PrivacyPolicyPage = lazy(() =>
   import('./pages/legal/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage }))
 );
@@ -172,17 +177,54 @@ const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 const FullScreenSpinner: React.FC = () => <AuthRouteLoadingSkeleton />;
 
-/** `/client` seul → hub profil + santé. Sous-chemins historiques → annuaire. */
-const ClientRootRedirectToHub: React.FC = () => {
+/** Ancienne entrée `/client` → nouvelle connexion portail client. */
+const ClientRootRedirectToDiscover: React.FC = () => {
   useEffect(() => {
-    window.location.replace('/mon-compte');
+    const { search, hash } = window.location;
+    window.location.replace(`/discover${search}${hash}`);
   }, []);
   return <PublicPageLoadingSkeleton />;
 };
 
-const ClientLegacySubpathRedirectToDiscover: React.FC = () => {
+const ClientLegacySubpathRedirect: React.FC = () => {
   useEffect(() => {
-    window.location.replace('/discover');
+    const { pathname, search, hash } = window.location;
+    const fullSuffix = `${search}${hash}`;
+    if (pathname === '/client/dashboard' || pathname === '/client/dashboard/') {
+      window.location.replace(`/discover${fullSuffix}`);
+      return;
+    }
+    if (pathname === '/client/bienvenue' || pathname === '/client/bienvenue/') {
+      window.location.replace(`/discover/bienvenue${fullSuffix}`);
+      return;
+    }
+    if (
+      pathname === '/client/compte-sante' ||
+      pathname === '/client/compte-sante/' ||
+      pathname === '/onboarding/finaliser-profil' ||
+      pathname === '/onboarding/finaliser-profil/'
+    ) {
+      window.location.replace(`/discover${fullSuffix}`);
+      return;
+    }
+    if (pathname === '/client/vitrine' || pathname === '/client/vitrine/') {
+      window.location.replace('/dashboard?tab=settings');
+      return;
+    }
+    if (pathname === '/client/studio/flash' || pathname === '/client/studio/flash/') {
+      window.location.replace('/dashboard?tab=flash');
+      return;
+    }
+    window.location.replace(`/explorer${fullSuffix}`);
+  }, []);
+  return <PublicPageLoadingSkeleton />;
+};
+
+const DiscoverLegacyRedirectToExplorer: React.FC = () => {
+  useEffect(() => {
+    const { pathname, search, hash } = window.location;
+    const nextPath = pathname.replace(/^\/discover/, '/explorer');
+    window.location.replace(`${nextPath}${search}${hash}`);
   }, []);
   return <PublicPageLoadingSkeleton />;
 };
@@ -328,7 +370,6 @@ const Router: React.FC = () => {
       getProps: (m) => ({ threadId: m[1] }),
     },
     { path: '/reservation-succes', component: ReservationSuccessPage },
-    { path: '/mon-compte', component: ClientAccountHubPage },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
     { path: '/privacy', component: PrivacyPolicyPage },
     { path: '/privacy-policy', component: PrivacyPolicyPage },
@@ -350,21 +391,35 @@ const Router: React.FC = () => {
       getProps: (m) => ({ section: m[1] }),
     },
     { path: '/admin', component: FounderDashboardPage, requiresAuth: true },
-    // Ancien portail : `/client` → hub ; `/client/…` profond → annuaire
-    { path: /^\/client\/.+/, component: ClientLegacySubpathRedirectToDiscover },
-    { path: /^\/client\/?$/, component: ClientRootRedirectToHub },
-    { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientRootRedirectToHub },
-    // ── Discover — directory public ─────────────────────────────────────────
-    { path: '/discover', component: DiscoverHomePage },
+    // Nouveau portail client — `/discover`
+    { path: '/discover/bienvenue', component: ClientWelcomeOnboardingPage },
+    { path: '/discover/login', component: ClientAccountHubPage },
+    { path: '/discover', component: ClientAccountHubPage },
+    { path: '/mon-compte', component: ClientRootRedirectToDiscover },
+    // Ancien portail / chemins historiques
+    { path: /^\/client\/.+/, component: ClientLegacySubpathRedirect },
+    { path: /^\/client\/?$/, component: ClientRootRedirectToDiscover },
+    { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientLegacySubpathRedirect },
+    // ── Explorer — annuaire public tatoueurs ────────────────────────────────
+    { path: '/explorer', component: DiscoverHomePage },
     {
-      path: /^\/discover\/([a-z0-9-]+)\/([a-z0-9-]+)\/?$/,
+      path: /^\/explorer\/([a-z0-9-]+)\/([a-z0-9-]+)\/?$/,
       component: DiscoverCityStylePage,
       getProps: (m) => ({ citySlug: m[1], styleSlug: m[2] }),
     },
     {
-      path: /^\/discover\/([a-z0-9-]+)\/?$/,
+      path: /^\/explorer\/([a-z0-9-]+)\/?$/,
       component: DiscoverCityPage,
       getProps: (m) => ({ citySlug: m[1] }),
+    },
+    // Compat historique: ancien discover public -> explorer public
+    {
+      path: /^\/discover\/([a-z0-9-]+)\/([a-z0-9-]+)\/?$/,
+      component: DiscoverLegacyRedirectToExplorer,
+    },
+    {
+      path: /^\/discover\/([a-z0-9-]+)\/?$/,
+      component: DiscoverLegacyRedirectToExplorer,
     },
     // ── Pages vitrines publiques (artistes & flashs) ────────────────────────
     {

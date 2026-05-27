@@ -1,7 +1,7 @@
 /**
  * Entrée espace client — /client
  * Connexion e-mail + mot de passe, inscription, définition du mot de passe (première connexion lien / legacy).
- * UI alignée sur CLIENT_DASHBOARD_THEME (même famille que /client/dashboard).
+ * UI alignée sur CLIENT_DASHBOARD_THEME (même famille que /discover).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -83,7 +83,7 @@ export const ClientPortalLoginPage: React.FC = () => {
       if (window.location.hash)
         window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}`);
       const sp = new URLSearchParams(window.location.search);
-      if (sp.has('code')) window.history.replaceState({}, '', '/client');
+      if (sp.has('code')) window.history.replaceState({}, '', '/discover/login');
     };
     const routeLoggedInUser = async (user: User) => {
       if (redirectedRef.current || cancelled) return;
@@ -304,7 +304,7 @@ export const ClientPortalLoginPage: React.FC = () => {
       <SEO
         title="Espace client — Inkflow"
         description="Connecte-toi à ton espace client : rendez-vous, suivi et fidélité."
-        canonical="/client"
+        canonical="/discover/login"
         keywords="espace client tatouage, connexion, suivi RDV Inkflow"
         ogImageAlt="Espace client Inkflow"
         noindex
@@ -597,7 +597,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                       </p>
                       <p className="text-center text-xs text-zinc-500">
                         <a
-                          href="/client/bienvenue"
+                          href="/discover/bienvenue"
                           className="font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2"
                         >
                           Première visite ? Découvre l’app

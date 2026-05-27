@@ -26,6 +26,7 @@ Deno.serve(async (req: Request) => {
       clientId?: string;
       clientEmail?: string;
       clientName?: string;
+      event?: string;
     };
     const appointmentId = body.appointmentId?.trim() || "";
     const studioId = body.studioId?.trim() || "";
@@ -45,9 +46,8 @@ Deno.serve(async (req: Request) => {
       .update({ closeout_push_sent_at: new Date().toISOString() })
       .eq("id", appointmentId)
       .eq("studio_id", studioId)
-      .eq("status", "completed")
       .is("closeout_push_sent_at", null)
-      .select("id, client_id, client_name")
+      .select("id, client_id, client_name, client_email, date, time, duration, status, balance_paid_at")
       .maybeSingle();
 
     if (claimErr) {
@@ -73,6 +73,34 @@ Deno.serve(async (req: Request) => {
     q.set("appointmentId", appointmentId);
     if (clientId) q.set("clientId", clientId);
     const path = `/dashboard?${q.toString()}`;
+
+    // Marque explicitement en base que le lifecycle post-séance doit se déclencher
+    // (sans dépendre d'un clic UI). Best-effort et idempotent via inkflow_reminder_logs.
+    try {
+      const aptDate = (claimed.date as string | null) || "";
+      const aptTime = (claimed.time as string | null) || "";
+      const dur = typeof claimed.duration === "number" && claimed.duration > 0 ? claimed.duration : 60;
+      const now = new Date();
+      const start = aptDate && aptTime ? new Date(`${aptDate}T${String(aptTime).slice(0, 5)}:00`) : null;
+      const end = start && !Number.isNaN(start.getTime()) ? new Date(start.getTime() + dur * 60 * 1000) : null;
+
+      const planned = [
+        { type: `lifecycle_plan:j1:${aptDate}`, when: aptDate },
+        { type: `lifecycle_plan:j7:${aptDate}`, when: aptDate },
+        { type: `lifecycle_plan:j30:${aptDate}`, when: aptDate },
+        { type: `lifecycle_plan:feedback:${aptDate}`, when: end ? end.toISOString() : now.toISOString() },
+      ];
+
+      for (const p of planned) {
+        await supabase.from("inkflow_reminder_logs").insert({
+          id: `lc_${Date.now()}_${appointmentId}_${p.type}`.slice(0, 120),
+          appointment_id: appointmentId,
+          type: p.type,
+        }).catch(() => undefined);
+      }
+    } catch {
+      // ignore
+    }
 
     const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
     const pushRes = await fetch(pushUrl, {

@@ -49,6 +49,9 @@ interface AppScreenshotProps {
   webpSrc?: string;
   alt: string;
   className?: string;
+  imgClassName?: string;
+  frameClassName?: string;
+  backdropClassName?: string;
   priority?: boolean;
 }
 
@@ -57,21 +60,29 @@ export const LandingAppScreenshot: React.FC<AppScreenshotProps> = ({
   webpSrc,
   alt,
   className = '',
+  imgClassName = 'object-top',
+  frameClassName = '',
+  backdropClassName,
   priority = false,
 }) => (
   <div
     className={`overflow-hidden rounded-[1.75rem] border border-zinc-200/80 bg-zinc-100 ${className}`}
   >
-    <picture>
-      {webpSrc ? <source srcSet={webpSrc} type="image/webp" /> : null}
-      <img
-        src={src}
-        alt={alt}
-        className="h-full w-full object-cover object-top"
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        fetchPriority={priority ? 'high' : 'auto'}
-      />
-    </picture>
+    <div className={`relative h-full w-full ${frameClassName}`}>
+      {backdropClassName ? (
+        <div aria-hidden="true" className={`pointer-events-none absolute ${backdropClassName}`} />
+      ) : null}
+      <picture className="relative block h-full w-full">
+        {webpSrc ? <source srcSet={webpSrc} type="image/webp" /> : null}
+        <img
+          src={src}
+          alt={alt}
+          className={`h-full w-full object-cover ${imgClassName}`}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={priority ? 'high' : 'auto'}
+        />
+      </picture>
+    </div>
   </div>
 );

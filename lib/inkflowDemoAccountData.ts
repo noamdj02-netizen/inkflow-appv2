@@ -51,9 +51,33 @@ export function getInkflowDemoStudioAppointments(): Appointment[] {
     updatedAt: iso,
   });
   const extra: Appointment[] = [
-    mkCompleted('ink-demo-cmp-1', 'demo-sb-c1', 'Nathan Simon', 'nathan@exemple.fr', d1, 380, 'Manchette — séance 1'),
-    mkCompleted('ink-demo-cmp-2', 'demo-sb-c4', 'Margot Fournier', 'margot@exemple.fr', d2, 220, 'Portrait minimaliste — solde'),
-    mkCompleted('ink-demo-cmp-3', 'demo-sb-c7', 'Sarah L.', 'sarah@exemple.fr', d3, 180, 'Flash floral'),
+    mkCompleted(
+      'ink-demo-cmp-1',
+      'demo-sb-c1',
+      'Nathan Simon',
+      'nathan@exemple.fr',
+      d1,
+      380,
+      'Manchette — séance 1'
+    ),
+    mkCompleted(
+      'ink-demo-cmp-2',
+      'demo-sb-c4',
+      'Margot Fournier',
+      'margot@exemple.fr',
+      d2,
+      220,
+      'Portrait minimaliste — solde'
+    ),
+    mkCompleted(
+      'ink-demo-cmp-3',
+      'demo-sb-c7',
+      'Sarah L.',
+      'sarah@exemple.fr',
+      d3,
+      180,
+      'Flash floral'
+    ),
   ];
   return [...base, ...extra];
 }
@@ -154,7 +178,7 @@ export function getInkflowDemoProBookings(studioId: string): Booking[] {
   ];
 }
 
-/** Réservations côté espace client (/client/dashboard). */
+/** Réservations côté espace client (/discover). */
 export function getInkflowDemoClientPortalBookings(): Array<{
   id: string;
   studio_name?: string;

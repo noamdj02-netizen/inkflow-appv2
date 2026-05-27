@@ -1,5 +1,5 @@
 /**
- * /discover/:city/:style — Page city + style
+ * /explorer/:city/:style — Page city + style
  */
 import { useEffect, useState } from 'react';
 import { ArtistCard } from '../../components/discover/ArtistCard';
@@ -83,7 +83,7 @@ export function DiscoverCityStylePage({ citySlug, styleSlug }: Props) {
   }, [citySlug, styleSlug, page, sort, styleName]);
 
   const cityName = cityData?.name ?? citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
-  const baseUrl = `/discover/${citySlug}/${styleSlug}`;
+  const baseUrl = `/explorer/${citySlug}/${styleSlug}`;
 
   const sortChip = (active: boolean) => ({
     fontSize: 12,
@@ -120,12 +120,12 @@ export function DiscoverCityStylePage({ citySlug, styleSlug }: Props) {
           backdropFilter: 'blur(12px)',
         }}
       >
-        <a href="/discover" style={{ fontSize: 13, color: U.textMuted, textDecoration: 'none' }}>
+        <a href="/explorer" style={{ fontSize: 13, color: U.textMuted, textDecoration: 'none' }}>
           Directory
         </a>
         <span style={{ color: U.borderStrong }}>/</span>
         <a
-          href={`/discover/${citySlug}`}
+          href={`/explorer/${citySlug}`}
           style={{ fontSize: 13, color: U.textMuted, textDecoration: 'none' }}
         >
           {cityName}
@@ -234,7 +234,7 @@ export function DiscoverCityStylePage({ citySlug, styleSlug }: Props) {
             Aucun artiste {styleName} trouvé à {cityName} pour le moment.
             <br />
             <a
-              href={`/discover/${citySlug}`}
+              href={`/explorer/${citySlug}`}
               style={{ color: U.accent, marginTop: 12, display: 'inline-block' }}
             >
               ← Voir tous les tatoueurs à {cityName}

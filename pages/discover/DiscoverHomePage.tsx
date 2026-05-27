@@ -1,5 +1,5 @@
 /**
- * /discover — Page d'accueil du directory tatoueurs
+ * /explorer — Page d'accueil du directory tatoueurs
  */
 import { useEffect, useState } from 'react';
 import { SearchBar } from '../../components/discover/SearchBar';
@@ -84,7 +84,7 @@ export function DiscoverHomePage() {
       <SEO
         title="Tatoueurs & studios — portfolios, réserver en ligne, acompte sécurisé | InkFlow"
         description="InkFlow ne remplace pas « n’importe quel rdv beauté » : c’est le dossier tatouage — portfolio, demande, créneau, acompte Stripe, messages. Trouve un artiste près de chez toi."
-        canonical="/discover"
+        canonical="/explorer"
         keywords="tatoueur, studio tatouage, tattoo France, directory tatouage, réserver tatouage, portfolio tatoueur"
         schema={websiteSchema}
       />
@@ -117,7 +117,7 @@ export function DiscoverHomePage() {
         </a>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <a
-            href="/discover"
+            href="/explorer"
             style={{
               fontSize: 13,
               fontWeight: 600,
@@ -213,7 +213,7 @@ export function DiscoverHomePage() {
           {STYLES_LIST.map((s) => (
             <a
               key={s}
-              href={`/discover/${s === 'réalisme' ? 'realisme' : (STYLE_SLUGS[s] ?? s.replace(/\s+/g, '-'))}`}
+              href={`/explorer/${s === 'réalisme' ? 'realisme' : (STYLE_SLUGS[s] ?? s.replace(/\s+/g, '-'))}`}
               style={{ textDecoration: 'none' }}
             >
               <StyleBadge style={s} />
@@ -235,7 +235,7 @@ export function DiscoverHomePage() {
             🔥 En ce moment
           </h2>
           <a
-            href="/discover/trending"
+            href="/explorer/trending"
             style={{ fontSize: 12, color: U.textMuted, textDecoration: 'none' }}
           >
             Voir tout

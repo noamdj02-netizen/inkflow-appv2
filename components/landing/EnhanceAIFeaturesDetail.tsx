@@ -31,6 +31,9 @@ interface DetailSectionConfig {
     src: string;
     webpSrc?: string;
     alt: string;
+    imgClassName?: string;
+    frameClassName?: string;
+    backdropClassName?: string;
   };
   caption?: string;
 }
@@ -47,9 +50,9 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
         { icon: BarChart3, label: t('features.section1.f4') },
       ],
       screenshot: {
-        src: '/images/hero-dashboard-mockup.png',
-        webpSrc: '/images/hero-dashboard-mockup.webp',
-        alt: 'Tableau de bord InkFlow — agenda et encaissements',
+        src: '/Mobile_Mockup_2.1.png',
+        alt: 'Aperçu mobile InkFlow Pro',
+        imgClassName: 'object-center',
       },
       caption: t('features.section1.visualTitle'),
     },
@@ -64,9 +67,9 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       ],
       reverse: true,
       screenshot: {
-        src: '/images/mockup-profil.png',
-        webpSrc: '/images/mockup-profil.webp',
+        src: '/ë.png',
         alt: 'Application InkFlow — fiche client et historique',
+        imgClassName: 'object-center',
       },
       caption: t('features.section2.visualTitle'),
     },
@@ -80,9 +83,9 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
         { icon: Bell, label: t('features.section3.f4') },
       ],
       screenshot: {
-        src: '/images/hero-dashboard-mockup.png',
-        webpSrc: '/images/hero-dashboard-mockup.webp',
+        src: '/Mobile_Mockup_2.2.jpg',
         alt: 'InkFlow — paiements Stripe et suivi des acomptes',
+        imgClassName: 'object-center',
       },
       caption: t('features.section3.visualTitle'),
     },
@@ -97,9 +100,13 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       ],
       reverse: true,
       screenshot: {
-        src: '/images/mockup-profil.png',
-        webpSrc: '/images/mockup-profil.webp',
+        src: '/images/azzzzssss.png',
         alt: 'Vitrine et réservation en ligne InkFlow',
+        imgClassName: 'object-contain scale-[0.84] transform-gpu object-center',
+        frameClassName:
+          'bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.22),transparent_70%)]',
+        backdropClassName:
+          'inset-x-[10%] inset-y-[12%] rounded-[1.75rem] border border-zinc-200/90 bg-white shadow-[0_32px_90px_-42px_rgba(9,9,11,0.28)]',
       },
       caption: t('features.section4.visualTitle'),
     },
@@ -120,6 +127,9 @@ function FeatureScreenshot({ config, index }: { config: DetailSectionConfig; ind
           src={config.screenshot.src}
           webpSrc={config.screenshot.webpSrc}
           alt={config.screenshot.alt}
+          imgClassName={config.screenshot.imgClassName}
+          frameClassName={config.screenshot.frameClassName}
+          backdropClassName={config.screenshot.backdropClassName}
           className="aspect-[4/3] sm:aspect-[16/10]"
           priority={index === 0}
         />

@@ -1,10 +1,31 @@
 import { supabase } from './supabase';
 import { sendProjectNotification } from './sendNotification';
 import type { ProjectRequestFormData } from '../types';
+import type { HealthFormData } from '../components/booking/HealthQuestionnaireForm';
+import type { Database } from '../types/database';
+
+function buildHealthPayload(
+  data: HealthFormData
+): Database['public']['Tables']['inkflow_health_forms']['Row']['health_data'] {
+  return {
+    allergies: data.allergies,
+    allergiesDetails: data.allergiesDetails || null,
+    grossesse: data.grossesse,
+    allaitement: data.allaitement,
+    maladiesInfectieuses: data.maladiesInfectieuses,
+    infectionsVirales: data.infectionsVirales,
+    troubleCicatriciel: data.troubleCicatriciel,
+    diabete: data.diabete,
+    antibiotiques: data.antibiotiques,
+    antiInflammatoires: data.antiInflammatoires,
+    steroides: data.steroides,
+  };
+}
 
 export async function createProjectRequest(
   data: ProjectRequestFormData,
-  studioId: string
+  studioId: string,
+  healthForm?: HealthFormData
 ): Promise<string> {
   const id = `pr_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const refs = Array.isArray(data.referenceImages)
@@ -46,6 +67,33 @@ export async function createProjectRequest(
     size: data.size || undefined,
     budget: data.budget || undefined,
   });
+
+  // Best-effort : ne bloque jamais la soumission projet.
+  if (healthForm) {
+    try {
+      const { error: healthErr } = await supabase.from('inkflow_health_forms').insert({
+        studio_id: studioId,
+        project_request_id: id,
+        client_name: healthForm.clientName.trim() || data.clientName.trim(),
+        client_email: data.clientEmail.trim(),
+        client_birthdate: healthForm.clientBirthdate || null,
+        client_instagram:
+          healthForm.clientInstagram?.trim() || data.clientInstagram?.trim() || null,
+        health_data: buildHealthPayload(
+          healthForm
+        ) as Database['public']['Tables']['inkflow_health_forms']['Row']['health_data'],
+        signature_text: healthForm.signatureText?.trim() || null,
+        certified_accurate: healthForm.certifiedAccurate === true,
+        certified_at: healthForm.certifiedAccurate ? new Date().toISOString() : null,
+      });
+      if (healthErr) {
+        // On ignore l'erreur pour ne pas casser le flux.
+        // (Le tattooer peut demander les infos santé plus tard si nécessaire.)
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   return id;
 }

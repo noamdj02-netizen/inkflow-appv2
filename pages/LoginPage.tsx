@@ -104,8 +104,13 @@ export const LoginPage: React.FC = () => {
       const path = await resolvePostLoginPath(next);
       if (cancelled) return;
       const portalOnly = user && (await shouldRedirectPortalClientFromProDashboard(user));
-      const target =
-        portalOnly && getRedirectPathnameOnly(path) !== '/mon-compte' ? '/discover' : path;
+      const pathOnly = getRedirectPathnameOnly(path);
+      const isAllowedClientTarget =
+        pathOnly === '/mon-compte' ||
+        pathOnly === '/discover' ||
+        pathOnly === '/discover/login' ||
+        pathOnly === '/discover/bienvenue';
+      const target = portalOnly && !isAllowedClientTarget ? '/discover' : path;
       window.history.replaceState({}, '', target);
       window.dispatchEvent(new Event('inkflow-navigate'));
     })();

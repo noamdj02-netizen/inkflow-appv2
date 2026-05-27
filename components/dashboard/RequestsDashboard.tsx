@@ -205,118 +205,154 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
   onOpenClientFiche,
 }) => {
   const { cardTap, transition } = useInkflowGestures();
+  const secondaryActions = [
+    ...(studioId
+      ? [
+          {
+            key: 'deposit',
+            label: 'Acompte',
+            onClick: onDeposit,
+            icon: <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+          },
+        ]
+      : []),
+    ...(apt.projectRequestId && onOpenDiscussion
+      ? [
+          {
+            key: 'discussion',
+            label: 'Discussion',
+            onClick: () => onOpenDiscussion(`pr_${apt.projectRequestId}`),
+            variant: 'primary' as const,
+            icon: <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+          },
+        ]
+      : []),
+    ...(onOpenClientFiche
+      ? [
+          {
+            key: 'client',
+            label: 'Fiche client',
+            onClick: onOpenClientFiche,
+            icon: <User className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+          },
+        ]
+      : []),
+    {
+      key: 'refuse',
+      label: 'Refuser',
+      onClick: onRefuse,
+      variant: 'danger' as const,
+      icon: <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+    },
+  ];
+
   return (
-    <motion.div className={dashboardListRow} whileTap={cardTap} transition={transition}>
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
-        <div
-          className={cn(
-            dashboardAvatarFrame,
-            dashboardAvatarSm,
-            'flex items-center justify-center'
-          )}
-        >
-          <ClientPhotoAvatar
-            name={apt.clientName}
-            src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
-            className="h-full w-full"
-            textClassName="text-lg font-bold text-zinc-700 dark:text-zinc-200"
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-lg text-zinc-900 dark:text-white">
-            {apt.clientName}
+    <motion.div
+      className="rounded-2xl border border-zinc-200 border-l-4 border-l-amber-500 bg-white p-4 shadow-sm transition-colors hover:bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:bg-zinc-800/25 sm:p-5"
+      whileTap={cardTap}
+      transition={transition}
+    >
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,22rem)] lg:gap-6">
+        <div className="min-w-0 space-y-4">
+          <div className="flex items-start gap-4 min-w-0">
+            <div
+              className={cn(
+                dashboardAvatarFrame,
+                dashboardAvatarSm,
+                'mt-0.5 flex items-center justify-center ring-1 ring-zinc-300/80 dark:ring-zinc-600/80'
+              )}
+            >
+              <ClientPhotoAvatar
+                name={apt.clientName}
+                src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
+                className="h-full w-full"
+                textClassName="text-lg font-bold text-zinc-700 dark:text-zinc-200"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg font-semibold text-zinc-900 dark:text-white">
+                    {apt.clientName}
+                  </div>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+                    <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75] text-zinc-400 dark:text-zinc-500" />
+                    <span className="truncate">{apt.clientEmail}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className={cn(dashboardStatusBadge.pending)}>En attente</span>
+                  {apt.createdAt && inboxSlaUrgencyLabel(apt.createdAt) ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/20 dark:text-red-300">
+                      <Clock className="size-3 shrink-0" aria-hidden />
+                      {inboxSlaUrgencyLabel(apt.createdAt)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 min-w-0">
-            <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75] text-zinc-400 dark:text-zinc-500" />
-            <span className="truncate">{apt.clientEmail}</span>
-          </div>
+
           {stampRw && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-3 py-2.5 text-sm text-blue-900 dark:text-blue-100">
-              <Gift className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-start gap-2 rounded-xl border border-blue-200/90 bg-blue-50/90 px-3 py-2.5 text-sm text-blue-900 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
+              <Gift className="mt-0.5 w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
               <span>
                 Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir
                 sur ce projet — code{' '}
-                <code className="font-mono text-xs bg-white/70 dark:bg-blue-950/40 px-1.5 py-0.5 rounded-md">
+                <code className="rounded-md bg-white/70 px-1.5 py-0.5 font-mono text-xs dark:bg-blue-950/40">
                   {stampRw.promoCode}
                 </code>
               </span>
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2 mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-            <span className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-700 dark:text-zinc-300">
-              <Calendar className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
-              {apt.date} • {apt.time}
-            </span>
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">{apt.service}</span>
-            <span className="font-semibold tabular-nums text-blue-700 dark:text-blue-400">
-              {apt.price}€
-            </span>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className={cn(dashboardStatusBadge.pending)}>En attente</span>
-            {apt.createdAt && inboxSlaUrgencyLabel(apt.createdAt) ? (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/20 dark:text-red-300">
-                <Clock className="size-3 shrink-0" aria-hidden />
-                {inboxSlaUrgencyLabel(apt.createdAt)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
 
-      <div className="flex flex-col gap-2 sm:items-end sm:ml-14 w-full sm:max-w-md">
-        <InboxQuickActions
-          primary={{
-            key: 'accept',
-            label: 'Accepter',
-            onClick: onAccept,
-            variant: 'primary',
-            icon: <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-          }}
-          secondary={[
-            ...(studioId
-              ? [
-                  {
-                    key: 'deposit',
-                    label: 'Acompte',
-                    onClick: onDeposit,
-                    icon: <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-                  },
-                ]
-              : []),
-            ...(apt.projectRequestId && onOpenDiscussion
-              ? [
-                  {
-                    key: 'discussion',
-                    label: 'Discussion',
-                    onClick: () => onOpenDiscussion(`pr_${apt.projectRequestId}`),
-                    variant: 'primary' as const,
-                    icon: <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-                  },
-                ]
-              : []),
-            {
-              key: 'refuse',
-              label: 'Refuser',
-              onClick: onRefuse,
-              variant: 'danger',
-              icon: <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
-            },
-          ]}
-        />
-      </div>
-      {onOpenClientFiche && (
-        <div className="w-full sm:ml-14 pt-1">
-          <button
-            type="button"
-            onClick={onOpenClientFiche}
-            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/60 text-sm font-semibold text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
-          >
-            <User className="w-4 h-4 shrink-0" aria-hidden />
-            Fiche client
-          </button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 px-3.5 py-3 dark:border-zinc-700/80 dark:bg-zinc-800/45">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                Créneau
+              </p>
+              <div className="mt-2 flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                <Calendar className="w-4 h-4 shrink-0 stroke-[1.75] text-zinc-500 dark:text-zinc-400" />
+                <span className="font-semibold whitespace-nowrap">{apt.date}</span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+                <Clock className="w-4 h-4 shrink-0 stroke-[1.75] text-zinc-500 dark:text-zinc-400" />
+                <span className="font-medium">{apt.time}</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 px-3.5 py-3 dark:border-zinc-700/80 dark:bg-zinc-800/45">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                Demande
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
+                {apt.service}
+              </p>
+              <p className="mt-2 text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                {apt.price}€
+              </p>
+            </div>
+          </div>
         </div>
-      )}
+
+        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-3.5 dark:border-zinc-700/80 dark:bg-zinc-800/45">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+            Actions rapides
+          </p>
+          <InboxQuickActions
+            primary={{
+              key: 'accept',
+              label: 'Accepter',
+              onClick: onAccept,
+              variant: 'primary',
+              icon: <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+            }}
+            secondary={secondaryActions}
+          />
+        </div>
+      </div>
     </motion.div>
   );
 };

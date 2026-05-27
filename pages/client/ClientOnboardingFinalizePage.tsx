@@ -7,7 +7,10 @@ import { ArrowLeft, CheckCircle, Loader2, Lock, User as UserIcon } from 'lucide-
 import type { User } from '@supabase/supabase-js';
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
-import { HealthQuestionnaireForm, type HealthFormData } from '../../components/booking/HealthQuestionnaireForm';
+import {
+  HealthQuestionnaireForm,
+  type HealthFormData,
+} from '../../components/booking/HealthQuestionnaireForm';
 import { supabase } from '../../lib/supabase';
 import { clientNeedsPassword } from '../../lib/clientAuth';
 import {
@@ -30,7 +33,9 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
   const toast = useToast();
   const [step, setStep] = useState<Step>('load');
   const [user, setUser] = useState<User | null>(null);
-  const [healthInitial, setHealthInitial] = useState<Partial<HealthFormData> | undefined>(undefined);
+  const [healthInitial, setHealthInitial] = useState<Partial<HealthFormData> | undefined>(
+    undefined
+  );
 
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -46,15 +51,17 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
-        window.location.replace('/client');
+        window.location.replace('/discover/login');
         return;
       }
       const u = session.user;
       if (await isClientPortalFullyReady(u)) {
         /** Profil déjà complet : même URL qu’avant on renvoyait au dashboard — ici on ouvre le questionnaire (consultation / mise à jour). */
-        window.location.replace('/client/compte-sante');
+        window.location.replace('/discover');
         return;
       }
       const hp = await fetchClientHealthProfile(u.id);
@@ -95,7 +102,9 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
   }, []);
 
   const refreshUser = async () => {
-    const { data: { user: u } } = await supabase.auth.getUser();
+    const {
+      data: { user: u },
+    } = await supabase.auth.getUser();
     setUser(u ?? null);
     return u;
   };
@@ -165,7 +174,9 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
   };
 
   const handleHealthComplete = async (data: HealthFormData) => {
-    const { data: { user: u } } = await supabase.auth.getUser();
+    const {
+      data: { user: u },
+    } = await supabase.auth.getUser();
     if (!u) {
       toast.error('Session expirée.');
       return;
@@ -215,119 +226,124 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y">
         <div className="w-full max-w-lg mx-auto px-4 sm:px-6 pb-10 pt-2 flex flex-col items-stretch">
           {step !== 'health' && (
-          <div className="w-full max-w-md mx-auto">
-          <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Logo className="rounded-xl" size="md" />
-              <span className="text-lg font-bold tracking-tight text-zinc-900 font-display">Inkflow</span>
-            </div>
+            <div className="w-full max-w-md mx-auto">
+              <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <Logo className="rounded-xl" size="md" />
+                  <span className="text-lg font-bold tracking-tight text-zinc-900 font-display">
+                    Inkflow
+                  </span>
+                </div>
 
-            {step === 'load' && (
-              <div className="flex items-center gap-3 py-10 justify-center">
-                <Loader2 className="w-6 h-6 text-blue-600 animate-spin" aria-hidden />
-                <span className="text-sm text-zinc-500">Chargement…</span>
+                {step === 'load' && (
+                  <div className="flex items-center gap-3 py-10 justify-center">
+                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin" aria-hidden />
+                    <span className="text-sm text-zinc-500">Chargement…</span>
+                  </div>
+                )}
+
+                {step === 'password' && (
+                  <>
+                    <div className="mb-6 space-y-2">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Sécurise ton compte
+                      </h1>
+                      <p className="text-sm text-zinc-500">
+                        Choisis un mot de passe pour te reconnecter plus tard.
+                      </p>
+                    </div>
+                    <form onSubmit={handlePassword} className="space-y-3">
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          className={inputClass}
+                          placeholder="Mot de passe"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                        />
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          className={inputClass}
+                          placeholder="Confirmer"
+                          value={password2}
+                          onChange={(e) => setPassword2(e.target.value)}
+                        />
+                      </div>
+                      {pwError ? <p className="text-sm text-red-600">{pwError}</p> : null}
+                      <button
+                        type="submit"
+                        disabled={pwSaving}
+                        className="w-full min-h-[48px] rounded-xl bg-zinc-900 text-white font-semibold dark:bg-white dark:text-zinc-900 active:scale-[0.98] transition-all disabled:opacity-50"
+                      >
+                        {pwSaving ? '…' : 'Continuer'}
+                      </button>
+                    </form>
+                  </>
+                )}
+
+                {step === 'profile' && (
+                  <>
+                    <div className="mb-6 space-y-2">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Tes coordonnées
+                      </h1>
+                      <p className="text-sm text-zinc-500">
+                        Utilisées pour tes réservations et rappels.
+                      </p>
+                    </div>
+                    <form onSubmit={handleProfile} className="space-y-3">
+                      <div className="relative">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          autoComplete="given-name"
+                          className={inputClass}
+                          placeholder="Prénom"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                        />
+                      </div>
+                      <div className="relative">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          autoComplete="family-name"
+                          className={inputClass}
+                          placeholder="Nom"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                        />
+                      </div>
+                      <div className="relative">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                        <input
+                          type="tel"
+                          autoComplete="tel"
+                          className={inputClass}
+                          placeholder="Téléphone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                      {profileError ? <p className="text-sm text-red-600">{profileError}</p> : null}
+                      <button
+                        type="submit"
+                        disabled={profileSaving}
+                        className="w-full min-h-[48px] rounded-xl bg-zinc-900 text-white font-semibold dark:bg-white dark:text-zinc-900 active:scale-[0.98] transition-all disabled:opacity-50"
+                      >
+                        {profileSaving ? '…' : 'Continuer'}
+                      </button>
+                    </form>
+                  </>
+                )}
               </div>
-            )}
-
-            {step === 'password' && (
-              <>
-                <div className="mb-6 space-y-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
-                    Sécurise ton compte
-                  </h1>
-                  <p className="text-sm text-zinc-500">Choisis un mot de passe pour te reconnecter plus tard.</p>
-                </div>
-                <form onSubmit={handlePassword} className="space-y-3">
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      className={inputClass}
-                      placeholder="Mot de passe"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      className={inputClass}
-                      placeholder="Confirmer"
-                      value={password2}
-                      onChange={(e) => setPassword2(e.target.value)}
-                    />
-                  </div>
-                  {pwError ? <p className="text-sm text-red-600">{pwError}</p> : null}
-                  <button
-                    type="submit"
-                    disabled={pwSaving}
-                    className="w-full min-h-[48px] rounded-xl bg-zinc-900 text-white font-semibold dark:bg-white dark:text-zinc-900 active:scale-[0.98] transition-all disabled:opacity-50"
-                  >
-                    {pwSaving ? '…' : 'Continuer'}
-                  </button>
-                </form>
-              </>
-            )}
-
-            {step === 'profile' && (
-              <>
-                <div className="mb-6 space-y-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
-                    Tes coordonnées
-                  </h1>
-                  <p className="text-sm text-zinc-500">Utilisées pour tes réservations et rappels.</p>
-                </div>
-                <form onSubmit={handleProfile} className="space-y-3">
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      autoComplete="given-name"
-                      className={inputClass}
-                      placeholder="Prénom"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                    />
-                  </div>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      autoComplete="family-name"
-                      className={inputClass}
-                      placeholder="Nom"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                    />
-                  </div>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      className={inputClass}
-                      placeholder="Téléphone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                  {profileError ? <p className="text-sm text-red-600">{profileError}</p> : null}
-                  <button
-                    type="submit"
-                    disabled={profileSaving}
-                    className="w-full min-h-[48px] rounded-xl bg-zinc-900 text-white font-semibold dark:bg-white dark:text-zinc-900 active:scale-[0.98] transition-all disabled:opacity-50"
-                  >
-                    {profileSaving ? '…' : 'Continuer'}
-                  </button>
-                </form>
-              </>
-            )}
-
-          </div>
-          </div>
+            </div>
           )}
 
           {step === 'health' && user && (

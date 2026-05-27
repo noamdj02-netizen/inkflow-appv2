@@ -3,7 +3,7 @@
  * Landing : https://ink-flow.me (Framer)
  * App : https://app.ink-flow.me ou inkdlow.vercel.app
  *
- * Espace client (`/client/dashboard`, requêtes `?tab=`) : chemins et onglets dans
+ * Espace client (`/discover`, requêtes `?tab=`) : chemins et onglets dans
  * `lib/clientDashboardRoutes.ts` — `pathForClientDashboardTab`, `PATH_CLIENT_DASHBOARD`.
  * Pour les URLs **absolues** (e-mail, liens, OAuth) : `getCanonicalAppOrigin()` et `APP_URL` ci-dessous.
  */
@@ -46,7 +46,7 @@ export function buildClientAccountHubUrl(opts?: { studioSlug?: string | null }):
   return `${origin}${getClientAccountHubPath(opts)}`;
 }
 
-/** redirectTo pour le magic link et la confirmation e-mail client → callback puis hub `/mon-compte`. */
+/** redirectTo pour le magic link et la confirmation e-mail client → callback puis hub `/discover`. */
 export function getClientMagicLinkRedirectTo(opts?: { studioSlug?: string | null }): string {
   const hubPath = getClientAccountHubPath({ studioSlug: opts?.studioSlug });
   const q = new URLSearchParams({
@@ -60,7 +60,7 @@ export function getClientEmailConfirmRedirectTo(opts?: { studioSlug?: string | n
   return getClientMagicLinkRedirectTo(opts);
 }
 
-/** `redirectTo` OAuth (Google) depuis `/client` — même callback que le magic link. */
+/** `redirectTo` OAuth (Google) depuis le portail client — même callback que le magic link. */
 export function getClientPortalOAuthRedirectTo(opts?: { studioSlug?: string | null }): string {
   return getClientMagicLinkRedirectTo(opts);
 }

@@ -1,5 +1,5 @@
 /**
- * Inkflow — /client/dashboard
+ * Inkflow — /discover
  * Même structure que le dashboard studio (app-shell : sidebar, header, carte centrale, colonne droite).
  * Couleurs : `lib/clientDashboardTheme.ts` → `CLIENT_DASHBOARD_THEME`.
  */
@@ -164,7 +164,7 @@ function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
             className="min-h-12 flex-1 touch-manipulation rounded-xl border-0 font-bold shadow-none"
             style={{ background: D.gold, color: D.onAccent }}
           >
-            <a href="/client" className="no-underline" style={{ color: D.onAccent }}>
+            <a href="/discover/login" className="no-underline" style={{ color: D.onAccent }}>
               Se connecter
             </a>
           </Button>
@@ -175,7 +175,7 @@ function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
             className="min-h-12 flex-1 touch-manipulation rounded-xl font-semibold bg-transparent"
             style={{ borderColor: D.border, background: D.card, color: D.text }}
           >
-            <a href="/client?register=1" className="no-underline" style={{ color: D.text, border: 'none' }}>
+            <a href="/discover/login?register=1" className="no-underline" style={{ color: D.text, border: 'none' }}>
               Créer mon compte
             </a>
           </Button>
@@ -773,7 +773,7 @@ function FlashSheet({
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <a
-                  href="/client/vitrine"
+                  href="/dashboard?tab=settings"
                   className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-center text-sm font-semibold transition-transform active:scale-[0.99] touch-manipulation"
                   style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
                 >
@@ -781,7 +781,7 @@ function FlashSheet({
                   Personnaliser la vitrine
                 </a>
                 <a
-                  href="/client/studio/flash"
+                  href="/dashboard?tab=flash"
                   className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-center text-sm font-semibold transition-transform active:scale-[0.99] touch-manipulation"
                   style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
                 >
@@ -1887,14 +1887,14 @@ function TabRDV({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
             <a
-              href="/client"
+              href="/discover/login"
               className="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl px-6 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation sm:flex-initial"
               style={{ background: D.gold, color: D.onAccent, textDecoration: 'none' }}
             >
               Me connecter
             </a>
             <a
-              href="/client?register=1"
+              href="/discover/login?register=1"
               className="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl border px-6 text-sm font-semibold transition-transform active:scale-[0.98] touch-manipulation sm:flex-initial"
               style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
             >
@@ -2399,7 +2399,7 @@ function TabProfile({
 
   const handleSignOut = async () => {
     await supabase.auth.signOut({ scope: 'global' });
-    window.location.href = '/client';
+    window.location.href = '/discover/login';
   };
 
   const showPhoto = Boolean(avatarUrl) && !avatarBroken;
@@ -2656,7 +2656,7 @@ function TabProfile({
           <ChevronRight className="w-4 h-4 shrink-0" style={{ color: D.muted }} aria-hidden />
         </button>
         <a
-          href="/client/compte-sante"
+          href="/discover"
           className="touch-manipulation active:scale-[0.99] transition-transform"
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
@@ -2740,7 +2740,7 @@ function TabProfile({
 
       {ownedStudioSlug ? (
         <a
-          href="/client/vitrine"
+          href="/dashboard?tab=settings"
           className="mb-6 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 min-h-[52px] transition-transform active:scale-[0.98] touch-manipulation"
           style={{ borderColor: D.goldDim, background: D.goldGlow, color: D.text }}
         >
@@ -3538,7 +3538,7 @@ export function ClientDashboard() {
                 type="button"
                 onClick={async () => {
                   await supabase.auth.signOut({ scope: 'global' });
-                  window.location.href = '/client';
+                  window.location.href = '/discover/login';
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
                 style={{ color: D.muted }}
@@ -3549,7 +3549,7 @@ export function ClientDashboard() {
             ) : (
               <>
                 <a
-                  href="/client"
+                  href="/discover/login"
                   className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
                   style={{ color: D.muted }}
                 >
@@ -3557,7 +3557,7 @@ export function ClientDashboard() {
                   <span>Connexion client</span>
                 </a>
                 <a
-                  href="/client?register=1"
+                  href="/discover/login?register=1"
                   className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
                   style={{ color: D.muted }}
                 >
@@ -3690,14 +3690,14 @@ export function ClientDashboard() {
               ) : (
                 <div className="flex shrink-0 items-center gap-1.5">
                   <a
-                    href="/client?register=1"
+                    href="/discover/login?register=1"
                     className="hidden min-h-[44px] items-center rounded-xl border px-2.5 text-xs font-semibold transition-all active:scale-[0.98] touch-manipulation sm:inline-flex"
                     style={{ borderColor: D.border, background: D.card, color: D.text }}
                   >
                     S’inscrire
                   </a>
                   <a
-                    href="/client"
+                    href="/discover/login"
                     className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl px-3 text-xs font-bold transition-all active:scale-[0.98] touch-manipulation"
                     style={{ background: D.gold, color: D.onAccent }}
                   >

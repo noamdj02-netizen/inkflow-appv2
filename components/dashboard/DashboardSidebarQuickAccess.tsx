@@ -1,39 +1,24 @@
 import React, { useMemo, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ChevronRight, Pin, Star } from 'lucide-react';
+import { Pin, Star } from 'lucide-react';
 import {
   QUICK_ACCESS_CATALOG,
   QUICK_ACCESS_MAX_PINS,
-  type QuickAccessInsight,
   type QuickAccessItemId,
 } from '../../lib/dashboardQuickAccess';
 import { useToast } from '../../contexts/ToastContext';
 
-const INSIGHT_STYLES: Record<
-  QuickAccessInsight['variant'],
-  { border: string; dot: string; bg: string }
-> = {
-  alert: {
-    border: 'border-l-amber-500 dark:border-l-amber-400',
-    dot: 'bg-amber-500',
-    bg: 'bg-amber-50/90 dark:bg-amber-950/25 border-amber-200/70 dark:border-amber-900/40',
-  },
-  today: {
-    border: 'border-l-blue-600 dark:border-l-blue-500',
-    dot: 'bg-blue-600 dark:bg-blue-500',
-    bg: 'bg-blue-50/80 dark:bg-blue-950/20 border-blue-200/60 dark:border-blue-900/40',
-  },
-  calm: {
-    border: 'border-l-zinc-900 dark:border-l-zinc-100',
-    dot: 'bg-zinc-900 dark:bg-zinc-100',
-    bg: 'bg-white dark:bg-zinc-900/60 border-zinc-200/80 dark:border-zinc-800',
-  },
-};
-
 export interface DashboardSidebarQuickAccessProps {
   pins: QuickAccessItemId[];
   recents: QuickAccessItemId[];
-  insight: QuickAccessInsight;
+  insight: {
+    id: string;
+    eyebrow: string;
+    title: string;
+    cta: string;
+    targetId: QuickAccessItemId;
+    badge?: number;
+    variant: 'alert' | 'today' | 'calm';
+  };
   activeQuickId: QuickAccessItemId | null;
   onNavigate: (id: QuickAccessItemId) => void;
   onTogglePin: (id: QuickAccessItemId) => { atMax: boolean };
@@ -43,20 +28,18 @@ export interface DashboardSidebarQuickAccessProps {
 export function DashboardSidebarQuickAccess({
   pins,
   recents,
-  insight,
+  insight: _insight,
   activeQuickId,
   onNavigate,
   onTogglePin,
   getBadge,
 }: DashboardSidebarQuickAccessProps) {
   const toast = useToast();
-  const reduceMotion = useReducedMotion();
   const [listTab, setListTab] = useState<'pins' | 'recent'>('pins');
 
   const catalogMap = useMemo(() => new Map(QUICK_ACCESS_CATALOG.map((c) => [c.id, c])), []);
 
   const listIds = listTab === 'pins' ? pins : recents;
-  const style = INSIGHT_STYLES[insight.variant];
 
   const handlePinClick = (e: React.MouseEvent, id: QuickAccessItemId) => {
     e.stopPropagation();
@@ -68,40 +51,6 @@ export function DashboardSidebarQuickAccess({
 
   return (
     <div className="relative z-10 px-4 pt-3 pb-2">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.button
-          key={insight.id}
-          type="button"
-          onClick={() => onNavigate(insight.targetId)}
-          initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className={`mb-2.5 w-full rounded-2xl border border-l-4 p-3 text-left shadow-sm transition-all active:scale-[0.98] motion-reduce:active:scale-100 ${style.border} ${style.bg}`}
-        >
-          <div className="flex items-start gap-2.5">
-            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${style.dot}`} aria-hidden />
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                {insight.eyebrow}
-              </p>
-              <p className="mt-0.5 text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
-                {insight.title}
-              </p>
-              <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                {insight.cta}
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-              </span>
-            </div>
-            {insight.badge != null && insight.badge > 0 && (
-              <span className="shrink-0 rounded-lg bg-zinc-900 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white dark:bg-white dark:text-zinc-900">
-                {insight.badge > 99 ? '99+' : insight.badge}
-              </span>
-            )}
-          </div>
-        </motion.button>
-      </AnimatePresence>
-
       <div
         className="flex rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 gap-0.5 mb-1.5"
         role="tablist"

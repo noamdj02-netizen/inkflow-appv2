@@ -85,7 +85,7 @@ const VITRINE_GUIDE_STEPS: TourStep[] = [
   { target: '[data-joyride="vitrine-coordonnees"]', title: 'Adresse et horaires', content: "L'emplacement du studio et les horaires d'ouverture sont affichés ici. Modifiables depuis le dashboard. Le jour actuel est mis en évidence (ex. Lundi 10h-19h)." },
   { target: '[data-joyride="vitrine-portfolio"]', title: 'Portfolio détaillé', content: "Vos réalisations avec catégorie, description, artiste et nombre de likes. Au survol, le client voit tout. Ajoutez vos photos depuis le dashboard (Portfolio) pour montrer votre style." },
   { target: '[data-joyride="vitrine-flash"]', title: 'Galerie Flash', content: "Vos flashs disponibles à la réservation. Chaque design affiche prix, durée, emplacements suggérés. En cliquant, le client ouvre la fiche de réservation avec paiement de l'acompte." },
-  { target: '[data-joyride="vitrine-flash-modal"]', title: 'Réservation et acompte', content: "Le client saisit ses coordonnées et paie l'acompte en ligne (Stripe). Son RDV est bloqué à son nom. Une fois payé : email de confirmation au client, notification au tatoueur. Il peut aussi demander un créneau sans payer tout de suite." },
+  { target: '[data-joyride="vitrine-flash-modal"]', title: 'Réservation et acompte', content: "Le client saisit ses coordonnées et paie l'acompte en ligne (Stripe). Son RDV est bloqué à son nom. Une fois payé : email de confirmation au client, notification au tatoueur. Selon les réglages du studio, il peut être requis de payer pour bloquer le créneau." },
 ];
 
 interface PublicStudioPageProProps {
@@ -111,6 +111,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [showProjectRequestForm, setShowProjectRequestForm] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingStudioId, setBookingStudioId] = useState<string | null>(null);
+  /** Anti-no show : si true, on masque toute option "sans paiement" sur la vitrine. */
+  const [requireDeposit, setRequireDeposit] = useState(true);
   /** Résolu tôt pour l’upload des images « demande de projet » (même bucket que réservations). */
   const [projectRequestStudioId, setProjectRequestStudioId] = useState<string | null>(null);
   /** Évite de confondre « pas encore résolu » et « aucun studio en base » (slug invalide / RLS). */
@@ -376,14 +378,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     return all;
   }, [studio?.showServicesSection]);
 
-  const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
+  const handleProjectRequestSubmit = async (
+    data: ProjectRequestFormData,
+    healthData?: import('../../components/booking/HealthQuestionnaireForm').HealthFormData
+  ) => {
     const studioId = projectRequestStudioId ?? (await getStudioIdBySlug(studioSlug));
     if (!studioId) {
       toast.error('Ce studio n\'est pas encore configuré. Contactez-nous directement.');
       return;
     }
     try {
-      await createProjectRequest(data, studioId);
+      await createProjectRequest(data, studioId, healthData);
       setRequestSuccess(true);
       setShowProjectRequestForm(false);
     } catch (e) {
@@ -402,6 +407,24 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         setBookingError('Studio introuvable. Contactez-nous directement.');
       }
       setBookingStudioId(id ?? null);
+      // Par sécurité: si on ne peut pas lire le flag, on considère l'acompte requis.
+      if (id) {
+        try {
+          const { data } = await supabase
+            .from('inkflow_payment_settings')
+            .select('settings')
+            .eq('studio_id', id)
+            .maybeSingle();
+          const settings = (data?.settings ?? {}) as Record<string, unknown>;
+          if (typeof settings.requireDeposit === 'boolean') {
+            setRequireDeposit(settings.requireDeposit);
+          } else {
+            setRequireDeposit(true);
+          }
+        } catch {
+          setRequireDeposit(true);
+        }
+      }
     } catch {
       setBookingError('Impossible de charger le formulaire. Réessayez.');
     }
@@ -1746,9 +1769,23 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             </button>
                           </div>
                           <p className="text-center text-sm text-neutral-500">ou</p>
-                          <a href={`/book/${studioSlug}?flash=${selectedFlash.id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}?flash=${selectedFlash.id}`); }} className="block w-full border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-semibold hover:bg-neutral-50 transition-all cursor-pointer">
-                            Demander un créneau sans payer maintenant
-                          </a>
+                          {requireDeposit ? (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                              Acompte obligatoire pour bloquer le créneau. Paiement sécurisé requis.
+                            </div>
+                          ) : (
+                            <a
+                              href={`/book/${studioSlug}?flash=${selectedFlash.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                navigateTo(`/book/${studioSlug}?flash=${selectedFlash.id}`);
+                              }}
+                              className="block w-full border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-semibold hover:bg-neutral-50 transition-all cursor-pointer"
+                            >
+                              Demander un créneau sans payer maintenant
+                            </a>
+                          )}
                         </>
                       )}
                     </>

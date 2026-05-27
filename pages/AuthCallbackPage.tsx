@@ -28,7 +28,7 @@ export const AuthCallbackPage: React.FC = () => {
     /**
      * Magic link Supabase : les tokens arrivent dans le hash (#access_token=…).
      * Le paramètre redirect_to en query est souvent perdu après redirection.
-     * URL dédiée /auth/callback/client → renvoie vers /discover (portail client web retiré).
+     * URL dédiée /auth/callback/client → renvoie vers /discover (portail client).
      */
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const linkType = hashParams.get('type');
@@ -42,7 +42,7 @@ export const AuthCallbackPage: React.FC = () => {
       typeof sessionStorage !== 'undefined'
         ? sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)
         : null;
-    const defaultPath = isClientCallback ? '/mon-compte' : '/dashboard';
+    const defaultPath = isClientCallback ? '/discover' : '/dashboard';
     const rawRedirect = redirectToParam || fromStorage || defaultPath;
     try {
       sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);

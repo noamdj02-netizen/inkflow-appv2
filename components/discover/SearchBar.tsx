@@ -9,15 +9,17 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ defaultCity = '', defaultStyle = '', defaultQ = '' }: SearchBarProps) {
-  const [q, setQ]         = useState(defaultQ);
-  const [city, setCity]   = useState(defaultCity);
+  const [q, setQ] = useState(defaultQ);
+  const [city, setCity] = useState(defaultCity);
   const [style, setStyle] = useState(defaultStyle);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const parts = ['discover'];
-    const citySlug = city.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const parts = ['explorer'];
+    const citySlug = city
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, '-');
     if (citySlug) parts.push(citySlug);
     if (style) {
@@ -79,7 +81,9 @@ export function SearchBar({ defaultCity = '', defaultStyle = '', defaultQ = '' }
         >
           <option value="">Tous les styles</option>
           {STYLES_LIST.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
       </div>

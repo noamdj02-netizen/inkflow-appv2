@@ -166,7 +166,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
   const openChat = () => {
     if (!sessionEmail || !artist) {
-      window.location.href = '/client';
+      window.location.href = '/discover/login';
       return;
     }
     // Thread ID déterministe : client+artiste
@@ -208,7 +208,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
       >
         <p className="text-lg font-semibold mb-4">{error ?? 'Artiste introuvable'}</p>
         <motion.a
-          href="/discover"
+          href="/explorer"
           whileTap={tap}
           className="text-sm underline"
           style={{ color: CX.accent }}

@@ -5,18 +5,31 @@ import { normalizePublicMessageThreadId } from './threadIds';
 import { isInkflowInternalStaffEmail } from './inkflowInternalStaff';
 import { getStudioByEmail } from './supabaseDashboard';
 
-/** Ancien portail web « My Inkflow » : sous-chemins `/client/…` → annuaire ; entrée `/client` et onboarding → hub client. */
+/** Migration portail client : `/client/...` historiques -> `/discover` ou `/explorer`. */
 export function remapSunsetClientPortalPaths(fullPath: string): string {
   const f = String(fullPath ?? '').trim();
   if (!f) return f;
   try {
     const u = new URL(f, 'https://app.ink-flow.me');
     const p = u.pathname.replace(/\/+$/, '') || '/';
-    if (p === '/client' || p === '/onboarding/finaliser-profil') {
-      return `/mon-compte${u.search}${u.hash}`;
+    if (p === '/client' || p === '/client/dashboard') {
+      return `/discover${u.search}${u.hash}`;
+    }
+    if (
+      p === '/onboarding/finaliser-profil' ||
+      p === '/client/compte-sante' ||
+      p === '/client/bienvenue'
+    ) {
+      return `/discover${u.search}${u.hash}`;
+    }
+    if (p === '/client/vitrine') {
+      return `/dashboard?tab=settings`;
+    }
+    if (p === '/client/studio/flash') {
+      return `/dashboard?tab=flash`;
     }
     if (p.startsWith('/client/')) {
-      return `/discover${u.search}${u.hash}`;
+      return `/explorer${u.search}${u.hash}`;
     }
   } catch {
     /* ignore */
@@ -165,7 +178,7 @@ export async function resolvePublicMessageAutoProfile(
 
 /**
  * Après connexion : applique la cible `redirect` / sessionStorage / défaut (souvent `/dashboard`).
- * Comptes portail sans studio : si la cible n’est pas `/mon-compte`, LoginPage peut renvoyer vers `/discover`.
+ * Comptes portail sans studio : si la cible n’est pas portail client, LoginPage peut renvoyer vers `/discover`.
  */
 export async function resolvePostLoginPath(
   raw: string | null | undefined,
@@ -204,5 +217,6 @@ export function shouldSkipTattooerStudioBootstrap(
   isClientAuthCallback: boolean
 ): boolean {
   if (isClientAuthCallback) return true;
-  return getRedirectPathnameOnly(resolvedRedirectUrl) === '/mon-compte';
+  const p = getRedirectPathnameOnly(resolvedRedirectUrl);
+  return p === '/mon-compte' || p === '/discover' || p === '/discover/login';
 }

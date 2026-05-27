@@ -6,16 +6,26 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.status = 'completed' AND (OLD.status IS DISTINCT FROM 'completed') THEN
+  IF
+    (NEW.status = 'completed' AND (OLD.status IS DISTINCT FROM 'completed'))
+    OR (NEW.balance_paid_at IS NOT NULL AND OLD.balance_paid_at IS NULL)
+  THEN
     PERFORM net.http_post(
-      url := 'https://jnrprkdueseahfrguhvt.supabase.co/functions/v1/post-appointment-closeout',
+      url := COALESCE(
+        NULLIF(current_setting('app.settings.supabase_url', true), ''),
+        'https://jnrprkdueseahfrguhvt.supabase.co'
+      ) || '/functions/v1/post-appointment-closeout',
       headers := '{"Content-Type": "application/json"}'::jsonb,
       body := jsonb_build_object(
         'appointmentId', NEW.id::text,
         'studioId',      NEW.studio_id::text,
         'clientId',      COALESCE(NEW.client_id::text, ''),
         'clientEmail',   COALESCE(NEW.client_email, ''),
-        'clientName',    COALESCE(NEW.client_name, NEW.client_email, '')
+        'clientName',    COALESCE(NEW.client_name, NEW.client_email, ''),
+        'event',         CASE
+                          WHEN NEW.balance_paid_at IS NOT NULL AND OLD.balance_paid_at IS NULL THEN 'balance_paid'
+                          ELSE 'completed'
+                        END
       )
     );
   END IF;

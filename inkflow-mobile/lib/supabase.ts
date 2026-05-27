@@ -8,13 +8,33 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl =
+export const supabaseUrl =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SUPABASE_URL as string) || '';
-const supabaseAnonKey =
+export const supabaseAnonKey =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY as string) || '';
 
+function hasValidSupabaseUrl(url: string): boolean {
+  const raw = url.trim();
+  if (!raw) return false;
+  if (raw.includes('xxxx.supabase.co')) return false;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    return Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function hasValidSupabaseAnonKey(key: string): boolean {
+  const raw = key.trim();
+  if (!raw) return false;
+  if (raw.includes('...')) return false;
+  return raw.length > 40;
+}
+
 export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl.length > 10);
+  return hasValidSupabaseUrl(supabaseUrl) && hasValidSupabaseAnonKey(supabaseAnonKey);
 }
 
 export const supabase = isSupabaseConfigured()

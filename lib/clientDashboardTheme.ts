@@ -1,5 +1,5 @@
 /**
- * Thème visuel de l’app client (/client/dashboard).
+ * Thème visuel de l’app client (/discover).
  * Même logique d’interface que le dashboard studio (sidebar, header, carte centrale, colonne droite).
  * Pour changer uniquement les couleurs, modifiez `CLIENT_DASHBOARD_THEME` ci-dessous.
  */

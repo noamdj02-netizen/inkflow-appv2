@@ -64,6 +64,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     setProjectError,
     handleProjectRequestSubmit,
     availabilityLoading,
+    availabilityUnavailable,
+    availabilityError,
     availableDates,
     availableSlots,
     calendarMonth,
@@ -722,6 +724,37 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               {availabilityLoading ? (
                 <div className="py-8 flex items-center justify-center">
                   <div className="w-6 h-6 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
+                </div>
+              ) : availabilityUnavailable ? (
+                <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-5 text-amber-950 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-amber-100 p-2">
+                      <AlertCircle className="h-4 w-4 text-amber-700" aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold">Creneaux temporairement indisponibles</h3>
+                      <p className="mt-1 text-sm text-amber-900/80">
+                        {availabilityError ||
+                          'Impossible de verifier les disponibilites en direct pour le moment. Rechargez la page avant de choisir un creneau.'}
+                      </p>
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => window.location.reload()}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98]"
+                        >
+                          Recharger
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBookingMode('project')}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition-all active:scale-[0.98]"
+                        >
+                          Envoyer une demande projet
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-white rounded-[22px] border border-[#e0e0e8] overflow-hidden shadow-[0px_20px_25px_rgba(0,0,0,0.1),0px_8px_10px_rgba(0,0,0,0.1)]">

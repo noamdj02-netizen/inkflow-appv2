@@ -15,7 +15,12 @@ import {
   mapProDashboardDeepLink,
   resolveWebAppDashboardUrl,
 } from '@/lib/mapProDashboardDeepLink';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import {
+  isSupabaseConfigured,
+  supabase,
+  supabaseAnonKey as SUPABASE_ANON_KEY,
+  supabaseUrl as SUPABASE_URL,
+} from '@/lib/supabase';
 import type {
   ShouldStartLoadRequest,
   WebViewErrorEvent,
@@ -48,8 +53,6 @@ function shouldStayInWebView(url: string): boolean {
     return false;
   }
 }
-const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '');
-const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
 const SYSTEM_SCHEMES = ['mailto:', 'tel:', 'sms:'];
 
 function mapDeepLinkToWebUrl(url: string): string | null {
@@ -102,15 +105,11 @@ function resolvePushTargetWebUrl(raw: unknown): string | null {
 let lastRegisteredExpoPushToken: string | null = null;
 
 async function registerExpoPushWithStudio(accessToken: string, studioId: string): Promise<void> {
-  if (!SUPABASE_URL) {
+  if (!isSupabaseConfigured()) {
     if (__DEV__) {
-      console.warn('[WebAppShell] EXPO_PUBLIC_SUPABASE_URL manquant — jeton push non envoyé.');
-    }
-    return;
-  }
-  if (!SUPABASE_ANON_KEY) {
-    if (__DEV__) {
-      console.warn('[WebAppShell] EXPO_PUBLIC_SUPABASE_ANON_KEY manquant — register-native-device non appelé.');
+      console.warn(
+        '[WebAppShell] Supabase mobile non configuré correctement — push natif ignoré (vérifie inkflow-mobile/.env).'
+      );
     }
     return;
   }
@@ -149,7 +148,7 @@ async function registerExpoPushWithStudio(accessToken: string, studioId: string)
     if (lastRegisteredExpoPushToken === expoToken) return;
     lastRegisteredExpoPushToken = expoToken;
 
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/register-native-device`, {
+    const res = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/register-native-device`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
