@@ -40,8 +40,8 @@ interface AppointmentRow {
   date: string;
   time: string | null;
   service: string | null;
+  deposit: number | null;
   deposit_link: string | null;
-  deposit_amount: number | null;
   studio_id: string;
   inkflow_studios?: { name: string | null } | null;
 }
@@ -164,8 +164,8 @@ Deno.serve(async (req: Request) => {
       date,
       time,
       service,
+      deposit,
       deposit_link,
-      deposit_amount,
       studio_id,
       inkflow_studios ( name )
     `)
@@ -203,7 +203,7 @@ Deno.serve(async (req: Request) => {
         apt.date,
         apt.time,
         apt.service,
-        apt.deposit_amount,
+        apt.deposit,
         apt.deposit_link,
       );
 
@@ -232,8 +232,8 @@ Deno.serve(async (req: Request) => {
       date,
       time,
       service,
+      deposit,
       deposit_link,
-      deposit_amount,
       studio_id,
       inkflow_studios ( name )
     `)
@@ -258,7 +258,7 @@ Deno.serve(async (req: Request) => {
           apt.date,
           apt.time,
           apt.service,
-          apt.deposit_amount,
+          apt.deposit,
           apt.deposit_link,
           true,
         );

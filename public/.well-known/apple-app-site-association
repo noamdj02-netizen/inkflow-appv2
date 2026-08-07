@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "REPLACE_WITH_APPLE_TEAM_ID.me.inkflow.studio",
+        "appID": "Z38CK66528.me.inkflow.studio",
         "paths": [
           "/dashboard*",
           "/book/*",
@@ -23,6 +23,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["6764879264.me.inkflow.studio"]
+    "apps": ["Z38CK66528.me.inkflow.studio"]
   }
 }

@@ -1,17 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
-import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
+import { resolveAppBaseUrl } from "../_shared/siteUrl.ts";
 import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = resolveAbsoluteSiteBase(
-  Deno.env.get("SITE_URL") || Deno.env.get("APP_URL"),
-  "https://ink-flow.me",
-);
+const APP_URL = resolveAppBaseUrl();
 
 const THEME_PRICE_EUR = 2.99;
 
@@ -95,8 +92,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const amountCents = Math.round(THEME_PRICE_EUR * 100);
-    const successUrl = `${SITE_URL}/dashboard?tab=settings&theme_purchased=1&session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${SITE_URL}/dashboard?tab=settings&theme_cancelled=1`;
+    const successUrl = `${APP_URL}/dashboard?tab=settings&theme_purchased=1&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${APP_URL}/dashboard?tab=settings&theme_cancelled=1`;
 
     const themeNames: Record<string, string> = {
       vintage: "Vintage Flash",

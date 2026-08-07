@@ -11,7 +11,7 @@ import { Logo } from '../../components/Logo';
 import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getVitrineData, getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
-import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
+import { getStudioIdBySlug, abandonPublicCheckoutAppointment } from '../../lib/supabaseDashboard';
 import { SEO, createTattooStudioSchema } from '../../components/SEO';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
@@ -257,10 +257,21 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'cancelled') {
+    if (params.get('payment') !== 'cancelled') return;
+
+    const aptId = params.get('apt')?.trim();
+    void (async () => {
+      if (aptId && isSupabaseConfigured()) {
+        const storageKey = `inkflow_checkout_email_${aptId}`;
+        const email = sessionStorage.getItem(storageKey)?.trim();
+        if (email) {
+          await abandonPublicCheckoutAppointment(aptId, email).catch(() => {});
+          sessionStorage.removeItem(storageKey);
+        }
+      }
       toast.info('Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.');
       window.history.replaceState({}, '', `/studio/${studioSlug}`);
-    }
+    })();
   }, [studioSlug, toast]);
 
   useEffect(() => {

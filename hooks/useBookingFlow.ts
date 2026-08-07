@@ -479,6 +479,29 @@ export function useBookingFlow(studioSlug: string) {
     verifyPayment();
   }, []);
 
+  // Retour Stripe « Annuler » — libère le créneau pending (RPC atomique)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'cancelled') return;
+
+    const aptId = params.get('apt')?.trim();
+    const storageKey = aptId ? `inkflow_checkout_email_${aptId}` : null;
+    const email =
+      (storageKey ? sessionStorage.getItem(storageKey)?.trim() : '') || form.email.trim();
+
+    void (async () => {
+      if (supabaseEnabled && aptId && email) {
+        await abandonPublicCheckoutAppointment(aptId, email).catch(() => {});
+        if (storageKey) sessionStorage.removeItem(storageKey);
+      }
+      setPaymentError(
+        'Paiement annulé. Le créneau a été libéré — vous pouvez en choisir un autre.'
+      );
+      window.history.replaceState({}, '', `/book/${studioSlug}`);
+    })();
+  }, [studioSlug, supabaseEnabled, form.email]);
+
   // ── Valeurs calculées ────────────────────────────────────────────────────────
 
   const getAvailableSlotsForDate = useMemo(
@@ -769,6 +792,12 @@ export function useBookingFlow(studioSlug: string) {
         setPaymentError(result.error);
         setIsSubmitting(false);
         return;
+      }
+
+      try {
+        sessionStorage.setItem(`inkflow_checkout_email_${appointmentId}`, clientEmail);
+      } catch {
+        /* navigation privée */
       }
 
       window.location.href = result.url;

@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
 import { amountsMatchClientAndServer, resolveExpectedCheckoutAmountEur } from "../_shared/checkoutExpectedAmount.ts";
-import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
+import { resolveAppBaseUrl } from "../_shared/siteUrl.ts";
 import { INKFLOW_PAYMENT_RECORD_STATUS } from "../_shared/inkflowPaymentRecordStatus.ts";
 
 /**
@@ -14,10 +14,7 @@ import { INKFLOW_PAYMENT_RECORD_STATUS } from "../_shared/inkflowPaymentRecordSt
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = resolveAbsoluteSiteBase(
-  Deno.env.get("SITE_URL") || Deno.env.get("APP_URL"),
-  "https://ink-flow.me",
-);
+const APP_URL = resolveAppBaseUrl();
 /** Commission plateforme en basis points (100 = 1 %). 0 = tout pour le studio. */
 const CONNECT_FEE_BPS = Math.max(
   0,
@@ -223,8 +220,10 @@ Deno.serve(async (req: Request) => {
       payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug)
         ? `&studio=${encodeURIComponent(payload.studioSlug)}`
         : "";
-    const successUrl = `${SITE_URL}/reservation-succes?session_id={CHECKOUT_SESSION_ID}${studioForSuccess}`;
-    const cancelUrl = `${SITE_URL}/${basePath}/${urlSegment}?payment=cancelled`;
+    const aptIdForCancel = payload.appointmentId?.trim();
+    const aptCancelQuery = aptIdForCancel ? `&apt=${encodeURIComponent(aptIdForCancel)}` : "";
+    const successUrl = `${APP_URL}/reservation-succes?session_id={CHECKOUT_SESSION_ID}${studioForSuccess}`;
+    const cancelUrl = `${APP_URL}/${basePath}/${urlSegment}?payment=cancelled${aptCancelQuery}`;
 
     const applicationFeeCents =
       CONNECT_FEE_BPS > 0 ? Math.min(amountCents, Math.floor((amountCents * CONNECT_FEE_BPS) / 10000)) : 0;
@@ -248,6 +247,13 @@ Deno.serve(async (req: Request) => {
       "metadata[client_name]": payload.clientName,
       "metadata[client_email]": payload.clientEmail,
       "metadata[service_name]": payload.serviceName,
+      ...(aptIdForCancel
+        ? {
+            "payment_intent_data[metadata][appointment_id]": aptIdForCancel,
+            "payment_intent_data[metadata][client_email]": payload.clientEmail,
+            "payment_intent_data[metadata][studio_id]": payload.studioId,
+          }
+        : {}),
       "payment_intent_data[transfer_data][destination]": connectAccountId!,
       ...(applicationFeeCents > 0
         ? { "payment_intent_data[application_fee_amount]": String(applicationFeeCents) }
@@ -317,6 +323,19 @@ Deno.serve(async (req: Request) => {
         }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    const aptIdForLink = payload.appointmentId?.trim();
+    if (aptIdForLink && typeof session.url === "string" && session.url.startsWith("http")) {
+      const { error: linkErr } = await supabase
+        .from("inkflow_appointments")
+        .update({ deposit_link: session.url, updated_at: new Date().toISOString() })
+        .eq("id", aptIdForLink)
+        .eq("studio_id", payload.studioId)
+        .eq("deposit_paid", false);
+      if (linkErr) {
+        console.warn("[create-checkout-session] deposit_link update failed:", linkErr.message);
+      }
     }
 
     return new Response(

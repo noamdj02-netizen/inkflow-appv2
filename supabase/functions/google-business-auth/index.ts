@@ -17,13 +17,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { resolveAppBaseUrl } from "../_shared/siteUrl.ts";
 
 const GOOGLE_CLIENT_ID          = Deno.env.get("GOOGLE_CLIENT_ID") || "";
 const GOOGLE_CLIENT_SECRET      = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
 const GOOGLE_BUSINESS_REDIRECT_URI = Deno.env.get("GOOGLE_BUSINESS_REDIRECT_URI") || "";
 const SUPABASE_URL              = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+const APP_URL = resolveAppBaseUrl();
 
 const SCOPE = "https://www.googleapis.com/auth/business.manage";
 
@@ -109,10 +110,10 @@ Deno.serve(async (req: Request) => {
     const error = url.searchParams.get("error");
 
     if (error) {
-      return Response.redirect(`${SITE_URL}/dashboard?error=google-business-denied`, 302);
+      return Response.redirect(`${APP_URL}/dashboard?error=google-business-denied`, 302);
     }
     if (!code || !studioId) {
-      return Response.redirect(`${SITE_URL}/dashboard?error=google-business-invalid`, 302);
+      return Response.redirect(`${APP_URL}/dashboard?error=google-business-invalid`, 302);
     }
 
     try {
@@ -130,7 +131,7 @@ Deno.serve(async (req: Request) => {
 
       if (!tokenRes.ok) {
         console.error("[google-business-auth] token exchange:", await tokenRes.text());
-        return Response.redirect(`${SITE_URL}/dashboard?error=google-business-token`, 302);
+        return Response.redirect(`${APP_URL}/dashboard?error=google-business-token`, 302);
       }
 
       const tokens = await tokenRes.json() as {
@@ -169,10 +170,10 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       }).eq("id", studioId);
 
-      return Response.redirect(`${SITE_URL}/dashboard?connected=google-business`, 302);
+      return Response.redirect(`${APP_URL}/dashboard?connected=google-business`, 302);
     } catch (err) {
       console.error("[google-business-auth] GET callback error:", err);
-      return Response.redirect(`${SITE_URL}/dashboard?error=google-business-server`, 302);
+      return Response.redirect(`${APP_URL}/dashboard?error=google-business-server`, 302);
     }
   }
 
@@ -282,7 +283,7 @@ Deno.serve(async (req: Request) => {
       return json({
         success: true,
         locationAutoSelected: autoLocationName !== null,
-        redirectUrl: `${SITE_URL}/dashboard?connected=google-business`,
+        redirectUrl: `${APP_URL}/dashboard?connected=google-business`,
       });
     }
 

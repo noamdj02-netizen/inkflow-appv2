@@ -107,3 +107,21 @@ export function htmlReactivation(firstName: string): string {
     hideAppPromo: true,
   });
 }
+
+/** Suivi manuel fondateur — même DA que bienvenue (check-in client actif). */
+export function htmlFounderCheckIn(firstName: string): string {
+  const name = escapeHtml(firstName);
+  const app = getAppUrl();
+  const body = `
+<p style="${EMAIL_STYLES.text}">Salut <strong>${name}</strong>,</p>
+<p style="${EMAIL_STYLES.textMuted}">Je me permets de te contacter pour savoir si tout se passe bien avec InkFlow de ton côté : prise en main, réservations, suivi clients, ou autre.</p>
+<p style="${EMAIL_STYLES.textMuted}">Si tu as la moindre question, un blocage ou besoin d’un coup de main, n’hésite pas à me répondre directement à ce mail ou à m’appeler — je suis là pour t’aider.</p>`;
+  return wrapEmailLayout({
+    preheader: "Un petit mot pour voir si tout va bien sur InkFlow.",
+    title: "Tout se passe bien ?",
+    bodyHtml: body,
+    button: ctaBlock(`${app}/dashboard`, "Ouvrir mon tableau de bord"),
+    secondaryButton: { text: "Me répondre par email", url: "mailto:noamdj02@gmail.com" },
+    hideAppPromo: true,
+  });
+}

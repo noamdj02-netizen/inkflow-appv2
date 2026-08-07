@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import * as Sentry from "https://deno.land/x/sentry/index.mjs";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { applyPaidCheckoutDbState } from "../_shared/applyPaidCheckoutDbState.ts";
+import { abandonPendingCheckoutAppointment } from "../_shared/abandonPublicCheckout.ts";
 import { applyPaidTerminalBalanceFromPaymentIntent } from "../_shared/applyPaidTerminalBalance.ts";
 import { triggerPaymentInvoiceGeneration } from "../_shared/triggerPaymentInvoice.ts";
 import {
@@ -975,6 +976,32 @@ Deno.serve(async (req: Request) => {
         } else {
           console.log("[stripe-webhook] account.updated sans metadata.studio_id:", account.id);
         }
+        break;
+      }
+
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === "payment") {
+          await abandonPendingCheckoutAppointment(
+            supabase,
+            session.metadata as Record<string, string | undefined> | null,
+            "[stripe-webhook checkout.session.expired]",
+          );
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const piMeta = pi.metadata as Record<string, string | undefined> | undefined;
+        if (piMeta?.inkflow_terminal === "1") {
+          break;
+        }
+        await abandonPendingCheckoutAppointment(
+          supabase,
+          piMeta ?? null,
+          "[stripe-webhook payment_intent.payment_failed]",
+        );
         break;
       }
 
