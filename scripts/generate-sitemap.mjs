@@ -34,7 +34,7 @@ if (existsSync(envPath)) {
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
-/** Récupère tous les slugs des studios publics depuis Supabase */
+/** Récupère les slugs des vitrines indexables (is_discoverable) depuis Supabase */
 async function fetchStudioSlugs() {
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.length < 10) {
     console.log('[sitemap] Supabase non configuré, sitemap avec URL de base uniquement.');
@@ -45,13 +45,14 @@ async function fetchStudioSlugs() {
     const { data, error } = await supabase
       .from('inkflow_studios')
       .select('slug')
+      .eq('is_discoverable', true)
       .not('slug', 'is', null);
     if (error) {
       console.warn('[sitemap] Erreur Supabase:', error.message);
       return [];
     }
     const slugs = (data || []).map((r) => r.slug).filter(Boolean);
-    console.log(`[sitemap] ${slugs.length} studio(s) trouvé(s) dans Supabase.`);
+    console.log(`[sitemap] ${slugs.length} studio(s) discoverable trouvé(s) dans Supabase.`);
     return slugs;
   } catch (err) {
     console.warn('[sitemap] Erreur:', err.message);
@@ -87,10 +88,8 @@ async function main() {
   /** Pages marketing & conversion (alignées routes App.tsx) */
   const staticEntries = [
     { path: '/', priority: '1.0', changefreq: 'weekly' },
-    { path: '/login', priority: '0.7', changefreq: 'monthly' },
     { path: '/signup', priority: '0.9', changefreq: 'monthly' },
     { path: '/demo', priority: '0.8', changefreq: 'weekly' },
-    { path: '/dashboard-demo', priority: '0.75', changefreq: 'weekly' },
     { path: '/politique-confidentialite', priority: '0.5', changefreq: 'yearly' },
     { path: '/conditions-utilisation', priority: '0.5', changefreq: 'yearly' },
     { path: '/aide', priority: '0.65', changefreq: 'monthly' },

@@ -645,6 +645,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   if (studioMissingInSupabase) {
     return (
       <div className="landing-scroll min-h-[100dvh] bg-neutral-50 flex flex-col items-center justify-center px-4 py-16">
+        <SEO
+          title="Studio introuvable"
+          description="Ce studio InkFlow n'existe pas ou n'est plus disponible."
+          canonical={`/studio/${studioSlug}`}
+          noindex
+        />
         <AlertCircle className="w-12 h-12 text-amber-600 mb-4 shrink-0" aria-hidden />
         <h1 className="text-xl font-semibold text-neutral-900 text-center">Studio introuvable</h1>
         <p className="text-sm text-neutral-600 text-center max-w-md mt-2">
@@ -673,10 +679,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     name: studioDisplay.name,
     description: studioDisplay.description || studioDisplay.tagline,
     address: studioDisplay.address || '',
-    city: studioDisplay.address?.split(',').pop()?.trim() || '',
-    postalCode: '',
+    phone: studioDisplay.phone || undefined,
     image: studioDisplay.coverImage || studioDisplay.avatar,
     slug: studioSlug,
+    openingHours: studioDisplay.openingHours,
+    rating: studioDisplay.rating,
+    reviewCount: studioDisplay.reviewCount,
   });
 
   const vitrineBookingCard = (

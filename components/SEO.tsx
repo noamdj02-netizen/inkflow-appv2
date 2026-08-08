@@ -1,13 +1,14 @@
 /**
  * Composant SEO réutilisable (Vite / React SPA).
  * Met à jour title, meta et JSON-LD via le DOM (pas de next/head).
- * Landing (ink-flow.me) = Framer. App (dashboard, login, etc.) = Vercel.
+ * Landing marketing et app SPA sur le même déploiement (app.ink-flow.me / localhost).
  */
 import React, { useEffect } from 'react';
-import { LANDING_URL, APP_URL } from '../lib/urls';
+import { APP_URL } from '../lib/urls';
 import { toAbsoluteUrl } from '../lib/seoUtils';
+import type { VitrineOpeningHours } from '../types/vitrine';
 
-const SITE_URL = LANDING_URL;
+const SITE_URL = APP_URL;
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 export interface SEOProps {
@@ -300,22 +301,89 @@ export function createWebPageSchema(opts: {
   };
 }
 
+const SCHEMA_DAY_OF_WEEK: Record<string, string> = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+};
+
+/** Extrait rue, ville et code postal depuis une adresse vitrine (format FR courant). */
+export function parseStudioPostalAddress(raw: string): {
+  streetAddress: string;
+  addressLocality: string;
+  postalCode: string;
+} {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { streetAddress: '', addressLocality: '', postalCode: '' };
+  }
+  const postalMatch = trimmed.match(/\b(\d{5})\b/);
+  const postalCode = postalMatch?.[1] ?? '';
+  const parts = trimmed
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    const locality = postalCode ? last.replace(postalCode, '').trim() || last : last;
+    return {
+      streetAddress: parts.slice(0, -1).join(', '),
+      addressLocality: locality,
+      postalCode,
+    };
+  }
+  if (postalCode) {
+    const locality = trimmed.replace(postalCode, '').replace(/,/g, ' ').trim();
+    return {
+      streetAddress: trimmed,
+      addressLocality: locality,
+      postalCode,
+    };
+  }
+  return { streetAddress: trimmed, addressLocality: parts[0] ?? '', postalCode: '' };
+}
+
+/** Horaires vitrine → `OpeningHoursSpecification` Schema.org (jours ouverts uniquement). */
+export function openingHoursToSchemaSpecs(
+  openingHours?: Record<string, VitrineOpeningHours>
+): object[] | undefined {
+  if (!openingHours) return undefined;
+  const specs: object[] = [];
+  for (const [day, hours] of Object.entries(openingHours)) {
+    if (!hours || hours.closed || !hours.open?.trim() || !hours.close?.trim()) continue;
+    const dayOfWeek = SCHEMA_DAY_OF_WEEK[day.toLowerCase()];
+    if (!dayOfWeek) continue;
+    specs.push({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek,
+      opens: hours.open.trim(),
+      closes: hours.close.trim(),
+    });
+  }
+  return specs.length > 0 ? specs : undefined;
+}
+
 export function createTattooStudioSchema(studio: {
   name: string;
   description: string;
   address: string;
-  city: string;
-  postalCode: string;
   phone?: string;
   image: string;
   rating?: number;
   reviewCount?: number;
   slug?: string;
+  openingHours?: Record<string, VitrineOpeningHours>;
 }): object {
   const appBase = APP_URL.replace(/\/$/, '');
   const base = studio.slug
     ? `${appBase}/studio/${studio.slug}`
     : `${appBase}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
+  const parsed = parseStudioPostalAddress(studio.address);
+  const openingHoursSpecification = openingHoursToSchemaSpecs(studio.openingHours);
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -327,17 +395,12 @@ export function createTattooStudioSchema(studio: {
     telephone: studio.phone,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: studio.address,
-      addressLocality: studio.city,
-      postalCode: studio.postalCode,
+      streetAddress: parsed.streetAddress || studio.address,
+      addressLocality: parsed.addressLocality,
+      postalCode: parsed.postalCode,
       addressCountry: 'FR',
     },
-    openingHoursSpecification: {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      opens: '10:00',
-      closes: '19:00',
-    },
+    ...(openingHoursSpecification && { openingHoursSpecification }),
     ...(studio.rating != null && {
       aggregateRating: {
         '@type': 'AggregateRating',
