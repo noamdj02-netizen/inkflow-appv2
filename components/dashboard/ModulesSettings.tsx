@@ -114,7 +114,7 @@ export const ModulesSettings: React.FC<ModulesSettingsProps> = ({ studioId, valu
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-zinc-900 dark:text-white">{label}</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{description}</p>
+            <p className="type-body text-muted-foreground mt-0.5">{description}</p>
           </div>
         </div>
         <button
@@ -141,10 +141,8 @@ export const ModulesSettings: React.FC<ModulesSettingsProps> = ({ studioId, valu
   return (
     <div className="space-y-6 max-w-2xl w-full">
       <div>
-        <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-          Modules
-        </h2>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-2xl">
+        <h2 className="type-heading">Modules</h2>
+        <p className="type-subtitle mt-1.5 max-w-2xl">
           Le <strong>cœur InkFlow</strong> couvre réservations, lien book et médias ; activez
           ensuite le bloc <strong>Pro & suivi</strong> (finance, fidélité, conformité). Les données
           restent en base si vous masquez un module.

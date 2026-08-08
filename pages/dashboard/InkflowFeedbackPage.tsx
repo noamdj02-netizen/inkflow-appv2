@@ -148,9 +148,7 @@ export const InkflowFeedbackPage: React.FC = () => {
               />
             </span>
             <div className="min-w-0 pt-0.5">
-              <h1 className="font-display text-2xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
-                Signaler un bug
-              </h1>
+              <h1 className="type-heading">Signaler un bug</h1>
               <p className="mt-1 text-sm text-zinc-500">Retour direct à l&apos;équipe InkFlow</p>
             </div>
           </div>

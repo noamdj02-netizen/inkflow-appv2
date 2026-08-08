@@ -224,7 +224,7 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                 Rendez-vous confirmé
               </p>
-              <h1 className="text-2xl sm:text-3xl font-bold font-display tracking-tight">
+              <h1 className="type-heading">
                 {recap.studioName}
               </h1>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">

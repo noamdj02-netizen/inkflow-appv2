@@ -168,12 +168,8 @@ Signature : ____________________________________`,
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
-            Formulaires de consentement
-          </h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-            Documents légaux à faire signer avant chaque séance
-          </p>
+          <h2 className="type-heading-sm">Formulaires de consentement</h2>
+          <p className="type-subtitle mt-1">Documents légaux à faire signer avant chaque séance</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -236,9 +232,7 @@ Signature : ____________________________________`,
             <FileText className="w-8 h-8 text-zinc-400" />
           </div>
           <p className="font-semibold text-zinc-900 dark:text-white mb-2">Aucun formulaire</p>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
-            Créez ou importez un formulaire de consentement
-          </p>
+          <p className="type-subtitle mb-6">Créez ou importez un formulaire de consentement</p>
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={() => setShowPresets(true)}

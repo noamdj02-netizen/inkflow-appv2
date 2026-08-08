@@ -413,9 +413,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-            Portfolio & Vitrine
-          </h2>
+          <h2 className="type-heading">Portfolio & Vitrine</h2>
           <p className="text-sm text-zinc-500 mt-1">
             {items.length} {items.length > 1 ? 'réalisations' : 'réalisation'} — Prenez une photo,
             elle apparaît sur votre vitrine et peut être partagée sur Instagram
@@ -520,7 +518,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
             {items.length === 0 ? 'Votre portfolio est vide' : 'Aucun résultat'}
           </h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-6">
+          <p className="type-body text-muted-foreground max-w-sm mx-auto mb-6">
             {items.length === 0
               ? 'Commencez par ajouter vos plus belles réalisations pour attirer de nouveaux clients.'
               : 'Aucune photo ne correspond aux filtres sélectionnés.'}
@@ -631,9 +629,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           >
             <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <div>
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-                  Ajouter au portfolio
-                </h3>
+                <h3 className="type-heading-sm">Ajouter au portfolio</h3>
                 <p className="text-sm text-zinc-500 mt-0.5">Partagez votre dernière réalisation</p>
               </div>
               <button

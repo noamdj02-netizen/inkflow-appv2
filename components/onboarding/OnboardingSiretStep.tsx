@@ -95,7 +95,7 @@ export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({
           >
             <div className="inline-flex items-center gap-2 mb-5 sm:mb-6">
               <Logo className="dark:invert" />
-              <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+              <span className="type-heading-sm">InkFlow</span>
             </div>
 
             <h1
@@ -104,7 +104,7 @@ export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({
             >
               SIRET du studio
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
+            <p className="type-subtitle mb-5 sm:mb-6">
               Obligatoire pour des factures conformes et les mentions légales. Stocké de façon
               sécurisée — comme dans Paramètres → Établissement.
             </p>

@@ -154,9 +154,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
-            Acomptes
-          </h1>
+          <h1 className="type-heading">Acomptes</h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">Suivez vos acomptes clients</p>
         </div>
       </div>
@@ -172,7 +170,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+          <div className="type-stat sm:text-2xl text-blue-600 dark:text-blue-400">
             {formatEuroPrivacy(depositsData.totalReceived, privacyMode)}
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
@@ -189,7 +187,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+          <div className="type-stat sm:text-2xl">
             {formatEuroPrivacy(depositsData.totalPending, privacyMode)}
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
@@ -206,7 +204,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+          <div className="type-stat sm:text-2xl">
             {formatEuroPrivacy(depositsData.totalExpected, privacyMode)}
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
@@ -223,7 +221,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
               <Banknote className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+          <div className="type-stat sm:text-2xl text-blue-600 dark:text-blue-400">
             {depositsData.all.length > 0
               ? Math.round((depositsData.received.length / depositsData.all.length) * 100)
               : 0}
@@ -276,7 +274,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
             <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 mx-auto mb-4 flex items-center justify-center">
               <Receipt className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
             </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucun acompte</p>
+            <p className="type-body text-muted-foreground">Aucun acompte</p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -304,7 +302,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                     <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                       {apt.clientName}
                     </p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                    <p className="type-body text-muted-foreground truncate">
                       {apt.service} •{' '}
                       {new Date(apt.date).toLocaleDateString('fr-FR', {
                         day: 'numeric',
@@ -380,11 +378,11 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                 <p className="font-semibold text-zinc-900 dark:text-white">
                   {appointmentToSend.clientName}
                 </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="type-body text-muted-foreground">
                   {new Date(appointmentToSend.date).toLocaleDateString('fr-FR')}
                 </p>
               </div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+              <p className="type-stat">
                 {formatEuroPrivacy(appointmentToSend.deposit, privacyMode)}
               </p>
             </div>

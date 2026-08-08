@@ -490,9 +490,7 @@ export const ActivityCenterTab: React.FC<ActivityCenterTabProps> = ({
     <div className="mx-auto w-full max-w-2xl space-y-6 dark:bg-black">
       <header className="space-y-4 border-b border-zinc-200/60 pb-6 dark:border-zinc-900">
         <div className="space-y-2">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl">
-            Suivi clients
-          </h1>
+          <h1 className="type-heading">Suivi clients</h1>
           <p className="max-w-lg text-sm leading-relaxed text-zinc-500 dark:text-zinc-500">
             Actions rapides, relances et notes — sans quitter le fil d’activité.
           </p>
@@ -524,9 +522,7 @@ export const ActivityCenterTab: React.FC<ActivityCenterTabProps> = ({
         </div>
       ) : visibleThreads.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200/80 px-6 py-10 text-center dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Aucune activité pour ce filtre.
-          </p>
+          <p className="type-body text-muted-foreground">Aucune activité pour ce filtre.</p>
           <button
             type="button"
             onClick={() => setActiveFilter('all')}

@@ -398,7 +398,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({
           className="relative rounded-2xl w-full max-w-lg p-6 border animate-slide-up bg-white dark:bg-[#18181b] border-zinc-200 dark:border-zinc-800 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <h2 className="text-xl font-bold mb-1 flex items-center gap-2 text-[var(--text-primary)]">
+          <h2 className="type-heading-sm mb-1 flex items-center gap-2">
             <LayoutGrid className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Ajouter un widget
           </h2>

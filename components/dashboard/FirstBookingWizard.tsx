@@ -279,9 +279,7 @@ export function FirstBookingWizard({
           <div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
             <Sparkles className="size-5" strokeWidth={2} aria-hidden />
           </div>
-          <h3 className="font-display text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
-            {step.title}
-          </h3>
+          <h3 className="type-heading-sm">{step.title}</h3>
           <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             {step.body}
           </p>

@@ -685,7 +685,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       className="gap-0 border border-neutral-200/80 bg-white text-neutral-900 shadow-sm ring-0 rounded-2xl py-0 sm:max-w-none"
     >
       <CardHeader className="border-0 pt-4 pb-2 sm:pt-6 sm:pb-3 md:px-8 md:pt-8">
-        <CardTitle className="text-xl sm:text-2xl font-bold text-neutral-900">Réserver</CardTitle>
+        <CardTitle className="type-heading-sm sm:text-2xl">Réserver</CardTitle>
         <CardDescription className="text-sm text-neutral-800">
           Réservez votre session en quelques clics
         </CardDescription>
@@ -1122,7 +1122,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             </div>
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2 sm:mb-3">{service.name}</h3>
+                            <h3 className="type-heading-sm sm:text-2xl mb-2 sm:mb-3">{service.name}</h3>
                             <p className="text-neutral-800 mb-4 leading-relaxed">{service.description}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
                               {service.features.map((feature, i) => (
@@ -1137,7 +1137,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             </div>
                           </div>
                           <div className="flex-shrink-0 text-right md:text-center">
-                            <div className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{service.price}</div>
+                            <div className="type-stat sm:text-3xl mb-2">{service.price}</div>
                             <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--vitrine-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity text-sm sm:text-base w-full md:w-auto cursor-pointer">
                               Réserver
                               <ArrowRight className="w-4 h-4" />

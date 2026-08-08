@@ -199,7 +199,7 @@ export const faqPageSchemaFr: object = {
       name: "Qu'est-ce que l'assistant IA Inkflow ?",
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Il propose des brouillons et des créneaux quand une demande arrive. Vous relisez, vous envoyez. Rien ne part sans votre accord.',
+        text: 'Il te propose des brouillons et des créneaux quand une demande arrive. Tu relis, tu envoies. Rien ne part sans ton accord.',
       },
     },
     {
@@ -207,7 +207,7 @@ export const faqPageSchemaFr: object = {
       name: 'Comment fonctionnent les paiements Stripe et PayPal ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Inkflow utilise Stripe Checkout. Vos clients paient l'acompte en ligne lors de la réservation, par carte et PayPal si PayPal est activé dans votre compte Stripe. Les fonds arrivent sur votre compte Stripe en quelques jours.",
+        text: "Inkflow utilise Stripe Checkout. Tes clients paient l'acompte en ligne lors de la réservation, par carte et PayPal si PayPal est activé dans ton compte Stripe. Les fonds arrivent sur ton compte Stripe en quelques jours.",
       },
     },
     {
@@ -215,7 +215,7 @@ export const faqPageSchemaFr: object = {
       name: 'Quelle est la différence entre Solo, Pro et Studio ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Solo conserve réservation · paiements · vitrine avec plafonds 1 siège / 100 fiches CRM, sans encore activer multi-calendriers étendus, statistiques avancées ou thème vitrine premium. Pro élève vos plafonds (3 sièges · 300 fiches) et active ces trois options. Studio reprend Pro, cinq sièges, CRM illimité sur notre grille et accès développeurs (API InkFlow documentée).',
+        text: 'Solo conserve réservation · paiements · vitrine avec plafonds 1 siège / 100 fiches CRM, sans encore activer multi-calendriers étendus, statistiques avancées ou thème vitrine premium. Pro élève tes plafonds (3 sièges · 300 fiches) et active ces trois options. Studio reprend Pro, cinq sièges, CRM illimité sur notre grille et accès développeurs (API InkFlow documentée).',
       },
     },
     {
@@ -223,7 +223,7 @@ export const faqPageSchemaFr: object = {
       name: 'Puis-je gérer mon propre portail client ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Vous contrôlez les accès depuis votre dashboard.",
+        text: "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Tu contrôles les accès depuis ton dashboard.",
       },
     },
     {
@@ -231,7 +231,7 @@ export const faqPageSchemaFr: object = {
       name: 'Comment est gérée la galerie flash unique ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Publiez vos flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
+        text: "Publie tes flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
       },
     },
     {

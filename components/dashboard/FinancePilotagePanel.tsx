@@ -480,10 +480,8 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
   return (
     <div className="space-y-8 animate-fade-in max-w-3xl">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">
-          Pilotage {year}
-        </h2>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-2xl">
+        <h2 className="type-heading">Pilotage {year}</h2>
+        <p className="type-subtitle mt-1.5 max-w-2xl">
           Estimations pédagogiques à partir de tes encaissements (RDV terminés + espèces saisies
           dans Revenus). {FINANCE_LEGAL_DISCLAIMER_FR}
         </p>
@@ -501,9 +499,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Ce mois-ci
             </p>
-            <h3 className="mt-1 font-display text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
-              Par où commencer
-            </h3>
+            <h3 className="mt-1 type-heading-sm">Par où commencer</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               Trois repères selon tes chiffres InkFlow — les obligations réelles sont sur URSSAF et
               les impôts.
@@ -542,10 +538,8 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
               </p>
             </FiscalLexiconHelp>
           </div>
-          <p className="mt-2 font-sans text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">
-            {formatEUR(caAggregate)}
-          </p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="type-stat mt-2">{formatEUR(caAggregate)}</p>
+          <p className="type-body text-muted-foreground mt-1">
             HT {formatEUR(ht)} · TTC {formatEUR(ttc)}
           </p>
         </div>
@@ -562,9 +556,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
               </p>
             </FiscalLexiconHelp>
           </div>
-          <p className="mt-2 font-sans text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">
-            {formatEUR(netEst)}
-          </p>
+          <p className="type-stat mt-2">{formatEUR(netEst)}</p>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 space-y-0.5">
             <span>
               Cotisations estimées : {formatEUR(fiscalSnapshot.cotisationsEUR)} · Taux cotisations{' '}
@@ -624,7 +616,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
                 Rappels d’échéances (perso)
               </h3>
             </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xl">
+            <p className="type-body text-muted-foreground max-w-xl">
               Saisis les prochaines dates visibles sur tes courriers ou portails (URSSAF, impôts).
               Ce sont des repères locaux — pas des échéances officielles calculées par InkFlow.
             </p>
@@ -696,7 +688,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
           <Scale className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0 mt-0.5" />
           <div className="min-w-0">
             <h3 className="font-semibold text-zinc-900 dark:text-white">Réconciliation rapide</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="type-body text-muted-foreground mt-1">
               Compare le total InkFlow du mois ({monthKey}) à un montant que tu vois sur ton relevé
               bancaire ou Stripe. L’écart aide à repérer un oubli de saisie — pas un contrôle
               comptable.
@@ -755,7 +747,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             <h3 className="font-semibold text-zinc-900 dark:text-white">
               Exports compta (mois courant)
             </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="type-body text-muted-foreground mt-1">
               Rapport PDF multipage (synthèse année, zoom mois, paramètres, annexe mouvements,
               mentions) ou grand livre CSV pour tableur — à croiser avec tes sources officielles.
             </p>
@@ -803,7 +795,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             <PenLine className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
             Paiements, admin & atelier
           </h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-2xl">
+          <p className="type-body text-muted-foreground mt-1.5 max-w-2xl">
             Raccourcis vers les portails publics (URSSAF, impôts, prévention, hygiène). InkFlow ne
             traite aucun paiement pour ton compte et ne remplace ni un expert-comptable ni un
             juriste — fais valider ta situation auprès des administrations et de conseils humains.
@@ -847,7 +839,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             <h3 className="font-semibold text-zinc-900 dark:text-white text-lg mt-1">
               Bonnes pratiques atelier (organisation)
             </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
+            <p className="type-body text-muted-foreground mt-1 max-w-2xl">
               Rappels pour le fonctionnement quotidien du studio — indépendants des échéances URSSAF
               et du bloc « checklist fiscale & admin » plus haut.
             </p>
@@ -872,7 +864,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         <h3 className="font-semibold text-zinc-900 dark:text-white">
           Charges directes (marge pédagogique)
         </h3>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="type-body text-muted-foreground">
           Ajoute le coût matériel ou une charge de séance pour voir un ordre de grandeur de marge
           (pas une comptabilité complète).
         </p>
@@ -944,7 +936,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             <span className="font-semibold text-zinc-900 dark:text-white block">
               Facturation électronique / Factur‑X & PDP (vision générale)
             </span>
-            <span className="text-sm text-zinc-500 dark:text-zinc-400 block mt-0.5">
+            <span className="type-body text-muted-foreground block mt-0.5">
               Cadre légal en évolution — InkFlow ne produit pas encore de flux Factur‑X ni d’envoi
               vers une plateforme de dématérialisation (PDP). Utilise ce PDF et le CSV comme
               brouillons, puis fais valider ta conformité auprès d’un conseil et des portails
@@ -985,7 +977,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             <span className="font-semibold text-zinc-900 dark:text-white block">
               Paramètres avancés du pilotage
             </span>
-            <span className="text-sm text-zinc-500 dark:text-zinc-400 block mt-0.5">
+            <span className="type-body text-muted-foreground block mt-0.5">
               Base HT/TTC, TVA, cotisations, plafond, fréquence de déclaration — à ajuster quand ta
               situation change.
             </span>

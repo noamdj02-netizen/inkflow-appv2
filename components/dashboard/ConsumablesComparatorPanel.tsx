@@ -232,7 +232,7 @@ export const ConsumablesComparatorPanel: React.FC<ConsumablesComparatorPanelProp
               <BarChart3 className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
               Comparateur de consommables
             </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-xl">
+            <p className="type-body text-muted-foreground mt-1 max-w-xl">
               Compare le coût total estimé (ligne + port) entre tes fournisseurs, par produit. Les
               prix sont TTC, alignés sur ton stock.
             </p>

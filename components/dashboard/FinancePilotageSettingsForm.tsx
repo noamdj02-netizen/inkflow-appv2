@@ -48,11 +48,9 @@ export const FinancePilotageSettingsForm: React.FC<FinancePilotageSettingsFormPr
       <section className="space-y-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
         <div className="flex items-center gap-2">
           <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-            Affichage des montants
-          </h2>
+          <h2 className="type-heading-sm">Affichage des montants</h2>
         </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="type-body text-muted-foreground">
           Indique comment tu saisis les prix (RDV, espèces) et comment tu préfères les lire à
           l’écran.
         </p>
@@ -121,10 +119,8 @@ export const FinancePilotageSettingsForm: React.FC<FinancePilotageSettingsFormPr
       </section>
 
       <section className="space-y-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          Pilotage auto-entrepreneur
-        </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <h2 className="type-heading-sm">Pilotage auto-entrepreneur</h2>
+        <p className="type-body text-muted-foreground">
           Presets indicatifs pour les cotisations — ajuste le taux si tu connais ta situation.
         </p>
         <label className={`block space-y-1.5 ${baseInput}`}>
@@ -188,10 +184,8 @@ export const FinancePilotageSettingsForm: React.FC<FinancePilotageSettingsFormPr
       </section>
 
       <section className="space-y-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          Profil fiscal (indicatif)
-        </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <h2 className="type-heading-sm">Profil fiscal (indicatif)</h2>
+        <p className="type-body text-muted-foreground">
           Pour les estimations et les rappels URSSAF — aucune donnée envoyée aux administrations
           depuis InkFlow.
         </p>
@@ -268,10 +262,8 @@ export const FinancePilotageSettingsForm: React.FC<FinancePilotageSettingsFormPr
       </section>
 
       <section className="space-y-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          Comparateur prix (opt-in)
-        </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <h2 className="type-heading-sm">Comparateur prix (opt-in)</h2>
+        <p className="type-body text-muted-foreground">
           Si tu actives l’option, tu pourras envoyer des contributions de prix anonymisées
           (catégorie + libellé) pour alimenter une base collaborative — fonctionnalité en évolution.
         </p>

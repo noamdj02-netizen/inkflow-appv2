@@ -57,9 +57,11 @@ class ErrorBoundaryImpl extends Component<Props, State> {
         <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
           <div className="max-w-md w-full text-center">
             <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-2xl" aria-hidden>⚠️</span>
+              <span className="text-2xl" aria-hidden>
+                ⚠️
+              </span>
             </div>
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Une erreur s&apos;est produite</h1>
+            <h1 className="type-heading-sm mb-2">Une erreur s&apos;est produite</h1>
             <p className="text-neutral-600 dark:text-neutral-300 text-sm mb-6">
               {errorContext === 'dashboard'
                 ? "Le tableau de bord n'a pas pu s'afficher. Réessayez ou déconnectez-vous."

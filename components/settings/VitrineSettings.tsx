@@ -258,9 +258,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
       )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 space-y-1">
-          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-            Personnaliser votre page vitrine
-          </h2>
+          <h2 className="type-heading-sm sm:text-xl">Personnaliser votre page vitrine</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xl leading-snug">
             {sections.length} sections au total — la sauvegarde est automatique. Utilisez le bouton
             pour forcer une synchro immédiate.

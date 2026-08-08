@@ -227,7 +227,7 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-[var(--text-primary)]">Paiements</h2>
+        <h2 className="type-heading-sm">Paiements</h2>
         <p className="text-[var(--text-secondary)] text-sm mt-1">Acomptes et connexion Stripe</p>
       </div>
 

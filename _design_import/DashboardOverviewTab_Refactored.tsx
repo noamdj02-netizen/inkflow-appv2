@@ -801,9 +801,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             {/* Desktop Header with controls */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between gap-4">
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-                  Vue d&apos;ensemble
-                </h1>
+                <h1 className="type-heading">Vue d&apos;ensemble</h1>
                 <button
                   onClick={() => setIsEditMode(!isEditMode)}
                   className={cn(

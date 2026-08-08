@@ -15,14 +15,17 @@ const SUB_RATE_MAX = 25;
 const SUB_RATE_WINDOW_MS = 60_000;
 
 const PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
+  /** Slug `solo` = formule commerciale « Essentiel » (~14€/mois TEST) */
   solo: {
     monthly: Deno.env.get("STRIPE_PRICE_SOLO_MONTHLY") || "",
     annual: Deno.env.get("STRIPE_PRICE_SOLO_ANNUAL") || "",
   },
+  /** ~37€/mois TEST */
   pro: {
     monthly: Deno.env.get("STRIPE_PRICE_PRO_MONTHLY") || "",
     annual: Deno.env.get("STRIPE_PRICE_PRO_ANNUAL") || "",
   },
+  /** ~99€/mois TEST */
   studio: {
     monthly: Deno.env.get("STRIPE_PRICE_STUDIO_MONTHLY") || "",
     annual: Deno.env.get("STRIPE_PRICE_STUDIO_ANNUAL") || "",

@@ -27,6 +27,14 @@ export const bentoBadge =
 
 export const microHover = 'transition-all duration-200 active:scale-[0.98]';
 
+/** Montants € dans listes bento — Inter Semibold compact. */
+export const bentoAmountStat =
+  'type-stat type-stat--inter-semibold type-stat--compact tabular-nums text-zinc-900 dark:text-zinc-50';
+
+/** KPI tuile bento (Revenu / Prévision / Acomptes) — Inter Semibold, taille lg/xl. */
+export const bentoKpiAmountStat =
+  'type-stat type-stat--inter-semibold type-stat--kpi tabular-nums text-zinc-900 dark:text-zinc-50';
+
 /** Bouton action premium (remplace bleu). */
 export const bentoActionBtn =
   'min-h-11 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98]';

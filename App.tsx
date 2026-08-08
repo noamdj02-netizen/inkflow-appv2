@@ -21,6 +21,9 @@ import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { AppSplashGate } from './components/auth/AppSplashGate';
 import { AppPageTransition } from './components/motion/AppPageTransition';
+import { InkflowRouterNavigation } from './components/motion/InkflowRouterNavigation';
+import { InkflowLenisProvider } from './contexts/InkflowLenisContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -37,6 +40,9 @@ const SignupPage = lazy(() =>
 );
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const ShadcnDashboard01Page = lazy(() =>
+  import('./pages/ShadcnDashboard01Page').then((m) => ({ default: m.ShadcnDashboard01Page }))
 );
 const InkflowFeedbackPage = lazy(() =>
   import('./pages/dashboard/InkflowFeedbackPage').then((m) => ({
@@ -260,48 +266,9 @@ const Router: React.FC = () => {
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('inkflow-navigate', handleLocationChange);
 
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest('a');
-      const rawHref = anchor?.getAttribute('href')?.trim() ?? '';
-      if (
-        rawHref.startsWith('mailto:') ||
-        rawHref.startsWith('tel:') ||
-        rawHref.startsWith('sms:')
-      ) {
-        return;
-      }
-      if (anchor && anchor.href.startsWith(window.location.origin) && !anchor.target) {
-        e.preventDefault();
-        const url = new URL(anchor.href);
-        const fullUrl = url.pathname + url.search + (url.hash || '');
-        window.history.pushState({}, '', fullUrl);
-        setCurrentPath(url.pathname + url.search);
-
-        if (url.hash) {
-          const id = url.hash.slice(1);
-          const scrollToSection = () => {
-            const el = document.getElementById(id);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          };
-          if (url.pathname === window.location.pathname) {
-            scrollToSection();
-          } else {
-            setTimeout(scrollToSection, 150);
-          }
-        } else {
-          document.querySelector('.app-shell-content')?.scrollTo(0, 0);
-          document.querySelector('.book-public-scroll')?.scrollTo(0, 0);
-          document.querySelector('.landing-scroll')?.scrollTo(0, 0);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick);
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('inkflow-navigate', handleLocationChange);
-      document.removeEventListener('click', handleClick);
     };
   }, []);
 
@@ -317,14 +284,19 @@ const Router: React.FC = () => {
       getProps: (m) => ({ code: m[1] }),
     },
     { path: '/reset-password', component: ResetPasswordPage },
-    { path: '/demo', component: DashboardDemoPage },
-    { path: '/dashboard-demo', component: DashboardDemoPage },
+    { path: '/demo', component: DashboardDemoPage, needsSupabaseSync: true },
+    { path: '/dashboard-demo', component: DashboardDemoPage, needsSupabaseSync: true },
     {
       path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/,
       component: FeatureDetailPage,
       getProps: (m) => ({ slug: m[1] }),
     },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
+    {
+      path: '/dashboard-shadcn-preview',
+      component: ShadcnDashboard01Page,
+      requiresAuth: true,
+    },
     {
       path: '/dashboard/signalement',
       component: InkflowFeedbackPage,
@@ -485,9 +457,7 @@ const Router: React.FC = () => {
                 ⚠️
               </span>
             </div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2">
-              Une erreur s&apos;est produite
-            </h1>
+            <h1 className="type-heading-sm mb-2">Une erreur s&apos;est produite</h1>
             <p className="text-[var(--text-secondary)] text-sm mb-6">
               Cette page n&apos;a pas pu s&apos;afficher. Réessayez ou retournez à l&apos;accueil.
             </p>
@@ -529,19 +499,24 @@ const Router: React.FC = () => {
 
   const showGlobalOfflineBanner = currentPath !== '/dashboard' && !currentPath.startsWith('/admin');
   const pathOnly = currentPath.split('?')[0];
-  const skipGlobalPageTransition = pathOnly === '/dashboard' || pathOnly.startsWith('/admin');
+  const skipGlobalPageTransition =
+    pathOnly === '/dashboard' ||
+    pathOnly.startsWith('/admin') ||
+    pathOnly === '/dashboard-demo' ||
+    pathOnly === '/demo';
 
   const pageShell = <Suspense fallback={<FullScreenSpinner />}>{PageWithGuard}</Suspense>;
 
   return (
-    <>
+    <InkflowLenisProvider routePath={pathOnly}>
+      <InkflowRouterNavigation onNavigate={setCurrentPath} />
       {showGlobalOfflineBanner ? <OfflineBanner /> : null}
       {skipGlobalPageTransition ? (
         pageShell
       ) : (
         <AppPageTransition routeKey={pathOnly}>{pageShell}</AppPageTransition>
       )}
-    </>
+    </InkflowLenisProvider>
   );
 };
 
@@ -630,14 +605,16 @@ const App: React.FC = () => {
           <AuthProvider>
             <AppSplashGate>
               <ToastProvider>
-                <LanguageProvider>
-                  <UnhandledRejectionHandler />
-                  <ProductAnalyticsIdentity />
-                  <Router />
-                  <ProductNpsPrompt />
-                  <CookieConsent />
-                  <PWAUpdatePrompt />
-                </LanguageProvider>
+                <TooltipProvider>
+                  <LanguageProvider>
+                    <UnhandledRejectionHandler />
+                    <ProductAnalyticsIdentity />
+                    <Router />
+                    <ProductNpsPrompt />
+                    <CookieConsent />
+                    <PWAUpdatePrompt />
+                  </LanguageProvider>
+                </TooltipProvider>
               </ToastProvider>
             </AppSplashGate>
           </AuthProvider>

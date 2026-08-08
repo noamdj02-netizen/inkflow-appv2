@@ -224,11 +224,6 @@ export function DashboardBentoUnified({
           className="md:col-span-12"
         />
       </div>
-      {/* Réserve scroll mobile — évite que la dernière carte soit sous la bottom nav fixe */}
-      <div
-        className="pointer-events-none w-full shrink-0 md:hidden min-h-[calc(var(--inkflow-mobile-dock-reserve,7.5rem)+env(safe-area-inset-bottom,0px))]"
-        aria-hidden
-      />
     </motion.section>
   );
 }

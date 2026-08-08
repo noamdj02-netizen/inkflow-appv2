@@ -57,7 +57,7 @@ export const ResetPasswordPage: React.FC = () => {
           <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
             <CheckCircle className="w-6 h-6 text-emerald-600" />
           </div>
-          <h1 className="text-xl font-bold text-neutral-900 mb-2">Email envoyé</h1>
+          <h1 className="type-heading-sm mb-2">Email envoyé</h1>
           <p className="text-neutral-600 text-sm mb-6">
             Si un compte existe pour {email}, vous recevrez un lien pour réinitialiser votre mot de
             passe.
@@ -86,7 +86,7 @@ export const ResetPasswordPage: React.FC = () => {
         <div className="bg-white rounded-2xl p-8 border border-neutral-200 shadow-sm">
           <div className="text-center mb-6">
             <Logo size="lg" className="rounded-2xl mx-auto mb-4" />
-            <h1 className="text-xl font-bold text-neutral-900">Mot de passe oublié ?</h1>
+            <h1 className="type-heading-sm">Mot de passe oublié ?</h1>
             <p className="text-neutral-600 text-sm mt-2">
               Entrez votre email pour recevoir un lien de réinitialisation.
             </p>

@@ -98,6 +98,8 @@ interface EtablissementPageProps {
   onSendCollaboratorInvite?: (artist: ArtistAccount) => void | Promise<void>;
   /** Limite du plan (collaborateurs) */
   maxArtists: number;
+  /** Plan Studio+ : invitations, rôles et permissions */
+  canManageTeamRoles: boolean;
   onGoToBilling: () => void;
   subscriptionStatus?: string;
   trialEndsAt?: string | null;
@@ -135,6 +137,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   onDeleteArtist,
   onSendCollaboratorInvite,
   maxArtists,
+  canManageTeamRoles,
   onGoToBilling,
   subscriptionStatus,
   trialEndsAt,
@@ -339,8 +342,8 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   return (
     <div className="animate-fade-in w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       <div className="mb-2">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Établissement</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+        <h1 className="type-heading">Établissement</h1>
+        <p className="type-body text-muted-foreground mt-1">
           Gérez l'identité professionnelle, l'équipe et la facturation de votre studio.
         </p>
       </div>
@@ -517,13 +520,11 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
         </div>
         <div className="p-5 space-y-4">
           {!useSupabase || !studioId ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="type-body text-muted-foreground">
               Connexion requise pour lier votre fiche Google à InkFlow.
             </p>
           ) : !onSaveGooglePlaceId ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Réglage indisponible pour le moment.
-            </p>
+            <p className="type-body text-muted-foreground">Réglage indisponible pour le moment.</p>
           ) : (
             <>
               {googlePlaceId ? (
@@ -814,198 +815,225 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       </section>
 
       {/* ══ Section 2 — Gestion d'Équipe ══ */}
-      <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-zinc-300" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">
-                Collaborateurs
-              </h2>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                Invitations, rôles (admin, tatoueur…) et droits dans l’app (RDV, vitrine…) — tout
-                est sur cette page.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowAddMember(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Ajouter
-          </button>
-        </div>
-
-        {/* Add member form */}
-        {showAddMember && (
-          <div className="px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Nom complet"
-                  className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-                />
-                <input
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember((p) => ({ ...p, email: e.target.value }))}
-                  placeholder="email@exemple.com"
-                  className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-                />
+      {canManageTeamRoles ? (
+        <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-zinc-300" />
               </div>
+              <div>
+                <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">
+                  Collaborateurs
+                </h2>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                  Invitations, rôles (admin, tatoueur…) et droits dans l’app (RDV, vitrine…) — tout
+                  est sur cette page.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowAddMember(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Ajouter
+            </button>
+          </div>
 
-              {/* Role selector */}
-              <div className="grid grid-cols-3 gap-2">
-                {ROLES.map((r) => (
+          {/* Add member form */}
+          {showAddMember && (
+            <div className="px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={newMember.name}
+                    onChange={(e) => setNewMember((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nom complet"
+                    className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                  />
+                  <input
+                    type="email"
+                    value={newMember.email}
+                    onChange={(e) => setNewMember((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="email@exemple.com"
+                    className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                {/* Role selector */}
+                <div className="grid grid-cols-3 gap-2">
+                  {ROLES.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => setNewMember((p) => ({ ...p, role: r.id }))}
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs font-medium transition-all ${
+                        newMember.role === r.id
+                          ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600'
+                      }`}
+                    >
+                      <span className={`p-1 rounded-lg ${newMember.role === r.id ? r.color : ''}`}>
+                        {r.icon}
+                      </span>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                  {ROLES.find((r) => r.id === newMember.role)?.desc}
+                </p>
+
+                <div className="flex gap-2 justify-end">
                   <button
-                    key={r.id}
-                    onClick={() => setNewMember((p) => ({ ...p, role: r.id }))}
-                    className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs font-medium transition-all ${
-                      newMember.role === r.id
-                        ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600'
-                    }`}
+                    onClick={() => {
+                      setShowAddMember(false);
+                      setNewMember({ name: '', email: '', role: 'tatoueur' });
+                    }}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   >
-                    <span className={`p-1 rounded-lg ${newMember.role === r.id ? r.color : ''}`}>
-                      {r.icon}
-                    </span>
-                    {r.label}
+                    Annuler
                   </button>
-                ))}
+                  <button
+                    onClick={handleAddMember}
+                    disabled={addingMember}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-all active:scale-[0.98]"
+                  >
+                    {addingMember ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                    Confirmer
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                {ROLES.find((r) => r.id === newMember.role)?.desc}
-              </p>
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => {
-                    setShowAddMember(false);
-                    setNewMember({ name: '', email: '', role: 'tatoueur' });
-                  }}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleAddMember}
-                  disabled={addingMember}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-all active:scale-[0.98]"
-                >
-                  {addingMember ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                  Confirmer
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Members list */}
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {artists.length === 0 && !showAddMember && (
-            <div className="px-5 py-8 text-center">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                <Shield className="w-5 h-5 text-zinc-400" />
-              </div>
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
-                Aucun collaborateur pour l'instant
-              </p>
-              <button
-                onClick={() => setShowAddMember(true)}
-                className="mt-3 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
-              >
-                + Inviter un collaborateur
-              </button>
             </div>
           )}
-          {artists.map((artist) => {
-            const role = ROLES.find((r) => r.id === (artist.role as TeamRole)) ?? ROLES[1];
-            const initials = artist.name
-              .split(' ')
-              .map((w) => w[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase();
-            return (
-              <div key={artist.id} className="flex items-center gap-3 px-5 py-3.5">
-                {/* Avatar */}
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-600 dark:to-zinc-700 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white overflow-hidden">
-                  {artist.avatar ? (
-                    <img src={artist.avatar} alt="" className="w-full h-full object-cover" />
+
+          {/* Members list */}
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {artists.length === 0 && !showAddMember && (
+              <div className="px-5 py-8 text-center">
+                <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                  <Shield className="w-5 h-5 text-zinc-400" />
+                </div>
+                <p className="text-sm text-zinc-400 dark:text-zinc-500">
+                  Aucun collaborateur pour l'instant
+                </p>
+                <button
+                  onClick={() => setShowAddMember(true)}
+                  className="mt-3 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
+                >
+                  + Inviter un collaborateur
+                </button>
+              </div>
+            )}
+            {artists.map((artist) => {
+              const role = ROLES.find((r) => r.id === (artist.role as TeamRole)) ?? ROLES[1];
+              const initials = artist.name
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+              return (
+                <div key={artist.id} className="flex items-center gap-3 px-5 py-3.5">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-600 dark:to-zinc-700 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white overflow-hidden">
+                    {artist.avatar ? (
+                      <img src={artist.avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                      {artist.name}
+                    </p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
+                      {artist.email}
+                    </p>
+                  </div>
+                  <span
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${role.color}`}
+                  >
+                    {role.icon}
+                    {role.label}
+                  </span>
+                  {deleteConfirmId === artist.id ? (
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          onDeleteArtist(artist.id);
+                          setDeleteConfirmId(null);
+                          toast.success('Collaborateur retiré');
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-red-600 text-white hover:bg-red-700 transition-all"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(null)}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   ) : (
-                    initials
+                    <button
+                      onClick={() => setDeleteConfirmId(artist.id)}
+                      className="p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex-shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
-                    {artist.name}
-                  </p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
-                    {artist.email}
-                  </p>
-                </div>
-                <span
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${role.color}`}
-                >
-                  {role.icon}
-                  {role.label}
-                </span>
-                {deleteConfirmId === artist.id ? (
-                  <div className="flex gap-1.5 flex-shrink-0">
-                    <button
-                      onClick={() => {
-                        onDeleteArtist(artist.id);
-                        setDeleteConfirmId(null);
-                        toast.success('Collaborateur retiré');
-                      }}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-red-600 text-white hover:bg-red-700 transition-all"
-                    >
-                      Confirmer
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirmId(null)}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setDeleteConfirmId(artist.id)}
-                    className="p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex-shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {artists.length > 0 && (
-          <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-6 bg-zinc-50/50 dark:bg-zinc-900/40">
-            <ArtistManager
-              hideAddButton
-              artists={artists}
-              onAdd={onAddArtist}
-              onUpdate={onUpdateArtist}
-              onDelete={onDeleteArtist}
-              onSendInvite={onSendCollaboratorInvite}
-              maxArtists={maxArtists}
-            />
+              );
+            })}
           </div>
-        )}
-      </section>
+
+          {artists.length > 0 && (
+            <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-6 bg-zinc-50/50 dark:bg-zinc-900/40">
+              <ArtistManager
+                hideAddButton
+                artists={artists}
+                onAdd={onAddArtist}
+                onUpdate={onUpdateArtist}
+                onDelete={onDeleteArtist}
+                onSendInvite={onSendCollaboratorInvite}
+                maxArtists={maxArtists}
+              />
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="space-y-3 p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-700/60 bg-zinc-800">
+                <Shield className="h-4 w-4 text-zinc-300" />
+              </div>
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                Collaborateurs & rôles
+              </h2>
+            </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Invitations, rôles (admin, tatoueur…) et permissions dans l’app — inclus à partir du
+              plan Studio.
+            </p>
+            <button
+              type="button"
+              onClick={onGoToBilling}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+            >
+              Voir le plan Studio
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ══ Section 3 — Facturation & Documents ══ */}
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">

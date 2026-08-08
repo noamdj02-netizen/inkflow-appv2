@@ -610,7 +610,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                   </span>
                 )}
               </div>
-              <div className="mt-4 space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <div className="mt-4 space-y-2 type-body text-muted-foreground">
                 {appointment.clientEmail ? (
                   <p className="flex min-w-0 items-center gap-2">
                     <Mail className={`size-4 ${ICON_FINE}`} strokeWidth={1.5} aria-hidden />
@@ -677,7 +677,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
           <h4 className={SECTION_TITLE}>Prochains rendez-vous</h4>
           <div className="mt-4 space-y-4">
             {upcomingSorted.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="type-body text-muted-foreground">
                 Aucun rendez-vous à venir pour ce client.
               </p>
             ) : (
@@ -754,7 +754,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
           <h4 className={SECTION_TITLE}>Historique des rendez-vous</h4>
           {pastSorted.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="type-body text-muted-foreground">
               Aucun rendez-vous passé ou clôturé sur cette fiche.
             </p>
           ) : (
@@ -968,7 +968,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
           <h4 className={SECTION_TITLE}>Portfolio</h4>
           {galleryUrls.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="type-body text-muted-foreground">
               Aucune photo enregistrée sur cette fiche ou les rendez-vous liés.
             </p>
           ) : (
@@ -1219,7 +1219,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         {showInkflowClientDiscussion && onOpenInkflowDiscussion && (
           <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
             <h4 className={SECTION_TITLE}>Suivi client</h4>
-            <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-3 type-body text-muted-foreground">
               Ce client peut être contacté via l&apos;app client InkFlow.
             </p>
             <button

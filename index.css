@@ -19,8 +19,35 @@
 @import '@fontsource/syne/latin-400.css';
 @import '@fontsource/syne/latin-700.css';
 @import '@fontsource/syne/latin-800.css';
+@import '@fontsource-variable/geist/wght.css';
+@import '@fontsource-variable/geist-mono/wght.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
 
 @import 'tailwindcss';
+@import './typeset.css';
+
+/* shadcn/typeset — preset docs (https://ui.shadcn.com/docs/typeset) */
+.typeset-docs {
+  --typeset-font-body: var(--font-geist);
+  --typeset-font-heading: var(--font-geist);
+  --typeset-font-mono: var(--font-geist-mono);
+  --typeset-size: 14px;
+  --typeset-leading: 1.5714286;
+  --typeset-flow: 1.25em;
+}
+
+/* Vercel dashboard — prose compacte (Geist copy-14) */
+.typeset-vercel {
+  --typeset-font-body: var(--font-geist);
+  --typeset-font-heading: var(--font-geist);
+  --typeset-font-mono: var(--font-geist-mono);
+  --typeset-size: 14px;
+  --typeset-leading: 1.5714286;
+  --typeset-flow: 1em;
+}
 /* Attention : ne pas écrire dans ce fichier des pseudo-classes factices du type « crochets file deux‑points line »
    ni des motifs ressemblant à des traces log avec pipe — Tailwind 4 les extrairait comme utilitaires et casserait le build. */
 @source not "./middleware.ts";
@@ -45,10 +72,16 @@
 @source not "./docs";
 
 @import 'shadcn/tailwind.css';
+@import 'tw-animate-css';
 
 /* Variables CSS pour thèmes structurels (ClassicTheme, SplitTheme, VintageTheme, BoldTheme) */
 :root {
   --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-jetbrains-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-geist: 'Geist Variable', var(--font-inter);
+  --font-geist-mono: 'Geist Mono Variable', var(--font-jetbrains-mono);
+  --font-mono: Geist Mono, monospace;
   --font-playfair: 'Playfair Display', Georgia, serif;
   --font-syne: 'Syne', sans-serif;
   --transition-snappy: 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -59,48 +92,80 @@
   --duration-release: 200ms;
   /* Clavier logiciel (iOS 15.4+ / Chrome sur Android) — marge suppl. sous les champs dans les modales */
   --keyboard-inset-height: env(keyboard-inset-height, 0px);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* shadcn InkFlow — jour (fallback :root, aligné inkflow-agenda-mobile-v2-jour) */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Marque InkFlow app : bleu primaire + texte sur CTA en blanc */
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: rgba(37, 99, 235, 0.35);
-  /* Graphiques : échelle bleu (marque) */
-  --chart-1: #2563eb;
-  --chart-2: #3b82f6;
-  --chart-3: #60a5fa;
-  --chart-4: #93c5fd;
-  --chart-5: #bfdbfe;
-  /** Chiffres / métriques (KPI, montants) — teinte marque, lisibles sur fond clair */
-  --numeric: oklch(0.22 0.07 264);
-  --numeric-muted: oklch(0.44 0.042 264);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #2563eb;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.44 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0 0 0);
+  --destructive: oklch(0.63 0.19 23.03);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.94 0 0);
+  --ring: oklch(0 0 0);
+  --chart-1: oklch(0.81 0.17 75.35);
+  --chart-2: oklch(0.55 0.22 264.53);
+  --chart-3: oklch(0.72 0 0);
+  --chart-4: oklch(0.92 0 0);
+  --chart-5: oklch(0.56 0 0);
+  --numeric: oklch(0 0 0);
+  --numeric-muted: oklch(0.44 0 0);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0 0);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0.94 0 0);
+  --sidebar-ring: oklch(0 0 0);
+  --font-sans: Geist, sans-serif;
+  --font-serif: Georgia, serif;
+  --shadow-color: hsl(0 0% 0%);
+  --shadow-opacity: 0.18;
+  --shadow-blur: 2px;
+  --shadow-spread: 0px;
+  --shadow-offset-x: 0px;
+  --shadow-offset-y: 1px;
+  --letter-spacing: 0em;
+  --spacing: 0.25rem;
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
+  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
+  --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+  --shadow: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+  --shadow-md: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18);
+  --shadow-lg: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18);
+  --shadow-xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18);
+  --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.45);
+  --tracking-normal: 0em;
+  /* Geist / Vercel typography scale (21st theme preview) */
+  --type-heading-size: clamp(1.5rem, 2.5vw, 1.875rem);
+  --type-heading-leading: 1.25;
+  --type-heading-weight: 600;
+  --type-heading-tracking: -0.025em;
+  --type-subtitle-size: 0.875rem;
+  --type-subtitle-leading: 1.4285714;
+  --type-subtitle-weight: 400;
+  --type-body-size: 0.875rem;
+  --type-body-leading: 1.5714286;
+  --type-body-weight: 400;
+  --type-caption-size: 0.75rem;
+  --type-caption-leading: 1.3333333;
+  --type-caption-weight: 400;
 }
 
 /* ============================================================
    PRO UI — règles de rigueur (une ombre, rayons, grille 4px,
-   3 tailles de texte, 2 poids, accent marque = blue-600 + blanc sur CTA)
+   3 tailles de texte, 2 poids, accent = primary InkFlow (shadcn tokens)
    Utiliser : shadow-pro, rounded-pro-btn|card|modal, pro-text-*,
    bg-pro-cta, text-pro-accent (CTA + états sélectionnés seulement)
    ============================================================ */
@@ -109,12 +174,12 @@
   --pro-radius-button: 8px;
   --pro-radius-card: 12px;
   --pro-radius-modal: 16px;
-  --pro-accent: #2563eb;
-  --pro-accent-foreground: #ffffff;
+  --pro-accent: var(--primary);
+  --pro-accent-foreground: var(--primary-foreground);
   /** 3 tailles par surface : titre (clamp), corps, petit */
-  --pro-text-title: clamp(1.25rem, 3.5vw, 1.875rem);
-  --pro-text-body: 0.875rem;
-  --pro-text-small: 0.75rem;
+  --pro-text-title: var(--type-heading-size);
+  --pro-text-body: var(--type-body-size);
+  --pro-text-small: var(--type-caption-size);
   --pro-weight-regular: 400;
   --pro-weight-medium: 500;
   --pro-grid-max: 72rem;
@@ -138,18 +203,112 @@
   }
   .pro-text-title {
     font-size: var(--pro-text-title);
-    line-height: 1.25;
-    font-weight: var(--pro-weight-medium);
+    line-height: var(--type-heading-leading);
+    font-weight: var(--type-heading-weight);
+    letter-spacing: var(--type-heading-tracking);
   }
   .pro-text-body {
     font-size: var(--pro-text-body);
-    line-height: 1.5;
-    font-weight: var(--pro-weight-regular);
+    line-height: var(--type-body-leading);
+    font-weight: var(--type-body-weight);
   }
   .pro-text-small {
     font-size: var(--pro-text-small);
-    line-height: 1.45;
-    font-weight: var(--pro-weight-regular);
+    line-height: var(--type-caption-leading);
+    font-weight: var(--type-caption-weight);
+  }
+
+  /** Vercel / Geist — Heading, Subtitle, Body, Caption (21st theme) */
+  .type-heading,
+  .font-display {
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: var(--type-heading-size);
+    line-height: var(--type-heading-leading);
+    font-weight: var(--type-heading-weight);
+    letter-spacing: var(--type-heading-tracking);
+    color: var(--foreground);
+  }
+  .type-subtitle {
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: var(--type-subtitle-size);
+    line-height: var(--type-subtitle-leading);
+    font-weight: var(--type-subtitle-weight);
+    color: var(--muted-foreground);
+  }
+  @media (min-width: 640px) {
+    .type-subtitle {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+  }
+  .type-body {
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-leading);
+    font-weight: var(--type-body-weight);
+    color: var(--foreground);
+  }
+  .type-caption {
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: var(--type-caption-size);
+    line-height: var(--type-caption-leading);
+    font-weight: var(--type-caption-weight);
+    color: var(--muted-foreground);
+  }
+  /** Section title — Geist heading-20 */
+  .type-heading-sm {
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: 1.25rem;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+  /** KPI / stat numérique */
+  .type-stat {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: var(--type-heading-size);
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: var(--type-heading-tracking);
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+  /** KPI Vue d’ensemble desktop — Inter Black */
+  .type-stat.type-stat--inter-black {
+    font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+  /** Montants listés bento — Inter Semibold compact (aligné tableau pilotage, moins lourd que KPI). */
+  .type-stat.type-stat--inter-semibold {
+    font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .type-stat.type-stat--inter-semibold.type-stat--compact {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .type-stat.type-stat--inter-semibold.type-stat--kpi {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+  @media (min-width: 640px) {
+    .type-stat.type-stat--inter-semibold.type-stat--kpi {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+  }
+
+  /** Labels de section sidebar / inbox (PAGES, Créneaux agenda…) */
+  .dashboardSectionTitle {
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
   }
   /** Accent marque (blue-600) : CTA principaux, états actifs / sélectionnés — pas pour « décorer » */
   .bg-pro-cta {
@@ -213,13 +372,12 @@
     @apply text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500;
   }
   .ink-page-title {
-    font-family:
-      'Plus Jakarta Sans',
-      'Inter',
-      system-ui,
-      -apple-system,
-      sans-serif;
-    @apply text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl;
+    font-family: var(--font-geist), system-ui, sans-serif;
+    font-size: var(--type-heading-size);
+    line-height: var(--type-heading-leading);
+    font-weight: var(--type-heading-weight);
+    letter-spacing: var(--type-heading-tracking);
+    @apply text-foreground;
   }
   .ink-btn-primary {
     @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-zinc-950;
@@ -344,9 +502,8 @@ video {
   overflow-x: hidden;
 }
 
-/* Hero title / Display — aligné Framer (Plus Jakarta Sans) */
-.font-hero-title,
-.font-display {
+/* Hero title landing — Plus Jakarta (Framer marketing, hors dashboard Geist) */
+.font-hero-title {
   font-family:
     'Plus Jakarta Sans',
     'Inter',
@@ -355,9 +512,9 @@ video {
     sans-serif;
 }
 
-/* Landing marketing — mesh + fond éditorial (pas grille pointillée template) */
+/* Landing marketing — fond hero (vidéo + repli sombre) */
 .landing-hero {
-  background-color: #f6f5f2;
+  background-color: #0a0a0a;
 }
 .landing-hero-mesh {
   background:
@@ -423,114 +580,158 @@ video {
   --sal: env(safe-area-inset-left, 0px);
 }
 
-/* Default + Mode Clair (Light) — SaaS premium (zinc/gray, violet accent) */
+/* Default + Mode Clair — shadcn Vercel (21st.dev / tweakcn) + legacy dashboard vars */
 :root,
 :root[data-theme='light'] {
-  --bg-primary: #fafafa;
-  --bg-secondary: #ffffff;
-  --bg-sidebar: #ffffff;
-  --bg-card: #ffffff;
-  --bg-card-secondary: #f4f4f5;
-  --bg-card-dark: #1a1035;
-  --bg-hover: rgba(0, 0, 0, 0.04);
-  --bg-hover-strong: rgba(0, 0, 0, 0.08);
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-tertiary: #71717a;
-  --text-on-dark: #ffffff;
-  --orange: #71717a;
-  --orange-hover: #52525b;
-  --orange-light: #f4f4f5;
-  --green: #2563eb;
-  --green-bg: #eff6ff;
-  --blue: #2563eb;
-  --blue-hover: #1d4ed8;
-  --blue-light: #3b82f6;
-  --magenta: #3f3f46;
-  --magenta-hover: #52525b;
-  --border: rgba(37, 99, 235, 0.18);
-  --border-light: rgba(37, 99, 235, 0.1);
-  --border-focus: rgba(37, 99, 235, 0.5);
-  --shadow-sm: rgba(37, 99, 235, 0.1);
-  --shadow-md: rgba(37, 99, 235, 0.14);
-  --shadow-lg: rgba(37, 99, 235, 0.18);
-  --chart-grid: rgba(37, 99, 235, 0.12);
-  --chart-text: #1e3a8a;
-  --chart-bg: #ffffff;
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.44 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0 0 0);
+  --destructive: oklch(0.63 0.19 23.03);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.94 0 0);
+  --ring: oklch(0 0 0);
+  --chart-1: oklch(0.81 0.17 75.35);
+  --chart-2: oklch(0.55 0.22 264.53);
+  --chart-3: oklch(0.72 0 0);
+  --chart-4: oklch(0.92 0 0);
+  --chart-5: oklch(0.56 0 0);
+  --numeric: oklch(0 0 0);
+  --numeric-muted: oklch(0.44 0 0);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0 0);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0.94 0 0);
+  --sidebar-ring: oklch(0 0 0);
+  --pro-accent: var(--primary);
+  --pro-accent-foreground: var(--primary-foreground);
+  --bg-primary: oklch(0.99 0 0);
+  --bg-secondary: oklch(1 0 0);
+  --bg-sidebar: oklch(0.99 0 0);
+  --bg-card: oklch(1 0 0);
+  --bg-card-secondary: oklch(0.97 0 0);
+  --bg-card-dark: oklch(0 0 0);
+  --bg-hover: oklch(0.97 0 0);
+  --bg-hover-strong: oklch(0.94 0 0);
+  --text-primary: oklch(0 0 0);
+  --text-secondary: oklch(0.44 0 0);
+  --text-tertiary: oklch(0.56 0 0);
+  --text-on-dark: oklch(1 0 0);
+  --orange: oklch(0.81 0.17 75.35);
+  --orange-hover: oklch(0.72 0.15 75.35);
+  --orange-light: oklch(0.97 0.02 75.35);
+  --green: oklch(0 0 0);
+  --green-bg: oklch(0.97 0 0);
+  --blue: oklch(0 0 0);
+  --blue-hover: oklch(0.25 0 0);
+  --blue-light: oklch(0.44 0 0);
+  --magenta: oklch(0.55 0.22 264.53);
+  --magenta-hover: oklch(0.48 0.2 264.53);
+  --border-light: oklch(0.92 0 0);
+  --border-focus: oklch(0 0 0);
+  --shadow-sm: hsl(0 0% 0% / 0.09);
+  --shadow-md: hsl(0 0% 0% / 0.18);
+  --shadow-lg: hsl(0 0% 0% / 0.18);
+  --chart-grid: oklch(0.92 0 0);
+  --chart-text: oklch(0.44 0 0);
+  --chart-bg: oklch(1 0 0);
 }
 
-/* Mode Sombre (Dark) — OLED True Black InkFlow */
+/* Mode Sombre — shadcn Vercel (21st.dev / tweakcn) */
 :root[data-theme='dark'] {
-  --ink-bg: #000000;
-  --ink-surface: #000000;
-  --ink-border: transparent;
-  --ink-text: #ffffff;
-  --ink-text-muted: #737373;
-  --ink-primary: #3b82f6;
-  --ink-success: #22c55e;
-  --ink-error: #ef4444;
+  --ink-bg: oklch(0 0 0);
+  --ink-surface: oklch(0.14 0 0);
+  --ink-border: oklch(0.26 0 0);
+  --ink-text: oklch(1 0 0);
+  --ink-text-muted: oklch(0.72 0 0);
+  --ink-primary: oklch(1 0 0);
+  --ink-success: oklch(0.72 0.19 142);
+  --ink-error: oklch(0.69 0.2 23.91);
   --ink-radius-card: 20px;
   --ink-radius-badge: 8px;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --ring: rgba(59, 130, 246, 0.35);
-  --chart-1: #60a5fa;
-  --chart-2: #3b82f6;
-  --chart-3: #2563eb;
-  --chart-4: #1d4ed8;
-  --chart-5: #93c5fd;
-  --numeric: #ffffff;
-  --numeric-muted: #737373;
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #000000;
-  --card-foreground: #ffffff;
-  --popover: #000000;
-  --popover-foreground: #ffffff;
-  --muted: #000000;
-  --muted-foreground: #737373;
-  --secondary: #000000;
-  --secondary-foreground: #ffffff;
-  --accent: #000000;
-  --accent-foreground: #ffffff;
-  --border: transparent;
-  --input: transparent;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --bg-primary: #000000;
-  --bg-secondary: #000000;
-  --bg-sidebar: #000000;
-  --bg-card: #000000;
-  --bg-card-secondary: #000000;
-  --bg-card-elevated: #000000;
-  --bg-card-dark: #000000;
-  --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-hover-strong: rgba(255, 255, 255, 0.07);
-  --text-primary: #ffffff;
-  --text-secondary: #737373;
-  --text-tertiary: #737373;
-  --text-on-dark: #ffffff;
-  --orange: #71717a;
-  --orange-hover: #52525b;
-  --orange-light: rgba(113, 113, 122, 0.13);
-  --green: #3b82f6;
-  --green-bg: rgba(59, 130, 246, 0.14);
-  --blue: #3b82f6;
-  --blue-hover: #2563eb;
-  --blue-light: #60a5fa;
-  --magenta: #71717a;
-  --magenta-hover: #8b5cf6;
-  --border: transparent;
-  --border-light: transparent;
-  --border-focus: rgba(59, 130, 246, 0.5);
-  --shadow-sm: transparent;
-  --shadow-md: transparent;
-  --shadow-lg: transparent;
-  --chart-grid: rgba(255, 255, 255, 0.08);
-  --chart-text: #a1a1aa;
-  --chart-bg: #000000;
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.23 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.32 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.69 0.2 23.91);
+  --destructive-foreground: oklch(0 0 0);
+  --border: oklch(0.26 0 0);
+  --input: oklch(0.32 0 0);
+  --ring: oklch(0.72 0 0);
+  --chart-1: oklch(0.81 0.17 75.35);
+  --chart-2: oklch(0.58 0.21 260.84);
+  --chart-3: oklch(0.56 0 0);
+  --chart-4: oklch(0.44 0 0);
+  --chart-5: oklch(0.92 0 0);
+  --numeric: oklch(1 0 0);
+  --numeric-muted: oklch(0.72 0 0);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.18 0 0);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0.32 0 0);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.32 0 0);
+  --sidebar-ring: oklch(0.72 0 0);
+  --pro-accent: var(--primary);
+  --pro-accent-foreground: var(--primary-foreground);
+  --bg-primary: oklch(0 0 0);
+  --bg-secondary: oklch(0.14 0 0);
+  --bg-sidebar: oklch(0.18 0 0);
+  --bg-card: oklch(0.14 0 0);
+  --bg-card-secondary: oklch(0.23 0 0);
+  --bg-card-elevated: oklch(0.23 0 0);
+  --bg-card-dark: oklch(0 0 0);
+  --bg-hover: oklch(0.23 0 0);
+  --bg-hover-strong: oklch(0.32 0 0);
+  --text-primary: oklch(1 0 0);
+  --text-secondary: oklch(0.72 0 0);
+  --text-tertiary: oklch(0.56 0 0);
+  --text-on-dark: oklch(1 0 0);
+  --orange: oklch(0.81 0.17 75.35);
+  --orange-hover: oklch(0.72 0.15 75.35);
+  --orange-light: oklch(0.25 0.04 75.35);
+  --green: oklch(1 0 0);
+  --green-bg: oklch(0.23 0 0);
+  --blue: oklch(1 0 0);
+  --blue-hover: oklch(0.92 0 0);
+  --blue-light: oklch(0.72 0 0);
+  --magenta: oklch(0.58 0.21 260.84);
+  --magenta-hover: oklch(0.52 0.19 260.84);
+  --border-light: oklch(0.26 0 0);
+  --border-focus: oklch(0.72 0 0);
+  --shadow-sm: hsl(0 0% 0% / 0.2);
+  --shadow-md: hsl(0 0% 0% / 0.28);
+  --shadow-lg: hsl(0 0% 0% / 0.36);
+  --chart-grid: oklch(0.26 0 0);
+  --chart-text: oklch(0.72 0 0);
+  --chart-bg: oklch(0.14 0 0);
 }
 
 /* OLED — cartes flottantes sans bordure (accueil, agenda, clients) */
@@ -912,24 +1113,18 @@ video {
  * Hover : bordure + ombre renforcées (pas de translate — mobile-friendly).
  */
 .prodify-card {
-  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
-  border-radius: 1.25rem;
-  border: 1px solid rgba(228, 228, 231, 0.95);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.75) inset,
-    0 1px 2px -1px rgba(0, 0, 0, 0.05),
-    0 8px 24px -6px rgba(15, 23, 42, 0.07);
+  background: var(--card);
+  border-radius: calc(var(--radius) * 2);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 4%);
   transition:
     border-color 0.2s ease,
     box-shadow 0.22s ease,
     transform 0.2s ease;
 }
 .prodify-card:hover {
-  border-color: #d4d4d8;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    0 2px 6px -2px rgba(0, 0, 0, 0.06),
-    0 14px 36px -10px rgba(15, 23, 42, 0.12);
+  border-color: color-mix(in oklch, var(--border), var(--foreground) 12%);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 6%);
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .prodify-card:hover,
@@ -944,20 +1139,14 @@ video {
   }
 }
 :root[data-theme='dark'] .prodify-card {
-  background: linear-gradient(180deg, #1c1c1f 0%, #18181b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.25rem;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 10px 32px -8px rgba(0, 0, 0, 0.55);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 35%);
 }
 :root[data-theme='dark'] .prodify-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 2px 8px rgba(0, 0, 0, 0.5),
-    0 16px 44px -10px rgba(0, 0, 0, 0.45);
+  border-color: color-mix(in oklch, var(--border), var(--foreground) 15%);
+  box-shadow: 0 2px 10px oklch(0 0 0 / 40%);
 }
 
 /* Legacy alias — CRM, messagerie, widgets, tableaux */
@@ -1037,8 +1226,8 @@ a.dashboard-widget-card:focus-visible {
 
 /* Boutons dashboard — iOS-native (rounded-xl, touch targets 44px) */
 .pill-primary {
-  background: #2563eb;
-  color: white;
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: none;
   padding: 8px 20px;
   min-height: 44px;
@@ -1059,7 +1248,7 @@ a.dashboard-widget-card:focus-visible {
     background 0.15s var(--ease-ios);
 }
 .pill-primary:hover {
-  background: #1d4ed8;
+  background: color-mix(in oklch, var(--primary), var(--foreground) 8%);
 }
 .pill-primary:active {
   transform: scale(0.95);
@@ -1101,9 +1290,9 @@ a.dashboard-widget-card:focus-visible {
     border-color 0.15s var(--ease-ios);
 }
 .pill-action:hover {
-  border-color: #d4d4d8;
-  background: #fafafa;
-  color: #2563eb;
+  border-color: var(--border);
+  background: var(--accent);
+  color: var(--foreground);
 }
 .pill-action:active {
   transform: scale(0.95);
@@ -1134,8 +1323,8 @@ a.dashboard-widget-card:focus-visible {
   border: none;
 }
 .badge-progress {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
+  background: var(--muted);
+  color: var(--foreground);
 }
 .badge-todo {
   background: rgba(113, 113, 122, 0.1);
@@ -1162,8 +1351,8 @@ a.dashboard-widget-card:focus-visible {
   color: #71717a;
 }
 :root[data-theme='dark'] .badge-progress {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
+  background: var(--muted);
+  color: var(--foreground);
 }
 :root[data-theme='dark'] .badge-upcoming {
   background: rgba(113, 113, 122, 0.15);
@@ -1268,18 +1457,18 @@ a.dashboard-widget-card:focus-visible {
   animation: prodify-fade-up 0.4s ease 0.4s both;
 }
 
-/* ===== Sidebar nav — SaaS premium (fond gris subtil + trait violet) ===== */
+/* ===== Sidebar nav — preset b0 ===== */
 .sidebar-nav-active {
-  background: #f4f4f5;
-  color: #7c3aed;
+  background: var(--accent);
+  color: var(--accent-foreground);
   font-weight: 600;
-  border-left: 2px solid #7c3aed;
+  border-left: 2px solid var(--primary);
   padding-left: 14px;
 }
 :root[data-theme='dark'] .sidebar-nav-active {
-  background: rgba(124, 58, 237, 0.1);
-  color: #a78bfa;
-  border-left-color: #7c3aed;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-left-color: var(--primary);
 }
 
 /* ===== Design System Dashboard — iOS-native buttons ===== */
@@ -1294,8 +1483,8 @@ a.dashboard-widget-card:focus-visible {
   font-weight: 600; /* Semibold — iOS standard */
   font-size: 0.875rem;
   letter-spacing: -0.01em;
-  color: white;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: var(--primary-foreground);
+  background: var(--primary);
   border: none;
   cursor: pointer;
   touch-action: manipulation; /* no 300ms tap delay */
@@ -1307,8 +1496,7 @@ a.dashboard-widget-card:focus-visible {
     background var(--duration-release) var(--ease-ios);
 }
 .btn-primary:hover {
-  /* Hover subtil — pas de translateY (anti-pattern mobile) */
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  background: color-mix(in oklch, var(--primary), var(--foreground) 8%);
 }
 .btn-primary:active {
   transform: scale(0.95);
@@ -1350,8 +1538,8 @@ a.dashboard-widget-card:focus-visible {
     background 0.15s var(--ease-ios);
 }
 .btn-outline:hover {
-  border-color: #a5b4fc;
-  background: rgba(99, 102, 241, 0.06);
+  border-color: var(--border);
+  background: var(--accent);
 }
 .btn-outline:active {
   transform: scale(0.95);
@@ -1558,8 +1746,8 @@ body {
   user-select: none;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  /* UI / corps : Inter (aligné Tailwind `font-sans` — titres display via `.font-display`) */
-  font-family: var(--font-inter);
+  /* UI / corps : Geist (Vercel shadcn theme) — titres via `.font-display` / `.type-heading` */
+  font-family: var(--font-geist), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -1884,8 +2072,15 @@ textarea {
   border-top-color: rgb(39 39 42);
 }
 
-/* Content area: réserve espace pour la bottom nav + safe area iOS + respiration (évite contenu caché) */
-@media (max-width: 767px) {
+/* Dashboard Pro — scroll natif (Lenis désactivé sur /dashboard) */
+.dashboard-pro-shell .app-shell-content,
+.dashboard-pro-shell .app-shell-sidebar {
+  scroll-behavior: auto;
+}
+
+/* Content area: réserve espace pour la bottom nav + safe area iOS + respiration (évite contenu caché)
+   Étendu jusqu'à lg (1023px) — tablette sans sidebar permanente garde le dock. */
+@media (max-width: 1023px) {
   .app-shell-content {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 16px) !important;
   }
@@ -2049,7 +2244,25 @@ textarea {
 
   .dashboard-pro-shell .dashboard-pro-mobile-bottom-nav button {
     -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+    min-width: 44px;
   }
+
+  /* Paramètres mobile — CapsuleTabs antd-mobile */
+  .adm-settings-capsule-tabs .adm-capsule-tabs-header {
+    border-bottom: none;
+    padding: 0 2px 4px;
+  }
+  .adm-settings-capsule-tabs .adm-capsule-tabs-tab-wrapper {
+    padding: 0 4px 0 0;
+  }
+  .adm-settings-capsule-tabs .adm-capsule-tabs-tab {
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
   :root[data-theme='dark'] .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
     border-top-color: #3f3f46;
     background: #141416;
@@ -3057,8 +3270,9 @@ summary {
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  --font-heading: var(--font-geist);
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -3099,43 +3313,89 @@ summary {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --font-serif: Georgia, serif;
+  --radius: 0.5rem;
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+  --tracking-normal: var(--tracking-normal);
+  --shadow-2xl: var(--shadow-2xl);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-md: var(--shadow-md);
+  --shadow: var(--shadow);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-2xs: var(--shadow-2xs);
+  --spacing: var(--spacing);
+  --letter-spacing: var(--letter-spacing);
+  --shadow-offset-y: var(--shadow-offset-y);
+  --shadow-offset-x: var(--shadow-offset-x);
+  --shadow-spread: var(--shadow-spread);
+  --shadow-blur: var(--shadow-blur);
+  --shadow-opacity: var(--shadow-opacity);
+  --color-shadow-color: var(--shadow-color);
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  /* Aligné marque : blue-600 + blanc (si classe .dark utilisée) */
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: #60a5fa;
-  --chart-2: #3b82f6;
-  --chart-3: #2563eb;
-  --chart-4: #1d4ed8;
-  --chart-5: #93c5fd;
-  --numeric: oklch(0.94 0.03 264);
-  --numeric-muted: oklch(0.62 0.045 264);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: #2563eb;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+.dark,
+:root[data-theme='dark'] {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.23 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.32 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.69 0.2 23.91);
+  --destructive-foreground: oklch(0 0 0);
+  --border: oklch(0.26 0 0);
+  --input: oklch(0.32 0 0);
+  --ring: oklch(0.72 0 0);
+  --chart-1: oklch(0.81 0.17 75.35);
+  --chart-2: oklch(0.58 0.21 260.84);
+  --chart-3: oklch(0.56 0 0);
+  --chart-4: oklch(0.44 0 0);
+  --chart-5: oklch(0.92 0 0);
+  --numeric: #00d4ff;
+  --numeric-muted: #6b6b6b;
+  --sidebar: oklch(0.18 0 0);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0.32 0 0);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.32 0 0);
+  --sidebar-ring: oklch(0.72 0 0);
+  --radius: 0.5rem;
+  --font-sans: Geist, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Geist Mono, monospace;
+  --shadow-color: hsl(0 0% 0%);
+  --shadow-opacity: 0.18;
+  --shadow-blur: 2px;
+  --shadow-spread: 0px;
+  --shadow-offset-x: 0px;
+  --shadow-offset-y: 1px;
+  --letter-spacing: 0em;
+  --spacing: 0.25rem;
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
+  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
+  --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+  --shadow: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+  --shadow-md: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18);
+  --shadow-lg: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18);
+  --shadow-xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18);
+  --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.45);
 }
 
 @layer base {
@@ -3144,8 +3404,27 @@ summary {
   }
   body {
     @apply bg-background text-foreground;
+    letter-spacing: var(--tracking-normal);
   }
   html {
     @apply font-sans;
   }
+  .font-mono,
+  .tabular-nums,
+  .font-numeric {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* shadcn dashboard — Geist (thème Vercel / 21st) */
+.dashboard-pro-shell [data-slot] {
+  font-family: var(--font-geist), system-ui, sans-serif;
+}
+.dashboard-pro-shell .tabular-nums,
+.dashboard-pro-shell .font-numeric,
+.dashboard-pro-shell .font-mono,
+.dashboard-pro-shell [data-slot='chart'] {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }

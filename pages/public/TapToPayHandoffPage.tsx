@@ -53,7 +53,7 @@ export const TapToPayHandoffPage: React.FC<Record<string, string>> = () => {
         <div className="flex size-12 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-800 mb-4">
           <Smartphone className="size-6 text-zinc-800 dark:text-zinc-100" strokeWidth={1.5} />
         </div>
-        <h1 className="font-display text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
+        <h1 className="type-heading-sm">
           Tap to Pay — Inkflow Pro
         </h1>
         {valid ? (

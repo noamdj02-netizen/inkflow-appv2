@@ -1,7 +1,7 @@
 import { BarChart3, ArrowUpRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { bentoListBlock, glassPanel, microHover } from './bentoStyles';
+import { bentoKpiAmountStat, bentoListBlock, glassPanel, microHover } from './bentoStyles';
 
 export interface BentoKpiQuickTileProps {
   monthlyRevenue: number;
@@ -83,9 +83,7 @@ export function BentoKpiQuickTile({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               {c.label}
             </p>
-            <p className="mt-1 text-lg font-bold tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-xl">
-              {c.value}
-            </p>
+            <p className={cn('mt-1', bentoKpiAmountStat)}>{c.value}</p>
           </div>
         ))}
       </div>

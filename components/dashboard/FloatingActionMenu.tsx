@@ -23,23 +23,19 @@ type FloatingActionMenuProps = {
   compactBottomNavFab?: boolean;
 };
 
-/** Aligné sur le snippet produit (rotation +) */
+/** Rotation du + — ease-out court (pas de spring mélangé). */
 const plusRotateTransition = {
-  duration: 0.3,
-  ease: 'easeInOut' as const,
-  type: 'spring' as const,
-  stiffness: 300,
-  damping: 20,
+  duration: 0.2,
+  ease: [0.23, 1, 0.32, 1] as const,
 };
 
-/** Conteneur du menu (flou + entrée) — même ressort que le snippet */
+/** Panneau menu — entrée rapide sans blur. */
 const menuLayerTransition = {
-  duration: 0.6,
-  type: 'spring' as const,
-  stiffness: 300,
-  damping: 20,
-  delay: 0.1,
+  duration: 0.22,
+  ease: [0.23, 1, 0.32, 1] as const,
 };
+
+const menuItemEase = [0.23, 1, 0.32, 1] as const;
 
 const FloatingActionMenu = ({
   options,
@@ -92,7 +88,7 @@ const FloatingActionMenu = ({
   const rotTransition = reduceMotion ? { duration: 0.15 } : plusRotateTransition;
   const layerTrans = reduceMotion ? { duration: 0.12 } : menuLayerTransition;
   const itemTrans = (index: number) =>
-    reduceMotion ? { duration: 0.1 } : { duration: 0.3, delay: index * 0.05 };
+    reduceMotion ? { duration: 0.1 } : { duration: 0.18, delay: index * 0.04, ease: menuItemEase };
 
   const fabButtonClass =
     'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0 bg-zinc-900 text-white shadow-[0_4px_24px_rgba(0,0,0,0.45)] hover:bg-zinc-800 [&_svg]:text-white';
@@ -127,9 +123,9 @@ const FloatingActionMenu = ({
       id={menuId}
       key="fab-actions-menu"
       role="menu"
-      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 10, y: 10, filter: 'blur(10px)' }}
-      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, x: 0, y: 0, filter: 'blur(0px)' }}
-      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 10, y: 10, filter: 'blur(10px)' }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.97 }}
+      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
       transition={layerTrans}
       className={cn(
         'max-h-[min(45dvh,20rem)] w-max min-w-[12rem] overflow-y-auto overscroll-contain',

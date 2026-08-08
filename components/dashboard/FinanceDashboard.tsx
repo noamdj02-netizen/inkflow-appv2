@@ -1,30 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import {
-  DollarSign,
-  TrendingUp,
-  CreditCard,
-  Receipt,
-  Banknote,
-  Plus,
-  Trash2,
-  FileText,
-  Download,
-  Clock,
-  Loader2,
-  ExternalLink,
-} from 'lucide-react';
+import { Banknote, FileText, Download, Loader2, ExternalLink, Clock } from 'lucide-react';
 import { Appointment } from '../../types';
-import { InvoiceButton } from './InvoiceButton';
 import { useAuth } from '../../contexts/AuthContext';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { Modal } from '../ui/Modal';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -34,6 +11,14 @@ import { getStudioFinancePrefsFromSupabase } from '../../lib/supabaseFinanceInve
 import { interpretAmountHTTTC } from '../../lib/financeDisplay';
 import type { StudioFinancePrefs } from '../../types/studioFinancePrefs';
 import { DEFAULT_STUDIO_FINANCE_PREFS } from '../../types/studioFinancePrefs';
+import { FinanceDashboardStripePanel } from './finance/FinanceDashboardStripePanel';
+import { buildFinanceSectionMetrics, FinanceSectionCards } from './finance/FinanceSectionCards';
+import { FinanceChartAreaInteractive } from './finance/FinanceChartAreaInteractive';
+import {
+  FinanceCashDrawerCard,
+  FinanceTransactionsTable,
+} from './finance/FinanceTransactionsTable';
+import { Button } from '@/components/ui/button';
 
 type BilanPeriod = 'today' | 'week' | 'month';
 
@@ -354,9 +339,7 @@ function FinanceBilanModal({
 
         <div id="bilan-print-content" className="space-y-6">
           <div className="border-b border-neutral-200 dark:border-neutral-700 pb-4">
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-              Bilan du {label}
-            </h2>
+            <h2 className="type-heading-sm">Bilan du {label}</h2>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -364,7 +347,7 @@ function FinanceBilanModal({
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
                 Chiffre d'affaires
               </div>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 tabular-nums">
+              <div className="type-stat text-blue-700 dark:text-blue-400">
                 {formatEuroPrivacy(totalCA, privacyMode)}
               </div>
             </div>
@@ -372,25 +355,19 @@ function FinanceBilanModal({
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
                 Nombre de clients
               </div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {clientCount}
-              </div>
+              <div className="type-stat">{clientCount}</div>
             </div>
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
                 Acomptes reçus
               </div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {formatEuroPrivacy(depositsReceived, privacyMode)}
-              </div>
+              <div className="type-stat">{formatEuroPrivacy(depositsReceived, privacyMode)}</div>
             </div>
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
                 Reste à payer encaissé
               </div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {formatEuroPrivacy(restPaid, privacyMode)}
-              </div>
+              <div className="type-stat">{formatEuroPrivacy(restPaid, privacyMode)}</div>
             </div>
           </div>
 
@@ -490,6 +467,8 @@ interface FinanceDashboardProps {
   /** Pour ouvrir le tableau de bord Express Stripe (lien à usage unique) */
   studioId?: string | null;
   useSupabase?: boolean;
+  studioName?: string;
+  studioSlug?: string | null;
 }
 
 export interface CashEntry {
@@ -525,6 +504,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
   appointments,
   studioId = null,
   useSupabase = false,
+  studioName = 'Mon studio',
+  studioSlug = null,
 }) => {
   const { user } = useAuth();
   const toast = useToast();
@@ -642,6 +623,67 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     });
   }, [appointments, cashEntries]);
 
+  const monthComparison = useMemo(() => {
+    const now = new Date();
+    const curStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const curEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    const prevRef = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevStart = `${prevRef.getFullYear()}-${String(prevRef.getMonth() + 1).padStart(2, '0')}-01`;
+    const prevEnd = new Date(prevRef.getFullYear(), prevRef.getMonth() + 1, 0)
+      .toISOString()
+      .split('T')[0];
+
+    const sumForRange = (start: string, end: string) => {
+      const rev = appointments
+        .filter((a) => a.status === 'completed' && a.date >= start && a.date <= end)
+        .reduce((s, a) => s + a.price, 0);
+      const cash = cashEntries
+        .filter((e) => e.date >= start && e.date <= end)
+        .reduce((s, e) => s + e.amount, 0);
+      const deposits = appointments
+        .filter((a) => a.depositPaid && a.date >= start && a.date <= end)
+        .reduce((s, a) => s + a.deposit, 0);
+      const pending = appointments
+        .filter(
+          (a) =>
+            !a.depositPaid && !['cancelled'].includes(a.status) && a.date >= start && a.date <= end
+        )
+        .reduce((s, a) => s + a.deposit, 0);
+      return { rev, cash, global: rev + cash, deposits, pending };
+    };
+
+    const current = sumForRange(curStart, curEnd);
+    const previous = sumForRange(prevStart, prevEnd);
+    return {
+      monthGlobal: { current: current.global, previous: previous.global },
+      monthDeposits: { current: current.deposits, previous: previous.deposits },
+      monthCash: { current: current.cash, previous: previous.cash },
+      monthPending: { current: current.pending, previous: previous.pending },
+    };
+  }, [appointments, cashEntries]);
+
+  const sectionMetrics = useMemo(
+    () =>
+      buildFinanceSectionMetrics({
+        totalGlobal,
+        totalDeposits,
+        totalCash,
+        pendingDeposits,
+        completedCount,
+        privacyMode,
+        ...monthComparison,
+      }),
+    [
+      totalGlobal,
+      totalDeposits,
+      totalCash,
+      pendingDeposits,
+      completedCount,
+      privacyMode,
+      monthComparison,
+    ]
+  );
+
   const transactions = useMemo(() => {
     const fromApts = appointments
       .filter((a) => a.status === 'completed' || a.depositPaid)
@@ -667,11 +709,6 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
   }, [appointments, cashEntries]);
-
-  const todayCash = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return cashEntries.filter((e) => e.date === today).reduce((s, e) => s + e.amount, 0);
-  }, [cashEntries]);
 
   const handleExportLedgerCsv = useCallback(() => {
     const fromApts = appointments
@@ -718,19 +755,15 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
   }, [studioId, useSupabase, toast]);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="animate-fade-in space-y-6">
+      {/* Header actions — au-dessus du shell dashboard-01 */}
+      <div className="flex flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between lg:px-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
-            Finance
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-            Gérez vos revenus, acomptes et encaissements
-          </p>
+          <h1 className="type-heading">Finance</h1>
+          <p className="type-subtitle mt-1">Gérez vos revenus, acomptes et encaissements</p>
           {useSupabase && studioId ? (
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 max-w-xl leading-snug">
-              Saisie en {financePrefs.amount_input_basis.toUpperCase()} (paramètres) — équivalent HT{' '}
+            <p className="type-caption mt-2 max-w-xl">
+              Saisie en {financePrefs.amount_input_basis.toUpperCase()} — HT{' '}
               {privacyMode
                 ? '••••'
                 : `${caEquiv.ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`}{' '}
@@ -742,323 +775,65 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleExportLedgerCsv}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-[0.98]"
-          >
-            <Download className="w-4 h-4" />
+          <Button type="button" variant="outline" size="sm" onClick={handleExportLedgerCsv}>
+            <Download className="size-4" aria-hidden />
             Export CSV
-          </button>
-          <button
-            onClick={() => setShowBilan(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-[0.98]"
-          >
-            <FileText className="w-4 h-4" />
-            Bilan & Rapports
-          </button>
-          <button
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setShowBilan(true)}>
+            <FileText className="size-4" aria-hidden />
+            Bilan
+          </Button>
+          <Button
             type="button"
-            onClick={() => void handleOpenStripeDashboard()}
+            variant="outline"
+            size="sm"
             disabled={!studioId || !useSupabase || stripeDashboardBusy}
-            title={
-              !useSupabase || !studioId
-                ? 'Disponible avec un studio synchronisé (Supabase)'
-                : 'Encaissements, virements et litiges (Stripe Express)'
-            }
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-zinc-100 px-4 py-2.5 font-medium text-[rgba(55,98,227,1)] transition-all hover:bg-zinc-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:text-[rgba(55,98,227,1)] dark:hover:bg-zinc-700"
+            onClick={() => void handleOpenStripeDashboard()}
           >
             {stripeDashboardBusy ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : (
-              <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+              <ExternalLink className="size-4" aria-hidden />
             )}
-            Tableau de bord Stripe
-          </button>
-          <button
-            onClick={() => setShowAddCash(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-medium  transition-all active:scale-[0.98]"
-          >
-            <Banknote className="w-4 h-4" />
-            Ajouter espèces
-          </button>
+            Stripe
+          </Button>
+          <Button type="button" size="sm" onClick={() => setShowAddCash(true)}>
+            <Banknote className="size-4" aria-hidden />
+            Espèces
+          </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Total global
-            </span>
-            <div className="p-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
-            {formatEuroPrivacy(totalGlobal, privacyMode)}
-          </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">RDV + espèces</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Revenus RDV
-            </span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <CreditCard className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
-            {formatEuroPrivacy(totalRevenue, privacyMode)}
-          </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Carte / virement</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Espèces
-            </span>
-            <div className="p-2 rounded-xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400">
-              <Banknote className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
-            {formatEuroPrivacy(totalCash, privacyMode)}
-          </div>
-          {todayCash > 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              {privacyMode
-                ? "+•••• aujourd'hui"
-                : `+${todayCash.toLocaleString('fr-FR')}€ aujourd'hui`}
-            </p>
-          )}
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Acomptes reçus
-            </span>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">
-              <Receipt className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
-            {formatEuroPrivacy(totalDeposits, privacyMode)}
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              En attente
-            </span>
-            <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 tabular-nums">
-            {formatEuroPrivacy(pendingDeposits, privacyMode)}
-          </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-            {completedCount} RDV terminés
-          </p>
-        </div>
-      </div>
+      {/* Shell dashboard-01 — https://ui.shadcn.com/view/new-york-v4/dashboard-01 */}
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <FinanceSectionCards metrics={sectionMetrics} />
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl p-5 sm:p-6 border border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">
-              Évolution des revenus
-            </h3>
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">
-              6 mois
-            </span>
+          <div className="px-4 lg:px-6">
+            <FinanceChartAreaInteractive monthlyData={chartData} privacyMode={privacyMode} />
           </div>
-          <div className="relative">
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#171717" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#171717" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-                <XAxis dataKey="month" stroke="#737373" style={{ fontSize: 12 }} />
-                <YAxis stroke="#737373" style={{ fontSize: 12 }} />
-                <Tooltip
-                  formatter={(v: number, name: string) => [
-                    formatEuroPrivacy(Number(v), privacyMode),
-                    name === 'revenue' ? 'Revenus RDV' : name === 'cash' ? 'Espèces' : 'Total',
-                  ]}
-                  contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5' }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#171717"
-                  strokeWidth={2}
-                  fill="url(#colorRevenue)"
-                  name="revenue"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cash"
-                  stroke="#059669"
-                  strokeWidth={2}
-                  fill="url(#colorCash)"
-                  name="cash"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-            {privacyMode && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-zinc-100/90 dark:bg-zinc-900/85 backdrop-blur-[2px] pointer-events-none">
-                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                  Graphique masqué
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Caisse espèces */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-base text-zinc-900 dark:text-white">
-                Caisse espèces
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Encaissements récents
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAddCash(true)}
-              className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
-              aria-label="Ajouter"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
-            {cashEntries.length === 0 ? (
-              <div className="py-10 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center">
-                  <Banknote className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-                </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucun encaissement</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {cashEntries
-                  .slice()
-                  .sort((a, b) => b.date.localeCompare(a.date))
-                  .slice(0, 8)
-                  .map((e) => (
-                    <div
-                      key={e.id}
-                      className="flex items-center justify-between px-5 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group transition-colors"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">
-                          {e.label}
-                        </div>
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          {e.date}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                          +{formatEuroPrivacy(e.amount, privacyMode)}
-                        </span>
-                        <button
-                          onClick={() => removeCashEntry(e.id)}
-                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
-                          aria-label="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          <FinanceDashboardStripePanel
+            studioId={studioId}
+            studioName={studioName}
+            studioSlug={studioSlug}
+            useSupabase={useSupabase}
+            appointments={appointments}
+          />
 
-      {/* Transactions */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">
-              Dernières transactions
-            </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Historique des paiements récents
-            </p>
-          </div>
-        </div>
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {transactions.length === 0 ? (
-            <div className="py-12 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 mx-auto mb-4 flex items-center justify-center">
-                <Receipt className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
-              </div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucune transaction</p>
-            </div>
-          ) : (
-            transactions.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      t.type === 'cash'
-                        ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
-                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                    }`}
-                  >
-                    {t.type === 'cash' ? (
-                      <Banknote className="w-5 h-5" />
-                    ) : (
-                      <Receipt className="w-5 h-5" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-neutral-900 dark:text-neutral-100">
-                      {t.label}
-                    </div>
-                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
-                      {t.sub} • {t.date}
-                      {t.type === 'cash' && (
-                        <span className="ml-2 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-medium">
-                          Espèces
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-neutral-900 dark:text-neutral-100">
-                    {formatEuroPrivacy(t.amount, privacyMode)}
-                  </span>
-                  {t.type === 'rdv' && t.appointment && user && (
-                    <InvoiceButton appointment={t.appointment} artist={user} studioId={studioId} />
-                  )}
-                </div>
-              </div>
-            ))
-          )}
+          <FinanceCashDrawerCard
+            cashEntries={cashEntries}
+            privacyMode={privacyMode}
+            onAdd={() => setShowAddCash(true)}
+            onRemove={removeCashEntry}
+          />
+
+          <FinanceTransactionsTable
+            transactions={transactions}
+            privacyMode={privacyMode}
+            user={user}
+            studioId={studioId}
+          />
         </div>
       </div>
 

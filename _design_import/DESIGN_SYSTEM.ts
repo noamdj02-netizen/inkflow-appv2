@@ -127,7 +127,7 @@ const BORDERS = {
   interactive: 'border-zinc-300 dark:border-zinc-700',
   // Focus ring
   focus:
-    'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900',
+    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 };
 
 const SHADOWS = {
@@ -150,7 +150,7 @@ const SHADOWS = {
 
 const CARDS = {
   // Standard card (rounded-3xl, border, soft shadow)
-  base: 'rounded-3xl border border-zinc-200/80 bg-white/95 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70',
+  base: 'rounded-2xl border border-border bg-card text-card-foreground shadow-sm',
 
   // Desktop-specific (larger padding, inset ring)
   desktop: 'rounded-[1.25rem] p-6 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]',
@@ -166,14 +166,14 @@ const CARDS = {
 const BUTTONS = {
   // Primary action
   primary:
-    'min-h-11 px-5 py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-semibold transition-colors hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-[0.98]',
+    'min-h-11 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold transition-colors hover:bg-primary/90 active:scale-[0.98]',
 
   // Secondary (outline)
   secondary:
-    'min-h-11 px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-semibold transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800',
+    'min-h-11 px-5 py-2.5 rounded-xl border border-border bg-background text-foreground font-semibold transition-colors hover:bg-accent',
 
   // Icon button (44×44 touch target minimum)
-  icon: 'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.97] motion-reduce:active:scale-100',
+  icon: 'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center transition-colors hover:bg-accent text-muted-foreground hover:text-foreground active:scale-[0.97] motion-reduce:active:scale-100',
 
   // Small button (fit content, no padding enforcement)
   sm: 'px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors',
@@ -220,9 +220,9 @@ const KPI_SHELLS = {
   // Mobile
   mobile: {
     outer:
-      'h-full min-w-0 min-h-[128px] flex flex-row rounded-[1.25rem] border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-[#1C1C1E] shadow-[0_2px_12px_rgba(15,23,42,0.06)] dark:shadow-none overflow-hidden',
+      'h-full min-w-0 min-h-[128px] flex flex-row rounded-2xl border border-border bg-card shadow-sm overflow-hidden',
     inner: 'flex flex-1 min-h-0 min-w-0 flex-col justify-between gap-0.5 p-3.5 min-[400px]:p-4',
-    strip: 'w-[3px] shrink-0 self-stretch',
+    strip: 'w-[3px] shrink-0 self-stretch bg-primary',
     caption:
       'text-[12px] font-medium text-zinc-500 dark:text-zinc-400 leading-snug pr-1 tracking-tight',
     metric:
@@ -283,7 +283,7 @@ const A11Y = {
 
   // Focus ring
   focusRing:
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 
   // Text contrast: 4.5:1 (normal), 3:1 (large)
   contrastHigh: 'text-zinc-900 dark:text-white', // 4.5:1

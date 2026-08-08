@@ -156,7 +156,7 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
           <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Revenu (mois)
           </p>
-          <p className="mt-0.5 text-xl font-bold tabular-nums text-zinc-900 dark:text-white">
+          <p className="type-stat mt-0.5 text-xl">
             {formatEuroPrivacy(monthlyRevenue, privacyMode)}
           </p>
         </div>

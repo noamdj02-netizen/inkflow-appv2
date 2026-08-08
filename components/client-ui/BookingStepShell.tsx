@@ -32,7 +32,9 @@ export const BookingStepShell: React.FC<BookingStepShellProps> = ({
   const pct = totalSteps > 0 ? Math.min(100, Math.round((step / totalSteps) * 100)) : 0;
 
   return (
-    <div className={`font-sans text-zinc-100 max-w-lg mx-auto w-full px-4 py-6 safe-top ${className}`}>
+    <div
+      className={`font-sans text-zinc-100 max-w-lg mx-auto w-full px-4 py-6 safe-top ${className}`}
+    >
       <div className="mb-6 flex items-center gap-3">
         {onBack ? (
           <button
@@ -65,8 +67,12 @@ export const BookingStepShell: React.FC<BookingStepShellProps> = ({
         </div>
       </div>
 
-      <h1 className="text-xl font-bold tracking-tight text-zinc-100 mb-2">{title}</h1>
-      {description ? <p className="text-sm text-zinc-400 leading-relaxed mb-6">{description}</p> : <div className="mb-4" />}
+      <h1 className="type-heading-sm text-zinc-100 mb-2">{title}</h1>
+      {description ? (
+        <p className="text-sm text-zinc-400 leading-relaxed mb-6">{description}</p>
+      ) : (
+        <div className="mb-4" />
+      )}
 
       <div className="space-y-4">{children}</div>
 

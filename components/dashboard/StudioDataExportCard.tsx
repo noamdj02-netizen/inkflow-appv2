@@ -98,10 +98,8 @@ export const StudioDataExportCard: React.FC<StudioDataExportCardProps> = ({
           <Database className="w-5 h-5 text-zinc-700 dark:text-zinc-300" aria-hidden />
         </div>
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
-            Export de vos données
-          </h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+          <h3 className="type-heading-sm">Export de vos données</h3>
+          <p className="type-body text-muted-foreground mt-0.5">
             CSV pour compta ; <strong>export JSON complet</strong> du dossier studio (portabilité
             RGPD). Les fichiers restent sur l’appareil — données rechargées côté serveur au clic.
           </p>

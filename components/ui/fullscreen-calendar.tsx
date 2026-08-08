@@ -129,12 +129,12 @@ export function FullScreenCalendar({
               <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {format(today, 'MMM', { locale: fr })}
               </span>
-              <div className="mt-1 flex w-full items-center justify-center rounded-lg border bg-background px-0.5 py-1 font-display text-lg font-bold">
+              <div className="type-stat mt-1 flex w-full items-center justify-center rounded-lg border bg-background px-0.5 py-1 text-lg">
                 <span>{format(today, 'd')}</span>
               </div>
             </div>
             <div className="min-w-0 flex flex-col">
-              <h2 className="truncate font-display text-base font-semibold text-foreground sm:text-lg">
+              <h2 className="type-heading-sm truncate sm:text-lg">
                 {format(firstDayCurrentMonth, 'MMMM yyyy', { locale: fr })}
               </h2>
               <p className="text-xs text-muted-foreground sm:text-sm">

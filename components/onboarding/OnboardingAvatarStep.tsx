@@ -131,7 +131,7 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
           >
             <div className="inline-flex items-center gap-2 mb-5 sm:mb-6">
               <Logo className="dark:invert" />
-              <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+              <span className="type-heading-sm">InkFlow</span>
             </div>
 
             <h1
@@ -140,7 +140,7 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
             >
               Photo de profil
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
+            <p className="type-subtitle mb-5 sm:mb-6">
               Logo ou portrait : visible sur ton espace pro et sur la vitrine. Tu pourras la changer
               dans le menu compte.
             </p>

@@ -284,10 +284,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-5 sm:p-6 space-y-5 safe-bottom animate-in slide-in-from-bottom-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2
-              id="session-closeout-title"
-              className="font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white"
-            >
+            <h2 id="session-closeout-title" className="type-heading-sm">
               Clôture de séance
             </h2>
             <p className="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-300">
@@ -314,9 +311,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
             {balanceSettled ? 'Solde réglé' : 'Solde à encaisser'}
           </p>
-          <p className="mt-1 font-display text-3xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">
-            {remainingLabel} €
-          </p>
+          <p className="type-stat text-3xl mt-1">{remainingLabel} €</p>
           {balanceSettled ? (
             <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
               Paiement déjà enregistré sur ce rendez-vous.

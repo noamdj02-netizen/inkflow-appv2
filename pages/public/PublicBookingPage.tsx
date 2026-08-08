@@ -114,7 +114,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
           <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
         </div>
-        <h2 className="text-xl font-bold text-ink-text mb-2">Paiement réussi</h2>
+        <h2 className="type-heading-sm mb-2 text-ink-text">Paiement réussi</h2>
         <p className="text-ink-muted text-center text-sm mb-8 max-w-xs">
           Votre acompte a bien été enregistré. Le studio vous contactera pour confirmer votre rendez-vous.
         </p>
@@ -145,7 +145,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-amber-600" strokeWidth={2} />
         </div>
-        <h2 className="text-xl font-bold text-ink-text mb-2">Vérification en cours</h2>
+        <h2 className="type-heading-sm mb-2 text-ink-text">Vérification en cours</h2>
         <p className="text-ink-muted text-center text-sm mb-8 max-w-xs">
           {paymentError ||
             'Nous vérifions votre paiement. Si vous avez été débité, votre réservation sera confirmée sous peu.'}
@@ -194,7 +194,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-zinc-500" strokeWidth={2} aria-hidden />
         </div>
-        <h1 className="text-xl font-bold text-ink-text mb-2 text-center">Studio introuvable</h1>
+        <h1 className="type-heading-sm mb-2 text-center text-ink-text">Studio introuvable</h1>
         <p className="text-ink-muted text-center text-sm mb-8 max-w-sm">
           Le lien que vous avez ouvert ne correspond à aucun studio InkFlow. Vérifiez l’URL ou demandez un
           nouveau lien à votre tatoueur.
@@ -348,7 +348,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               </div>
             )}
           </div>
-          <h1 id="booking-studio-title" className="text-2xl font-bold text-ink-text mt-4 tracking-tight">
+          <h1 id="booking-studio-title" className="type-heading mt-4 text-ink-text">
             {studio.name}
           </h1>
           <p id="booking-step-hint" className="text-ink-muted text-sm mt-1">
@@ -496,7 +496,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
                   <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
                 </div>
-                <h2 className="text-xl font-bold text-ink-text mb-2">Demande envoyée !</h2>
+                <h2 className="type-heading-sm mb-2 text-ink-text">Demande envoyée !</h2>
                 <p className="text-ink-muted text-sm max-w-xs">
                   L'artiste va étudier votre projet et vous recontacte avec le tarif et un lien
                   pour choisir votre créneau.

@@ -3,6 +3,8 @@ import type { Json } from '../types/database';
 import { normalizeStudioFinancePrefs, type StudioFinancePrefs } from '../types/studioFinancePrefs';
 
 /** Colonnes explicites — évite select('*') sur les lectures dashboard stock / coûts. */
+
+/** --- Registre traçabilité légale (R.513-10-15 CSP) — UI active --- */
 const SEL_CONSUMABLE_PRODUCT =
   'id,studio_id,name,category,unit,qty_on_hand,brand,sku,created_at,updated_at';
 const SEL_CONSUMABLE_SUPPLIER =
@@ -13,6 +15,8 @@ const SEL_STOCK_MOVEMENT =
   'id,studio_id,product_id,delta_qty,reason,source,appointment_id,meta,created_at';
 const SEL_CONSUMABLE_LOT =
   'id,studio_id,raw_barcode,lot_number,expiry_date,product_label,supplier_name,client_id,appointment_id,created_at';
+
+/** --- Stock commercial (DEPRECATED UI — données historiques) --- */
 const SEL_APPOINTMENT_COST = 'id,studio_id,appointment_id,label,amount_cents,created_at';
 
 export async function getStudioFinancePrefsFromSupabase(

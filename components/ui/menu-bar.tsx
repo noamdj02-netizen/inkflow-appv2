@@ -34,7 +34,7 @@ export function MenuBar({ items, activeIndex, onItemPress, centerSlot, className
         aria-label={item.label}
         onClick={() => onItemPress(index)}
         className={cn(
-          'relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors touch-manipulation',
+          'relative flex size-11 shrink-0 items-center justify-center rounded-full transition-colors touch-manipulation min-w-[44px] min-h-[44px]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900',
           'active:scale-[0.96] motion-reduce:active:scale-100',
           isActive
@@ -71,7 +71,7 @@ export function MenuBar({ items, activeIndex, onItemPress, centerSlot, className
     <div className={cn('relative flex justify-center', className)}>
       <div
         className={cn(
-          'relative z-10 inline-flex h-12 items-center gap-0.5 overflow-visible px-1.5',
+          'relative z-10 inline-flex min-h-[52px] items-center gap-0.5 overflow-visible px-1.5',
           'rounded-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl',
           'border border-zinc-200/70 dark:border-zinc-800/80',
           'shadow-[0_8px_24px_-8px_rgba(9,9,11,0.18)] dark:shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]'

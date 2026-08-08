@@ -187,15 +187,13 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
               <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
                 Session du jour
               </p>
-              <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 tabular-nums">
-                {todaysAppointments.length}
-              </p>
+              <p className="type-stat">{todaysAppointments.length}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
                 Reste à encaisser
               </p>
-              <p className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 tabular-nums">
+              <p className="type-stat text-blue-600 dark:text-blue-400">
                 {formatEuro(remainingBalanceToCollect)}
               </p>
             </div>
@@ -269,7 +267,7 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
                 className={cn(
                   'text-base font-display font-bold leading-tight tracking-tight text-zinc-950 dark:text-white sm:text-lg md:text-xl',
                   mobileMinimalChrome &&
-                    'text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-lg md:text-xl'
+                    'type-stat text-slate-900 dark:text-white sm:text-lg md:text-xl'
                 )}
               >
                 {focusAppointment ? 'Prochaine séance' : 'Journée prête'}
@@ -460,7 +458,7 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
                     }
                     className="min-h-[44px] rounded-xl sm:rounded-2xl"
                   >
-                    Stock & aiguilles
+                    Traçabilité
                   </Button>
                 </div>
               </div>

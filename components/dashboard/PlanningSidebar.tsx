@@ -6,7 +6,6 @@
 import React, { useMemo, useState } from 'react';
 import { addDays, startOfDay } from 'date-fns';
 import {
-  ChevronLeft,
   ChevronRight,
   Calendar,
   Plus,
@@ -19,14 +18,9 @@ import {
   X,
 } from 'lucide-react';
 import type { Appointment } from '../../types';
-import {
-  agendaWeekStart,
-  mondayOffsetFromMonthFirst,
-  parseLocalYmd,
-  toLocalYmd,
-} from '../../lib/agendaDates';
+import { agendaWeekStart, parseLocalYmd, toLocalYmd } from '../../lib/agendaDates';
+import { PlanningCalendarPicker } from './PlanningCalendarPicker';
 
-const WEEKDAYS_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const WEEKDAYS_FULL = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 interface PlanningSidebarProps {
@@ -35,8 +29,7 @@ interface PlanningSidebarProps {
   onSelectDate: (date: string) => void;
   onSelectAppointment?: (apt: Appointment) => void;
   currentMonth: Date;
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
+  onMonthChange: (month: Date) => void;
   onToday: () => void;
   onNewAppointment?: () => void;
   /** Desktop : masque le panneau pour élargir le tableau de bord */
@@ -52,8 +45,7 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
   onSelectDate,
   onSelectAppointment,
   currentMonth,
-  onPrevMonth,
-  onNextMonth,
+  onMonthChange,
   onToday,
   onNewAppointment,
   onRequestClose,
@@ -66,45 +58,11 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
   const displayDate = selectedDate ?? todayStr;
   const isToday = displayDate === todayStr;
 
-  const datesWithAppointments = useMemo(() => {
-    const map = new Map<string, number>();
-    appointments.forEach((a) => {
-      if (!['cancelled', 'no_show'].includes(a.status)) {
-        map.set(a.date, (map.get(a.date) || 0) + 1);
-      }
-    });
-    return map;
-  }, [appointments]);
-
   const dayAppointments = useMemo(() => {
     return appointments
       .filter((a) => a.date === displayDate && !['cancelled', 'no_show'].includes(a.status))
       .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
   }, [appointments, displayDate]);
-
-  const { weeks, monthLabel } = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
-    const startPad = mondayOffsetFromMonthFirst(first);
-    const daysInMonth = last.getDate();
-    const totalCells = startPad + daysInMonth;
-    const rows = Math.ceil(totalCells / 7);
-    const weeks: (number | null)[][] = [];
-    let day = 1;
-    for (let r = 0; r < rows; r++) {
-      const row: (number | null)[] = [];
-      for (let c = 0; c < 7; c++) {
-        const i = r * 7 + c;
-        if (i < startPad || day > daysInMonth) row.push(null);
-        else row.push(day++);
-      }
-      weeks.push(row);
-    }
-    const monthLabel = currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    return { weeks, monthLabel };
-  }, [currentMonth]);
 
   const displayDateLabel = useMemo(() => {
     if (isToday) return "Aujourd'hui";
@@ -204,140 +162,15 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-5 [scrollbar-gutter:stable]">
-        {/* Header du calendrier */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
-          {/* Navigation du mois */}
-          <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onPrevMonth}
-              className="p-2 rounded-xl text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors"
-              aria-label="Mois précédent"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="text-center">
-              <span className="text-sm font-semibold text-zinc-900 dark:text-white capitalize">
-                {monthLabel}
-              </span>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-500">
-                {totalAppointmentsThisMonth} RDV ce mois
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onNextMonth}
-              className="p-2 rounded-xl text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors"
-              aria-label="Mois suivant"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Grille du calendrier */}
-          <div className="p-3">
-            {/* En-têtes des jours */}
-            <div className="grid grid-cols-7 mb-2">
-              {WEEKDAYS_SHORT.map((wd, i) => (
-                <div
-                  key={wd + i}
-                  className={`py-2 text-[10px] font-semibold uppercase tracking-wider text-center ${
-                    i === 5 || i === 6
-                      ? 'text-zinc-400 dark:text-zinc-600'
-                      : 'text-zinc-500 dark:text-zinc-500'
-                  }`}
-                >
-                  {wd}
-                </div>
-              ))}
-            </div>
-
-            {/* Jours du mois */}
-            <div className="grid grid-cols-7 gap-1">
-              {weeks.flatMap((row, ri) =>
-                row.map((day, ci) => {
-                  if (day === null) return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
-
-                  const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                  const dateStr = toLocalYmd(d);
-                  const isSelected = selectedDate === dateStr;
-                  const isTodayCell = dateStr === todayStr;
-                  const appointmentCount = datesWithAppointments.get(dateStr) || 0;
-                  const hasAppointments = appointmentCount > 0;
-                  const isWeekend = ci === 5 || ci === 6;
-                  const isPast = dateStr < todayStr;
-
-                  return (
-                    <button
-                      key={dateStr}
-                      type="button"
-                      onClick={() => onSelectDate(dateStr)}
-                      className={`
-                        relative aspect-square rounded-xl text-xs font-medium flex flex-col items-center justify-center transition-all
-                        ${
-                          isSelected
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                            : isTodayCell
-                              ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
-                              : isPast
-                                ? 'text-zinc-400 dark:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                                : isWeekend
-                                  ? 'text-zinc-500 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                        }
-                        ${hasAppointments && !isSelected ? 'font-semibold' : ''}
-                      `}
-                    >
-                      <span className={isTodayCell && !isSelected ? 'relative' : ''}>
-                        {day}
-                        {isTodayCell && !isSelected && (
-                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-600" />
-                        )}
-                      </span>
-                      {/* Indicateur de RDV */}
-                      {hasAppointments && (
-                        <div
-                          className={`absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5 ${isSelected ? 'opacity-80' : ''}`}
-                        >
-                          {appointmentCount <= 3 ? (
-                            Array.from({ length: appointmentCount }).map((_, i) => (
-                              <span
-                                key={i}
-                                className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}
-                              />
-                            ))
-                          ) : (
-                            <span
-                              className={`text-[8px] font-bold ${isSelected ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'}`}
-                            >
-                              {appointmentCount}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Bouton Aujourd'hui */}
-            <button
-              type="button"
-              onClick={onToday}
-              className={`w-full mt-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                isToday
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                  : 'text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-2">
-                <Calendar className="w-3.5 h-3.5" />
-                Aujourd'hui
-              </span>
-            </button>
-          </div>
-        </div>
+        <PlanningCalendarPicker
+          appointments={appointments}
+          selectedDate={selectedDate}
+          onSelectDate={onSelectDate}
+          currentMonth={currentMonth}
+          onMonthChange={onMonthChange}
+          onToday={onToday}
+          monthAppointmentCount={totalAppointmentsThisMonth}
+        />
 
         {/* Toggle Vue Jour / Semaine */}
         <div className="flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">

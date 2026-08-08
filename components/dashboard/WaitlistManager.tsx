@@ -55,7 +55,7 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Liste d'attente</h2>
+          <h2 className="type-heading-sm">Liste d'attente</h2>
           <p className="text-[var(--text-secondary)] text-sm mt-1">
             {waiting.length} en attente, {notified.length} notifie(s), {booked.length} reserve(s)
           </p>

@@ -455,6 +455,10 @@ export interface DashboardOverviewTabProps {
   pageTitleInShell?: boolean;
   /** Réservations vitrine — objectif « première résa ». */
   bookings?: Booking[];
+  /** Section synthèse agenda (intégrée depuis l’ancien onglet `agenda`). */
+  agendaSummarySection?: React.ReactNode;
+  /** Scroll + ouvre la synthèse agenda dans la vue d’ensemble. */
+  onOpenAgendaSummary?: () => void;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -504,7 +508,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   onOpenBilling,
   pageTitleInShell: _pageTitleInShell = false,
   bookings = [],
+  agendaSummarySection,
+  onOpenAgendaSummary,
 }) => {
+  const openAgendaSummary = onOpenAgendaSummary ?? (() => setActiveTab('overview'));
   const { privacyMode } = useStudioPrivacy();
   const [firstBookingWizardOpen, setFirstBookingWizardOpen] = useState(false);
   const pilotageWaveGradId = useId();
@@ -1044,6 +1051,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
   const desktopKpiShell = `prodify-card h-full flex flex-col ${KPI_SHELLS.desktop.outer}`;
+  const desktopKpiStat = 'type-stat type-stat--inter-black mt-2';
   const desktopKpiCaption = KPI_SHELLS.desktop.caption;
   const desktopKpiIconBtn = KPI_SHELLS.desktop.icon;
   /** Home mobile — widgets au même "glass shell" (Figma 387:178) */
@@ -1144,13 +1152,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </button>
                 </div>
                 <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
-                  <p
-                    className={
-                      isMdUp
-                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
-                        : iosKpiMetricWrap
-                    }
-                  >
+                  <p className={isMdUp ? desktopKpiStat : iosKpiMetricWrap}>
                     {isMdUp ? (
                       <>{euro(safeMonthlyRevenue)}</>
                     ) : (
@@ -1242,13 +1244,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </button>
                 </div>
                 <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
-                  <p
-                    className={
-                      isMdUp
-                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
-                        : iosKpiMetricWrap
-                    }
-                  >
+                  <p className={isMdUp ? desktopKpiStat : iosKpiMetricWrap}>
                     {isMdUp ? (
                       <>{euro(safePendingDeposits)}</>
                     ) : (
@@ -1305,13 +1301,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </button>
                 </div>
                 <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
-                  <p
-                    className={
-                      isMdUp
-                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
-                        : iosKpiMetricWrap
-                    }
-                  >
+                  <p className={isMdUp ? desktopKpiStat : iosKpiMetricWrap}>
                     {isMdUp ? (
                       clients.length
                     ) : (
@@ -1367,7 +1357,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>RDV ce mois</span>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('agenda')}
+                    onClick={() => openAgendaSummary()}
                     className={isMdUp ? desktopKpiIconBtn : iosKpiIconBtn}
                     aria-label="Agenda"
                   >
@@ -1377,13 +1367,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </button>
                 </div>
                 <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
-                  <p
-                    className={
-                      isMdUp
-                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
-                        : iosKpiMetricWrap
-                    }
-                  >
+                  <p className={isMdUp ? desktopKpiStat : iosKpiMetricWrap}>
                     {isMdUp ? (
                       appointmentsThisMonth
                     ) : (
@@ -1504,7 +1488,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       formatEuro={euro}
       onOpenFinance={() => setActiveTab('finance')}
       onOpenVitrine={openVitrineInNewTab}
-      onOpenAgenda={() => setActiveTab('agenda')}
+      onOpenAgenda={() => openAgendaSummary()}
       onOpenRequests={() => setActiveTab('requests')}
       onNewAppointment={() => setShowBookingModal(true)}
       onNewClient={() => setActiveTab('clients')}
@@ -1541,7 +1525,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 onSelectAppointment={(apt) => setSelectedAppointment(apt)}
                 onOpenCloseout={onOpenCloseoutAppointment ?? ((apt) => setSelectedAppointment(apt))}
                 onOpenStockTrace={() => setActiveTab('stock')}
-                onOpenAgenda={() => setActiveTab('agenda')}
+                onOpenAgenda={() => openAgendaSummary()}
                 mobileMinimalChrome
               />
             </div>
@@ -1703,17 +1687,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         <BentoPilotageQuickRow
                           todayAppointmentsCount={activeTodaySlotsCount}
                           pendingRequestsCount={pendingDemandesCount}
-                          onOpenAgenda={() => setActiveTab('agenda')}
+                          onOpenAgenda={() => openAgendaSummary()}
                           onOpenRequests={() => setActiveTab('requests')}
                         />
                       </div>
                     </div>
                   ) : null}
 
-                  {/* Aperçu prochains RDV (compact) */}
-                  {heroPreviewRdvs.length > 0 ? (
+                  {/* Aperçu prochains RDV (compact) — masqué si bento (déjà dans BentoAgendaTodayTile) */}
+                  {!showArtistBento && heroPreviewRdvs.length > 0 ? (
                     <div className="rounded-2xl border border-zinc-100 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-900 dark:bg-zinc-950">
-                      <p className="mb-2 font-display text-[10px] font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">
+                      <p className="type-caption mb-2 font-semibold uppercase tracking-wide">
                         Prochains RDV
                       </p>
                       <ul className="space-y-1.5">
@@ -1726,7 +1710,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                 onClick={() => setSelectedAppointment(apt)}
                                 className="flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-left transition-colors hover:border-zinc-200/90 hover:bg-zinc-50/90 active:scale-[0.99] dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50"
                               >
-                                <span className="w-11 shrink-0 text-center font-display text-[11px] font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">
+                                <span className="type-caption w-11 shrink-0 text-center font-semibold tabular-nums">
                                   {isToday
                                     ? (apt.time?.slice(0, 5) ?? '—')
                                     : new Date(apt.date + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -1734,7 +1718,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                         month: 'short',
                                       })}
                                 </span>
-                                <span className="min-w-0 flex-1 truncate font-display text-[13px] font-semibold text-[#2D3436] dark:text-zinc-100">
+                                <span className="type-body min-w-0 flex-1 truncate font-semibold">
                                   {apt.clientName}
                                 </span>
                                 <ChevronRight
@@ -1749,7 +1733,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </div>
                   ) : null}
 
-                  {pendingDemandesCount > 0 ? (
+                  {!showArtistBento && pendingDemandesCount > 0 ? (
                     <div className="mb-4">
                       <button
                         type="button"
@@ -1800,7 +1784,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             ) : null}
 
             {onSetupNavigate ? (
-              <div className="flex flex-col gap-3 px-0">
+              <div className={cn('flex flex-col gap-3', showArtistBento ? 'px-4' : 'px-0')}>
                 <FirstBookingGoalCard
                   {...firstBookingGoalInput}
                   studioId={studioId}
@@ -1821,70 +1805,133 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             ) : null}
 
-            {/* Mode widgets — même logique que desktop (KPI réordonnables) */}
-            {isEditMode && (
-              <div className="px-0 mt-2 sm:mt-3 mb-1">
-                <div className={cn(crmCard, 'flex flex-col gap-2 bg-zinc-50 p-3 dark:bg-zinc-950')}>
-                  <div className="flex items-start gap-2">
-                    <div className="p-1.5 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 shrink-0">
-                      <Move className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        Personnaliser le tableau
-                      </p>
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-                        Glissez les blocs « Ce mois ». Les graphiques et colonnes latérales restent
-                        visibles sur grand écran.
-                      </p>
+            {/* CRM mobile legacy — masqué si bento actif (planning, clients, KPI déjà dans DashboardBentoUnified) */}
+            {!showArtistBento && (
+              <>
+                {/* Mode widgets — même logique que desktop (KPI réordonnables) */}
+                {isEditMode && (
+                  <div className="px-0 mt-2 sm:mt-3 mb-1">
+                    <div
+                      className={cn(crmCard, 'flex flex-col gap-2 bg-zinc-50 p-3 dark:bg-zinc-950')}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="p-1.5 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 shrink-0">
+                          <Move className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                            Personnaliser le tableau
+                          </p>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
+                            Glissez les blocs « Ce mois ». Les graphiques et colonnes latérales
+                            restent visibles sur grand écran.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowWidgetPicker(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-900 dark:hover:bg-white transition-colors active:scale-[0.98]"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Ajouter un widget
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditMode(false)}
+                          className="px-3 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors active:scale-[0.98]"
+                        >
+                          Terminer
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowWidgetPicker(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-900 dark:hover:bg-white transition-colors active:scale-[0.98]"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Ajouter un widget
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditMode(false)}
-                      className="px-3 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors active:scale-[0.98]"
-                    >
-                      Terminer
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            <motion.div
-              variants={mobileStackVariants}
-              initial="hidden"
-              animate="visible"
-              className="px-4 flex flex-col gap-6"
-              {...iosSpring(0.12)}
-            >
-              <motion.div variants={mobileSectionVariants} className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-                    Aujourd&apos;hui
-                  </h2>
-                  <span className="text-xs font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
-                    {todayAppointments.length}{' '}
-                    {todayAppointments.length <= 1 ? 'séance' : 'séances'}
-                  </span>
-                </div>
+                <motion.div
+                  variants={mobileStackVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="px-4 flex flex-col gap-6"
+                  {...iosSpring(0.12)}
+                >
+                  <motion.div variants={mobileSectionVariants} className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                        Aujourd&apos;hui
+                      </h2>
+                      <span className="text-xs font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
+                        {todayAppointments.length}{' '}
+                        {todayAppointments.length <= 1 ? 'séance' : 'séances'}
+                      </span>
+                    </div>
 
-                <div className={cn(crmCard, 'overflow-hidden')}>
-                  {todayAppointments.length > 0 ? (
-                    <div className="divide-y divide-zinc-100 dark:divide-zinc-900/60">
-                      {todayAppointments.slice(0, 4).map((apt) => {
-                        const tint = getTodayRowTint(apt.status);
-                        const timeLabel = apt.time?.slice(0, 5) ?? '—';
-                        return (
+                    <div className={cn(crmCard, 'overflow-hidden')}>
+                      {todayAppointments.length > 0 ? (
+                        <div className="divide-y divide-zinc-100 dark:divide-zinc-900/60">
+                          {todayAppointments.slice(0, 4).map((apt) => {
+                            const tint = getTodayRowTint(apt.status);
+                            const timeLabel = apt.time?.slice(0, 5) ?? '—';
+                            return (
+                              <button
+                                key={apt.id}
+                                type="button"
+                                onClick={() => setSelectedAppointment(apt)}
+                                className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors active:bg-zinc-50 dark:active:bg-zinc-900/40"
+                              >
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <div className="relative size-11 shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-black/[0.04] dark:bg-zinc-800/90 dark:ring-white/[0.06]">
+                                    <ClientPhotoAvatar
+                                      name={apt.clientName}
+                                      src={getClientAvatarForAppointment(apt, clients)}
+                                      className="size-full"
+                                      textClassName="text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-300"
+                                      imgClassName="rounded-full"
+                                    />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                                      {apt.clientName}
+                                    </p>
+                                    <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
+                                      {apt.service || 'Tatouage'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight
+                                  className="size-4 shrink-0 text-zinc-300 dark:text-zinc-700"
+                                  aria-hidden
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-8 text-center">
+                          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+                            Aucun rendez-vous aujourd&apos;hui.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {upcomingAppointments.length > 0 && (
+                    <motion.div variants={mobileSectionVariants} className="space-y-2">
+                      <div className="px-1">
+                        <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                          À venir
+                        </h2>
+                      </div>
+
+                      <div
+                        className={cn(
+                          crmCard,
+                          'divide-y divide-zinc-100 dark:divide-zinc-900/60 overflow-hidden'
+                        )}
+                      >
+                        {upcomingAppointments.slice(0, 5).map((apt) => (
                           <button
                             key={apt.id}
                             type="button"
@@ -1892,422 +1939,387 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                             className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors active:bg-zinc-50 dark:active:bg-zinc-900/40"
                           >
                             <div className="flex min-w-0 items-center gap-3">
-                              <div className="relative size-11 shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-black/[0.04] dark:bg-zinc-800/90 dark:ring-white/[0.06]">
-                                <ClientPhotoAvatar
-                                  name={apt.clientName}
-                                  src={getClientAvatarForAppointment(apt, clients)}
-                                  className="size-full"
-                                  textClassName="text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-300"
-                                  imgClassName="rounded-full"
-                                />
+                              <div className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-w-[45px] tabular-nums">
+                                {new Date(apt.date + 'T12:00:00').toLocaleDateString('fr-FR', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                                   {apt.clientName}
                                 </p>
-                                <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
-                                  {apt.service || 'Tatouage'}
-                                </p>
                               </div>
                             </div>
-                            <ChevronRight
-                              className="size-4 shrink-0 text-zinc-300 dark:text-zinc-700"
-                              aria-hidden
-                            />
+                            <span className="text-xs font-medium text-zinc-400 tabular-nums shrink-0">
+                              {Math.round(Number(apt.price) || 0).toLocaleString('fr-FR')}€
+                            </span>
                           </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-8 text-center">
-                      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
-                        Aucun rendez-vous aujourd&apos;hui.
-                      </p>
-                    </div>
+                        ))}
+                      </div>
+                    </motion.div>
                   )}
-                </div>
-              </motion.div>
 
-              {upcomingAppointments.length > 0 && (
-                <motion.div variants={mobileSectionVariants} className="space-y-2">
-                  <div className="px-1">
-                    <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-                      À venir
-                    </h2>
-                  </div>
-
-                  <div
-                    className={cn(
-                      crmCard,
-                      'divide-y divide-zinc-100 dark:divide-zinc-900/60 overflow-hidden'
-                    )}
-                  >
-                    {upcomingAppointments.slice(0, 5).map((apt) => (
-                      <button
-                        key={apt.id}
-                        type="button"
-                        onClick={() => setSelectedAppointment(apt)}
-                        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors active:bg-zinc-50 dark:active:bg-zinc-900/40"
-                      >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-w-[45px] tabular-nums">
-                            {new Date(apt.date + 'T12:00:00').toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'short',
-                            })}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                              {apt.clientName}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium text-zinc-400 tabular-nums shrink-0">
-                          {Math.round(Number(apt.price) || 0).toLocaleString('fr-FR')}€
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Top clients */}
-              <motion.div variants={mobileSectionVariants}>
-                <div className={cn('overflow-hidden', crmCard)}>
-                  <div className={crmCardHeader}>
-                    <span className={crmSectionTitle}>Top clients</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('clients')}
-                      className={crmListLink}
-                    >
-                      Tout
-                    </button>
-                  </div>
-                  {topClients.length > 0 ? (
-                    <div className="divide-y divide-zinc-100 dark:divide-zinc-900/70">
-                      {topClients.slice(0, 4).map((client) => (
+                  {/* Top clients */}
+                  <motion.div variants={mobileSectionVariants}>
+                    <div className={cn('overflow-hidden', crmCard)}>
+                      <div className={crmCardHeader}>
+                        <span className={crmSectionTitle}>Top clients</span>
                         <button
-                          key={client.id}
                           type="button"
                           onClick={() => setActiveTab('clients')}
-                          className="w-full flex items-center gap-3.5 px-4 py-3.5 min-h-[56px] active:bg-zinc-50 dark:active:bg-zinc-900/50 transition-colors text-left"
+                          className={crmListLink}
                         >
-                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/80 dark:bg-zinc-700">
-                            <ClientPhotoAvatar
-                              name={client.name}
-                              src={client.avatar}
-                              className="h-full w-full"
-                              textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">
-                                {client.name}
-                              </span>
-                              {(client.totalSpent ?? 0) >= 500 && (
-                                <Star className="w-3.5 h-3.5 shrink-0 fill-primary/85 text-primary" />
-                              )}
-                            </div>
-                            <span className="text-sm text-zinc-400 dark:text-zinc-500">
-                              {privacyMode ? '••••' : `${client.totalSpent}€`} dépensés
-                            </span>
-                          </div>
+                          Tout
+                        </button>
+                      </div>
+                      {topClients.length > 0 ? (
+                        <div className="divide-y divide-zinc-100 dark:divide-zinc-900/70">
+                          {topClients.slice(0, 4).map((client) => (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => setActiveTab('clients')}
+                              className="w-full flex items-center gap-3.5 px-4 py-3.5 min-h-[56px] active:bg-zinc-50 dark:active:bg-zinc-900/50 transition-colors text-left"
+                            >
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/80 dark:bg-zinc-700">
+                                <ClientPhotoAvatar
+                                  name={client.name}
+                                  src={client.avatar}
+                                  className="h-full w-full"
+                                  textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">
+                                    {client.name}
+                                  </span>
+                                  {(client.totalSpent ?? 0) >= 500 && (
+                                    <Star className="w-3.5 h-3.5 shrink-0 fill-primary/85 text-primary" />
+                                  )}
+                                </div>
+                                <span className="text-sm text-zinc-400 dark:text-zinc-500">
+                                  {privacyMode ? '••••' : `${client.totalSpent}€`} dépensés
+                                </span>
+                              </div>
+                              <ChevronRight
+                                className="size-4 shrink-0 text-zinc-300 dark:text-zinc-600"
+                                strokeWidth={1.5}
+                                aria-hidden
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="px-4 pb-4">
+                          <p className="text-sm text-zinc-400 text-center py-6">Aucun client</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Synthèse — shell aligné Top clients (zinc monochrome) */}
+                  <motion.div variants={mobileSectionVariants}>
+                    <div className={cn('overflow-hidden', crmCard)}>
+                      <div className={crmCardHeader}>
+                        <div className="min-w-0">
+                          <span className={crmSectionTitle}>Synthèse</span>
+                          <p className={cn('mt-0.5', bentoMicroMeta)}>{crmMonthRangeLabel}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('finance')}
+                          className={cn(
+                            crmListLink,
+                            'inline-flex shrink-0 items-center gap-0.5 active:scale-[0.98] transition-all'
+                          )}
+                        >
+                          Finance
                           <ChevronRight
-                            className="size-4 shrink-0 text-zinc-300 dark:text-zinc-600"
+                            className="size-3.5 opacity-50"
                             strokeWidth={1.5}
                             aria-hidden
                           />
                         </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-4 pb-4">
-                      <p className="text-sm text-zinc-400 text-center py-6">Aucun client</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Synthèse — shell aligné Top clients (zinc monochrome) */}
-              <motion.div variants={mobileSectionVariants}>
-                <div className={cn('overflow-hidden', crmCard)}>
-                  <div className={crmCardHeader}>
-                    <div className="min-w-0">
-                      <span className={crmSectionTitle}>Synthèse</span>
-                      <p className={cn('mt-0.5', bentoMicroMeta)}>{crmMonthRangeLabel}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('finance')}
-                      className={cn(
-                        crmListLink,
-                        'inline-flex shrink-0 items-center gap-0.5 active:scale-[0.98] transition-all'
-                      )}
-                    >
-                      Finance
-                      <ChevronRight className="size-3.5 opacity-50" strokeWidth={1.5} aria-hidden />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4 p-4">
-                    <div className={bentoStatTray}>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          ['RDV mois', appointmentsThisMonth],
-                          ['Terminés', completedAppointmentsThisMonth],
-                          ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
-                        ].map(([label, value]) => (
-                          <div key={label} className={bentoStatCell}>
-                            <p className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400 dark:text-zinc-500">
-                              {label}
-                            </p>
-                            <p className="mt-1.5 text-xl font-bold tabular-nums leading-none tracking-tight text-zinc-900 dark:text-zinc-50">
-                              {value}
-                            </p>
-                          </div>
-                        ))}
                       </div>
-                    </div>
 
-                    {(trendRevenue !== null ||
-                      ((rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode)) && (
-                      <div
-                        className="space-y-2.5 border-t border-zinc-100/90 pt-3.5 dark:border-zinc-900/80"
-                        role="region"
-                        aria-label="Indicateurs du mois"
-                      >
-                        {trendRevenue !== null && (
-                          <p
-                            className={cn(
-                              'flex flex-wrap items-center gap-x-1.5 gap-y-0.5',
-                              bentoMicroMeta
-                            )}
-                            role="status"
-                          >
-                            {trendRevenue >= 0 ? (
-                              <TrendingUp
-                                className="size-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80"
-                                strokeWidth={1.75}
-                                aria-hidden
-                              />
-                            ) : (
-                              <TrendingDown
-                                className="size-3.5 shrink-0 text-zinc-400 dark:text-zinc-500"
-                                strokeWidth={1.75}
-                                aria-hidden
-                              />
-                            )}
-                            <span
-                              className={cn(
-                                'tabular-nums',
-                                trendRevenue >= 0
-                                  ? 'text-emerald-700/90 dark:text-emerald-300/90'
-                                  : revenueTrendDisplaySoft
-                                    ? 'text-zinc-500 dark:text-zinc-400'
-                                    : 'text-zinc-600 dark:text-zinc-300'
-                              )}
-                            >
-                              {trendRevenue >= 0 ? '+' : ''}
-                              {trendRevenue}%
-                            </span>
-                            <span>vs mois dernier</span>
-                          </p>
-                        )}
-                        {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
+                      <div className="space-y-4 p-4">
+                        <div className={bentoStatTray}>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              ['RDV mois', appointmentsThisMonth],
+                              ['Terminés', completedAppointmentsThisMonth],
+                              ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
+                            ].map(([label, value]) => (
+                              <div key={label} className={bentoStatCell}>
+                                <p className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400 dark:text-zinc-500">
+                                  {label}
+                                </p>
+                                <p className="type-stat mt-1.5 text-xl">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {(trendRevenue !== null ||
+                          ((rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) &&
+                            !privacyMode)) && (
                           <div
-                            className="flex flex-wrap gap-2"
-                            role="status"
-                            aria-label="Rappels rendez-vous"
+                            className="space-y-2.5 border-t border-zinc-100/90 pt-3.5 dark:border-zinc-900/80"
+                            role="region"
+                            aria-label="Indicateurs du mois"
                           >
-                            {rdvAlertUnpaidCount > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
-                                className={bentoSoftAlertChip}
+                            {trendRevenue !== null && (
+                              <p
+                                className={cn(
+                                  'flex flex-wrap items-center gap-x-1.5 gap-y-0.5',
+                                  bentoMicroMeta
+                                )}
+                                role="status"
                               >
-                                <AlertCircle
-                                  className="h-3.5 w-3.5 shrink-0 text-amber-700/70 dark:text-amber-200/80"
-                                  strokeWidth={1.75}
-                                  aria-hidden
-                                />
-                                <span className="min-w-0 [text-wrap:balance]">
-                                  {rdvAlertUnpaidCount} sans acompte
+                                {trendRevenue >= 0 ? (
+                                  <TrendingUp
+                                    className="size-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80"
+                                    strokeWidth={1.75}
+                                    aria-hidden
+                                  />
+                                ) : (
+                                  <TrendingDown
+                                    className="size-3.5 shrink-0 text-zinc-400 dark:text-zinc-500"
+                                    strokeWidth={1.75}
+                                    aria-hidden
+                                  />
+                                )}
+                                <span
+                                  className={cn(
+                                    'tabular-nums',
+                                    trendRevenue >= 0
+                                      ? 'text-emerald-700/90 dark:text-emerald-300/90'
+                                      : revenueTrendDisplaySoft
+                                        ? 'text-zinc-500 dark:text-zinc-400'
+                                        : 'text-zinc-600 dark:text-zinc-300'
+                                  )}
+                                >
+                                  {trendRevenue >= 0 ? '+' : ''}
+                                  {trendRevenue}%
                                 </span>
-                              </button>
+                                <span>vs mois dernier</span>
+                              </p>
                             )}
-                            {rdvAlertBientotCount > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
-                                className={bentoSoftInfoChip}
-                              >
-                                <Clock
-                                  className="h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400"
-                                  strokeWidth={1.75}
-                                  aria-hidden
-                                />
-                                <span className="min-w-0 [text-wrap:balance]">
-                                  {rdvAlertBientotCount} auj. ou demain
-                                </span>
-                              </button>
-                            )}
+                            {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) &&
+                              !privacyMode && (
+                                <div
+                                  className="flex flex-wrap gap-2"
+                                  role="status"
+                                  aria-label="Rappels rendez-vous"
+                                >
+                                  {rdvAlertUnpaidCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onAlertNavigate?.({ id: 'unpaid', type: 'warning' })
+                                      }
+                                      className={bentoSoftAlertChip}
+                                    >
+                                      <AlertCircle
+                                        className="h-3.5 w-3.5 shrink-0 text-amber-700/70 dark:text-amber-200/80"
+                                        strokeWidth={1.75}
+                                        aria-hidden
+                                      />
+                                      <span className="min-w-0 [text-wrap:balance]">
+                                        {rdvAlertUnpaidCount} sans acompte
+                                      </span>
+                                    </button>
+                                  )}
+                                  {rdvAlertBientotCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
+                                      className={bentoSoftInfoChip}
+                                    >
+                                      <Clock
+                                        className="h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400"
+                                        strokeWidth={1.75}
+                                        aria-hidden
+                                      />
+                                      <span className="min-w-0 [text-wrap:balance]">
+                                        {rdvAlertBientotCount} auj. ou demain
+                                      </span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {stripeConnectAccountId && useSupabase && (
-                      <button
-                        type="button"
-                        onClick={() => void openStripeExpressDashboard()}
-                        disabled={stripeExpressOpening}
-                        title="Tableau de bord Stripe (Express)"
-                        className={cn(bentoStripeLinkBtn, stripeExpressOpening && 'opacity-60')}
-                      >
-                        {stripeExpressOpening ? (
-                          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                        ) : (
-                          <LayoutDashboard
-                            className="size-4 shrink-0 text-zinc-500"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
+                        {stripeConnectAccountId && useSupabase && (
+                          <button
+                            type="button"
+                            onClick={() => void openStripeExpressDashboard()}
+                            disabled={stripeExpressOpening}
+                            title="Tableau de bord Stripe (Express)"
+                            className={cn(bentoStripeLinkBtn, stripeExpressOpening && 'opacity-60')}
+                          >
+                            {stripeExpressOpening ? (
+                              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                            ) : (
+                              <LayoutDashboard
+                                className="size-4 shrink-0 text-zinc-500"
+                                strokeWidth={1.5}
+                                aria-hidden
+                              />
+                            )}
+                            Tableau de bord Stripe
+                          </button>
                         )}
-                        Tableau de bord Stripe
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div variants={mobileSectionVariants}>
-                <div className={cn(inkOledCard, 'border-0 p-5')}>
-                  <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
-                    <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-1 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-800">
-                      <button
-                        type="button"
-                        onClick={() => setInsightView('rdv')}
-                        className={cn(
-                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
-                          insightView === 'rdv'
-                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-inset dark:ring-zinc-700'
-                            : 'text-zinc-500 dark:text-zinc-500'
-                        )}
-                      >
-                        RDV
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInsightView('demandes')}
-                        className={cn(
-                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
-                          insightView === 'demandes'
-                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-inset dark:ring-zinc-700'
-                            : 'text-zinc-500 dark:text-zinc-500'
-                        )}
-                      >
-                        Demandes
-                      </button>
-                    </div>
-                    <div className="flex min-h-[44px] items-center gap-2 self-stretch min-[400px]:self-auto">
-                      <label
-                        htmlFor="overview-mobile-insight-period"
-                        className="shrink-0 text-xs font-medium text-zinc-600 dark:text-zinc-400"
-                      >
-                        Période
-                      </label>
-                      <div className="relative min-w-0 flex-1 max-w-[11rem]">
-                        <select
-                          id="overview-mobile-insight-period"
-                          value={insightPeriod}
-                          onChange={(e) => setInsightPeriod(e.target.value as 'week' | 'month')}
-                          className="min-h-[44px] w-full appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
-                          aria-label="Période des statistiques"
-                        >
-                          <option value="week">7 jours</option>
-                          <option value="month">Mois en cours</option>
-                        </select>
-                        <ChevronDown
-                          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
-                          aria-hidden
-                        />
                       </div>
                     </div>
-                  </div>
-                  <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
-                    {insightPeriod === 'month'
-                      ? crmMonthRangeLabel
-                      : `Semaine : ${crmWeekRangeLabel}`}
-                  </p>
-                  {insightDonutData.length > 0 ? (
-                    <div className="mt-5 flex flex-col items-stretch gap-5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:gap-6">
-                      <div className="mx-auto flex w-full max-w-[220px] items-center justify-center min-[420px]:mx-0 min-[420px]:w-[200px] min-[420px]:shrink-0">
-                        <div className="aspect-square h-[200px] w-full max-w-[200px] min-[420px]:h-[180px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                              <Pie
-                                data={insightDonutData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                innerRadius="56%"
-                                outerRadius="86%"
-                                paddingAngle={2}
-                                cornerRadius={3}
-                                stroke="none"
-                                isAnimationActive={false}
-                              >
-                                {insightDonutData.map((entry) => (
-                                  <Cell key={entry.name} fill={entry.color} />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
+                  </motion.div>
+
+                  <motion.div variants={mobileSectionVariants}>
+                    <div className={cn(inkOledCard, 'border-0 p-5')}>
+                      <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
+                        <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-1 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-800">
+                          <button
+                            type="button"
+                            onClick={() => setInsightView('rdv')}
+                            className={cn(
+                              'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+                              insightView === 'rdv'
+                                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-inset dark:ring-zinc-700'
+                                : 'text-zinc-500 dark:text-zinc-500'
+                            )}
+                          >
+                            RDV
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInsightView('demandes')}
+                            className={cn(
+                              'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+                              insightView === 'demandes'
+                                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-inset dark:ring-zinc-700'
+                                : 'text-zinc-500 dark:text-zinc-500'
+                            )}
+                          >
+                            Demandes
+                          </button>
+                        </div>
+                        <div className="flex min-h-[44px] items-center gap-2 self-stretch min-[400px]:self-auto">
+                          <label
+                            htmlFor="overview-mobile-insight-period"
+                            className="shrink-0 text-xs font-medium text-zinc-600 dark:text-zinc-400"
+                          >
+                            Période
+                          </label>
+                          <div className="relative min-w-0 flex-1 max-w-[11rem]">
+                            <select
+                              id="overview-mobile-insight-period"
+                              value={insightPeriod}
+                              onChange={(e) => setInsightPeriod(e.target.value as 'week' | 'month')}
+                              className="min-h-[44px] w-full appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                              aria-label="Période des statistiques"
+                            >
+                              <option value="week">7 jours</option>
+                              <option value="month">Mois en cours</option>
+                            </select>
+                            <ChevronDown
+                              className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                              aria-hidden
+                            />
+                          </div>
                         </div>
                       </div>
-                      <ul
-                        className="flex min-w-0 flex-1 flex-col justify-center gap-3 py-1"
-                        aria-label="Légende"
-                      >
-                        {insightDonutData.map((row) => (
-                          <li key={row.name} className="flex items-center justify-between gap-4">
-                            <span className="flex min-w-0 items-center gap-2.5">
-                              <span
-                                className="size-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: row.color }}
-                                aria-hidden
-                              />
-                              <span className={inkDonutLegendLabel}>{row.name}</span>
-                            </span>
-                            <span className={inkDonutLegendValue}>{row.value}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {insightPeriod === 'month'
+                          ? crmMonthRangeLabel
+                          : `Semaine : ${crmWeekRangeLabel}`}
+                      </p>
+                      {insightDonutData.length > 0 ? (
+                        <div className="mt-5 flex flex-col items-stretch gap-5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:gap-6">
+                          <div className="mx-auto flex w-full max-w-[220px] items-center justify-center min-[420px]:mx-0 min-[420px]:w-[200px] min-[420px]:shrink-0">
+                            <div className="aspect-square h-[200px] w-full max-w-[200px] min-[420px]:h-[180px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                                  <Pie
+                                    data={insightDonutData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius="56%"
+                                    outerRadius="86%"
+                                    paddingAngle={2}
+                                    cornerRadius={3}
+                                    stroke="none"
+                                    isAnimationActive={false}
+                                  >
+                                    {insightDonutData.map((entry) => (
+                                      <Cell key={entry.name} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                          <ul
+                            className="flex min-w-0 flex-1 flex-col justify-center gap-3 py-1"
+                            aria-label="Légende"
+                          >
+                            {insightDonutData.map((row) => (
+                              <li
+                                key={row.name}
+                                className="flex items-center justify-between gap-4"
+                              >
+                                <span className="flex min-w-0 items-center gap-2.5">
+                                  <span
+                                    className="size-2.5 shrink-0 rounded-full"
+                                    style={{ backgroundColor: row.color }}
+                                    aria-hidden
+                                  />
+                                  <span className={inkDonutLegendLabel}>{row.name}</span>
+                                </span>
+                                <span className={inkDonutLegendValue}>{row.value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="mt-4 rounded-xl border border-dashed border-zinc-100 py-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                          Pas encore de données sur cette période.
+                        </p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="mt-4 rounded-xl border border-dashed border-zinc-100 py-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                      Pas encore de données sur cette période.
-                    </p>
-                  )}
-                </div>
-              </motion.div>
+                  </motion.div>
 
-              {unpaidCount > 0 && rdvAlertUnpaidCount === 0 && !privacyMode && (
-                <motion.div variants={mobileSectionVariants} className="flex flex-wrap gap-2 px-4">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('requests')}
-                    className={bentoSoftAlertChip}
-                  >
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
-                    {unpaidCount} sans acompte
-                  </button>
+                  {unpaidCount > 0 && rdvAlertUnpaidCount === 0 && !privacyMode && (
+                    <motion.div
+                      variants={mobileSectionVariants}
+                      className="flex flex-wrap gap-2 px-4"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('requests')}
+                        className={bentoSoftAlertChip}
+                      >
+                        <AlertCircle
+                          className="h-3.5 w-3.5 shrink-0"
+                          strokeWidth={1.75}
+                          aria-hidden
+                        />
+                        {unpaidCount} sans acompte
+                      </button>
+                    </motion.div>
+                  )}
+                  {agendaSummarySection ? (
+                    <motion.div variants={mobileSectionVariants} className="px-4 pb-2">
+                      {agendaSummarySection}
+                    </motion.div>
+                  ) : null}
                 </motion.div>
-              )}
-            </motion.div>
+              </>
+            )}
           </motion.div>
         )}
 
@@ -2338,7 +2350,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               ) : undefined
             }
             unpaidAlertCount={0}
-            onViewUnpaidAppointments={() => setActiveTab('agenda')}
+            onViewUnpaidAppointments={() => openAgendaSummary()}
             kpiRow={
               <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
                 {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
@@ -2438,7 +2450,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                         Évolution du revenu
                                       </p>
                                       <div className="flex items-baseline gap-2 flex-wrap">
-                                        <p className="text-2xl font-bold text-numeric tabular-nums">
+                                        <p className="type-stat">
                                           {euro(periodRevenue ?? totalRevenue)}
                                         </p>
                                         {periodTrend !== null && (
@@ -2562,7 +2574,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                           À venir
                                         </span>
                                         <button
-                                          onClick={() => setActiveTab('agenda')}
+                                          onClick={() => openAgendaSummary()}
                                           className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                                         >
                                           Voir tout
@@ -2655,23 +2667,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   </div>
                                   <div className="grid grid-cols-3 gap-4">
                                     <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
-                                      <p className="text-2xl font-bold text-primary tabular-nums">
-                                        {confirmedApts}
-                                      </p>
+                                      <p className="type-stat text-primary">{confirmedApts}</p>
                                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                         Confirmés
                                       </p>
                                     </div>
                                     <div className="text-center p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80">
-                                      <p className="text-2xl font-bold text-numeric tabular-nums">
-                                        {pendingApts}
-                                      </p>
+                                      <p className="type-stat">{pendingApts}</p>
                                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                         En attente
                                       </p>
                                     </div>
                                     <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
-                                      <p className="text-2xl font-bold text-numeric tabular-nums">
+                                      <p className="type-stat">
                                         {privacyMode ? '••••' : `${avgPrice}€`}
                                       </p>
                                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -2717,7 +2725,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       </p>
                                     </div>
                                     <button
-                                      onClick={() => setActiveTab('agenda')}
+                                      onClick={() => openAgendaSummary()}
                                       className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                                     >
                                       Voir tout
@@ -2906,7 +2914,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               >
                                 <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
                                   <div className="flex items-center gap-3 mb-4">
-                                    <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground">
                                       <Target className="w-5 h-5" />
                                     </div>
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
@@ -2915,10 +2923,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   </div>
                                   <div className="mb-3">
                                     <div className="flex items-end justify-between mb-2">
-                                      <span className="text-2xl font-bold text-zinc-900 dark:text-white">
+                                      <span className="type-heading">
                                         {euro(safeMonthlyRevenue)}
                                       </span>
-                                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                                      <span className="type-body text-muted-foreground">
                                         /{' '}
                                         {privacyMode
                                           ? '••••'
@@ -2927,7 +2935,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                     </div>
                                     <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                                       <div
-                                        className="h-full bg-blue-600 rounded-full transition-all duration-500 dark:bg-blue-500"
+                                        className="h-full bg-primary rounded-full transition-all duration-500"
                                         style={{ width: `${progress}%` }}
                                       />
                                     </div>
@@ -2954,14 +2962,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   className="w-full rounded-2xl border border-zinc-100 bg-white p-5 text-left transition-all active:scale-[0.98] hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:bg-zinc-900"
                                 >
                                   <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground">
                                       <Zap className="w-5 h-5" />
                                     </div>
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                                       Flash Designs
                                     </p>
                                   </div>
-                                  <p className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+                                  <p className="type-stat mb-1">
                                     {customWidgets.length || 0} designs
                                   </p>
                                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -2986,7 +2994,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               >
                                 <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
                                   <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground">
                                       <Gift className="w-5 h-5" />
                                     </div>
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
@@ -3025,6 +3033,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </SortableContext>
                   </div>
                 </div>
+                {agendaSummarySection ? (
+                  <div className="min-w-0">{agendaSummarySection}</div>
+                ) : null}
               </>
             }
           />
@@ -3050,13 +3061,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <h2
-                      id="widget-picker-title"
-                      className="text-xl font-bold text-zinc-900 dark:text-white"
-                    >
+                    <h2 id="widget-picker-title" className="type-heading-sm">
                       Ajouter un widget
                     </h2>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                    <p className="type-body text-muted-foreground mt-1">
                       Personnalisez votre dashboard avec de nouveaux widgets
                     </p>
                   </div>
@@ -3079,7 +3087,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     <p className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                       Tous les widgets sont actifs
                     </p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    <p className="type-body text-muted-foreground">
                       Vous avez déjà ajouté tous les widgets disponibles
                     </p>
                   </div>

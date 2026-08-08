@@ -519,15 +519,13 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                 qrPreviewTheme === 'blue' ? 'bg-blue-600' : 'bg-black'
               }`}
             >
-              <p className="font-display text-lg font-black tracking-tight text-white sm:text-xl">
-                INKFLOW
-              </p>
+              <p className="type-heading-sm text-white sm:text-xl">INKFLOW</p>
             </div>
             <div className="relative z-[1] -mt-7 flex flex-col items-center px-3 pb-4 pt-0">
               <div className="rounded-lg border-[6px] border-black bg-white p-1.5 shadow-sm">
                 <canvas ref={qrCanvasRef} className="block h-[168px] w-[168px]" />
               </div>
-              <p className="mt-3 w-full truncate text-center font-display text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              <p className="type-body mt-3 w-full truncate text-center font-semibold">
                 {studioName}
               </p>
               <p className="mt-1.5 px-1 text-center text-xs font-medium leading-snug text-zinc-600 dark:text-zinc-400">

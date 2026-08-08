@@ -38,11 +38,21 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
   const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'artist', specialties: '', avatar: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    role: 'artist',
+    specialties: '',
+    avatar: '',
+  });
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({
-    view_appointments: true, manage_appointments: true, view_clients: true,
-    manage_flash: true, view_finance: false, manage_vitrine: false,
+    view_appointments: true,
+    manage_appointments: true,
+    view_clients: true,
+    manage_flash: true,
+    view_finance: false,
+    manage_vitrine: false,
   });
 
   const canAdd = maxArtists === -1 || artists.length < maxArtists;
@@ -56,7 +66,10 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
       email: form.email.trim(),
       role: form.role,
       avatar: form.avatar || undefined,
-      specialties: form.specialties.split(',').map(s => s.trim()).filter(Boolean),
+      specialties: form.specialties
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       permissions,
       active: true,
       createdAt: new Date().toISOString(),
@@ -79,14 +92,17 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
 
   const handleUpdate = () => {
     if (!editing) return;
-    const artist = artists.find(a => a.id === editing);
+    const artist = artists.find((a) => a.id === editing);
     if (!artist) return;
     onUpdate({
       ...artist,
       name: form.name.trim(),
       email: form.email.trim(),
       role: form.role,
-      specialties: form.specialties.split(',').map(s => s.trim()).filter(Boolean),
+      specialties: form.specialties
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       avatar: form.avatar || undefined,
       permissions,
     });
@@ -102,7 +118,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
             className={
               hideAddButton
                 ? 'text-sm font-semibold text-zinc-900 dark:text-white'
-                : 'text-xl font-bold text-[var(--text-primary)]'
+                : 'type-heading-sm'
             }
           >
             {hideAddButton ? 'Droits par personne' : 'Accès & permissions'}
@@ -116,55 +132,91 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
           >
             {hideAddButton ? (
               <>
-                Ouvrez <span className="font-medium text-zinc-700 dark:text-zinc-300">Modifier</span> sur une fiche pour
-                cocher RDV, clients, vitrine, etc. Utilisez <span className="font-medium">Envoyer l&apos;invitation</span>{' '}
-                sur chaque carte pour envoyer l&apos;e-mail au collaborateur (ou le bouton <span className="font-medium">Ajouter</span>{' '}
-                plus haut pour un nouveau membre).
+                Ouvrez{' '}
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">Modifier</span> sur
+                une fiche pour cocher RDV, clients, vitrine, etc. Utilisez{' '}
+                <span className="font-medium">Envoyer l&apos;invitation</span> sur chaque carte pour
+                envoyer l&apos;e-mail au collaborateur (ou le bouton{' '}
+                <span className="font-medium">Ajouter</span> plus haut pour un nouveau membre).
               </>
             ) : (
               <>
                 {artists.length} profil{artists.length !== 1 ? 's' : ''}
-                {maxArtists !== -1 ? ` / ${maxArtists} max` : ''} · cochez ce que chacun peut faire dans l’app.
+                {maxArtists !== -1 ? ` / ${maxArtists} max` : ''} · cochez ce que chacun peut faire
+                dans l’app.
               </>
             )}
           </p>
         </div>
         {!hideAddButton && canAdd && (
-          <button onClick={() => { setShowAdd(true); setEditing(null); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 shrink-0">
+          <button
+            onClick={() => {
+              setShowAdd(true);
+              setEditing(null);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 shrink-0"
+          >
             <Plus className="w-4 h-4" /> Ajouter
           </button>
         )}
         {!hideAddButton && !canAdd && (
-          <div className="text-sm text-[var(--text-secondary)] font-medium shrink-0">Limite atteinte - Passez au plan superieur</div>
+          <div className="text-sm text-[var(--text-secondary)] font-medium shrink-0">
+            Limite atteinte - Passez au plan superieur
+          </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {artists.map(artist => (
-          <div key={artist.id} className={`bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)] ${!artist.active ? 'opacity-60' : ''}`}>
+        {artists.map((artist) => (
+          <div
+            key={artist.id}
+            className={`bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)] ${!artist.active ? 'opacity-60' : ''}`}
+          >
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[var(--bg-card-secondary)] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {artist.avatar ? <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-[var(--text-tertiary)]" />}
+                {artist.avatar ? (
+                  <img
+                    src={artist.avatar}
+                    alt={artist.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-6 h-6 text-[var(--text-tertiary)]" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-bold truncate text-[var(--text-primary)]">{artist.name}</h3>
-                  {!artist.active && <span className="text-xs bg-[var(--bg-card-secondary)] text-[var(--text-tertiary)] px-2 py-0.5 rounded-full">Inactif</span>}
+                  {!artist.active && (
+                    <span className="text-xs bg-[var(--bg-card-secondary)] text-[var(--text-tertiary)] px-2 py-0.5 rounded-full">
+                      Inactif
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-[var(--text-secondary)] truncate">{artist.email}</p>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {artist.specialties.map((s, i) => (
-                    <span key={i} className="text-xs bg-[var(--bg-card-secondary)] text-[var(--text-primary)] px-2 py-0.5 rounded-full">{s}</span>
+                    <span
+                      key={i}
+                      className="text-xs bg-[var(--bg-card-secondary)] text-[var(--text-primary)] px-2 py-0.5 rounded-full"
+                    >
+                      {s}
+                    </span>
                   ))}
                 </div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => startEdit(artist)} className="p-2 rounded-lg hover:bg-[var(--bg-hover)]">
+                <button
+                  onClick={() => startEdit(artist)}
+                  className="p-2 rounded-lg hover:bg-[var(--bg-hover)]"
+                >
                   <Edit2 className="w-4 h-4 text-[var(--text-secondary)]" />
                 </button>
-                <button onClick={() => setDeleteConfirmId(artist.id)}
-                  className="p-2 rounded-lg hover:bg-red-500/10">
+                <button
+                  onClick={() => setDeleteConfirmId(artist.id)}
+                  className="p-2 rounded-lg hover:bg-red-500/10"
+                >
                   <Trash2 className="w-4 h-4 text-[var(--text-secondary)]" />
                 </button>
               </div>
@@ -198,38 +250,83 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
       </div>
 
       {(showAdd || editing) && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => { setShowAdd(false); setEditing(null); }}>
-          <div className="bg-[var(--bg-card)] rounded-2xl max-w-lg w-full p-6 border border-[var(--border)]" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowAdd(false);
+            setEditing(null);
+          }}
+        >
+          <div
+            className="bg-[var(--bg-card)] rounded-2xl max-w-lg w-full p-6 border border-[var(--border)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">{editing ? 'Modifier l\'artiste' : 'Ajouter un artiste'}</h3>
-              <button onClick={() => { setShowAdd(false); setEditing(null); }} className="p-2 rounded-lg hover:bg-[var(--bg-hover)]"><X className="w-5 h-5 text-[var(--text-secondary)]" /></button>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                {editing ? "Modifier l'artiste" : 'Ajouter un artiste'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAdd(false);
+                  setEditing(null);
+                }}
+                className="p-2 rounded-lg hover:bg-[var(--bg-hover)]"
+              >
+                <X className="w-5 h-5 text-[var(--text-secondary)]" />
+              </button>
             </div>
             <div className="space-y-4">
-              <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="Nom complet" className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
-              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="Email" className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
-              <input type="text" value={form.specialties} onChange={e => setForm(p => ({ ...p, specialties: e.target.value }))}
-                placeholder="Specialites (separees par virgules)" className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Nom complet"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="Email"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
+              <input
+                type="text"
+                value={form.specialties}
+                onChange={(e) => setForm((p) => ({ ...p, specialties: e.target.value }))}
+                placeholder="Specialites (separees par virgules)"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
               <div>
                 <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
-                  <Shield className="w-4 h-4 inline mr-1" />Permissions
+                  <Shield className="w-4 h-4 inline mr-1" />
+                  Permissions
                 </label>
                 <div className="space-y-2">
-                  {PERMISSIONS.map(perm => (
-                    <label key={perm.key} className="flex items-center gap-3 text-sm cursor-pointer text-[var(--text-primary)]">
-                      <input type="checkbox" checked={permissions[perm.key] || false}
-                        onChange={e => setPermissions(p => ({ ...p, [perm.key]: e.target.checked }))}
-                        className="w-4 h-4 rounded border-[var(--border)]" />
+                  {PERMISSIONS.map((perm) => (
+                    <label
+                      key={perm.key}
+                      className="flex items-center gap-3 text-sm cursor-pointer text-[var(--text-primary)]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={permissions[perm.key] || false}
+                        onChange={(e) =>
+                          setPermissions((p) => ({ ...p, [perm.key]: e.target.checked }))
+                        }
+                        className="w-4 h-4 rounded border-[var(--border)]"
+                      />
                       {perm.label}
                     </label>
                   ))}
                 </div>
               </div>
-              <button onClick={editing ? handleUpdate : handleAdd}
+              <button
+                onClick={editing ? handleUpdate : handleAdd}
                 disabled={!form.name.trim() || !form.email.trim()}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50">
-                {editing ? 'Enregistrer' : 'Ajouter l\'artiste'}
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50"
+              >
+                {editing ? 'Enregistrer' : "Ajouter l'artiste"}
               </button>
             </div>
           </div>
@@ -239,7 +336,10 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({
       <ConfirmModal
         isOpen={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
-        onConfirm={() => { if (deleteConfirmId) onDelete(deleteConfirmId); setDeleteConfirmId(null); }}
+        onConfirm={() => {
+          if (deleteConfirmId) onDelete(deleteConfirmId);
+          setDeleteConfirmId(null);
+        }}
         title="Supprimer cet artiste ?"
         message="L'artiste sera retiré de votre équipe. Cette action est irréversible."
         confirmLabel="Supprimer"

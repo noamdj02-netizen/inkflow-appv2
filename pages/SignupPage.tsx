@@ -55,7 +55,7 @@ export const SignupPage: React.FC = () => {
               <div className="mb-8">
                 <div className="inline-flex items-center gap-2 mb-6">
                   <Logo className="dark:invert" />
-                  <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+                  <span className="type-heading-sm">InkFlow</span>
                 </div>
 
                 {/* Badge parrainage */}
@@ -76,7 +76,7 @@ export const SignupPage: React.FC = () => {
                 <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
                   Ouvre ton compte studio
                 </h1>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+                <p className="type-body text-muted-foreground">
                   Environ 1 minute · 1 mois d&apos;essai gratuit · Sans carte au départ
                 </p>
               </div>

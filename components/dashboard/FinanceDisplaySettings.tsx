@@ -79,7 +79,7 @@ export const FinanceDisplaySettings: React.FC<FinanceDisplaySettingsProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm py-8">
+      <div className="type-subtitle flex items-center gap-2 py-8">
         <Loader2 className="w-5 h-5 animate-spin" />
         Chargement…
       </div>

@@ -492,3 +492,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+const PUBLIC_DEMO_USER: User = {
+  id: 'public-demo-user',
+  email: DEMO_ACCOUNT_EMAIL,
+  name: 'Alex',
+  studioName: 'Studio InkFlow',
+  role: 'studio_owner',
+  avatar: '/images/avatars/avatar-1.png',
+};
+
+/**
+ * Session démo isolée pour `/dashboard-demo` — ne lit ni n’écrit `localStorage` auth.
+ * S’imbrique dans `AuthProvider` et remplace le contexte pour les composants enfants.
+ */
+export const PublicDemoAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User>(PUBLIC_DEMO_USER);
+  const noopAsync = useCallback(async () => {}, []);
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser((prev) => ({ ...prev, ...updates }));
+  }, []);
+  const logout = useCallback(async () => {
+    if (typeof window !== 'undefined') window.location.href = '/signup';
+  }, []);
+  const signup = useCallback(async () => ({ needsEmailConfirmation: false }), []);
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      authLoading: false,
+      isAuthenticated: true,
+      login: noopAsync,
+      loginWithGoogle: noopAsync,
+      loginWithApple: noopAsync,
+      signup,
+      resendSignupConfirmation: noopAsync,
+      logout,
+      updateUser,
+      isGoogleAuthEnabled: false,
+      isAppleAuthEnabled: false,
+    }),
+    [user, noopAsync, updateUser, logout, signup]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

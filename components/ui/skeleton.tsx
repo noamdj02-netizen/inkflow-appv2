@@ -1,15 +1,12 @@
-import React from 'react';
+import * as React from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** Bloc pulse — aligné tokens `--text-tertiary` / surfaces (échelle 4px). */
-export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      className={cn(
-        'animate-pulse rounded-md bg-[var(--text-tertiary)]/15 dark:bg-white/10',
-        className,
-      )}
+      data-slot="skeleton"
+      className={cn('animate-pulse rounded-2xl bg-muted', className)}
       {...props}
     />
   );
@@ -55,3 +52,5 @@ export function NotificationListSkeleton({ rows = 4 }: { rows?: number }) {
     </div>
   );
 }
+
+export { Skeleton };

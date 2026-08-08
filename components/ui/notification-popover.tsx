@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
 import { NotificationListSkeleton } from '@/components/ui/skeleton';
@@ -37,36 +37,40 @@ const NotificationItem = memo(function NotificationItem({
   descriptionStyle,
   dateStyle,
 }: NotificationItemProps) {
-  const staggerDelay = Math.min(index * 0.06, 0.36);
+  const reduceMotion = useReducedMotion();
+  const staggerDelay = Math.min(index * 0.04, 0.24);
   return (
-  <motion.div
-    initial={{ opacity: 0, x: 12, filter: 'blur(6px)' }}
-    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-    transition={{ duration: 0.22, delay: staggerDelay }}
-    className={cn('cursor-pointer px-4 py-4 transition-colors', hoverBgClass)}
-    onClick={() => onMarkAsRead(notification.id)}
-  >
-    <div className="flex items-start justify-between gap-2">
-      <div className="flex min-w-0 items-center gap-2">
-        {!notification.read ? <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotColor)} /> : null}
-        <h4 className={cn('text-sm font-medium leading-snug', textColor)} style={titleStyle}>
-          {notification.title}
-        </h4>
-      </div>
-      <span
-        className="shrink-0 text-xs text-[var(--text-tertiary)]"
-        style={dateStyle}
-      >
-        {notification.timestamp.toLocaleDateString()}
-      </span>
-    </div>
-    <p
-      className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]"
-      style={descriptionStyle}
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, x: 8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0.01 }
+          : { duration: 0.2, delay: staggerDelay, ease: [0.23, 1, 0.32, 1] }
+      }
+      className={cn('cursor-pointer px-4 py-4 transition-colors', hoverBgClass)}
+      onClick={() => onMarkAsRead(notification.id)}
     >
-      {notification.description}
-    </p>
-  </motion.div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {!notification.read ? (
+            <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotColor)} />
+          ) : null}
+          <h4 className={cn('text-sm font-medium leading-snug', textColor)} style={titleStyle}>
+            {notification.title}
+          </h4>
+        </div>
+        <span className="shrink-0 text-xs text-[var(--text-tertiary)]" style={dateStyle}>
+          {notification.timestamp.toLocaleDateString()}
+        </span>
+      </div>
+      <p
+        className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]"
+        style={descriptionStyle}
+      >
+        {notification.description}
+      </p>
+    </motion.div>
   );
 });
 
@@ -92,21 +96,21 @@ const NotificationList = memo(function NotificationList({
   dateStyle,
 }: NotificationListProps) {
   return (
-  <div className={cn('divide-y', dividerClass)}>
-    {notifications.map((notification, index) => (
-      <NotificationItem
-        key={notification.id}
-        notification={notification}
-        index={index}
-        onMarkAsRead={onMarkAsRead}
-        textColor={textColor}
-        hoverBgClass={hoverBgClass}
-        titleStyle={titleStyle}
-        descriptionStyle={descriptionStyle}
-        dateStyle={dateStyle}
-      />
-    ))}
-  </div>
+    <div className={cn('divide-y', dividerClass)}>
+      {notifications.map((notification, index) => (
+        <NotificationItem
+          key={notification.id}
+          notification={notification}
+          index={index}
+          onMarkAsRead={onMarkAsRead}
+          textColor={textColor}
+          hoverBgClass={hoverBgClass}
+          titleStyle={titleStyle}
+          descriptionStyle={descriptionStyle}
+          dateStyle={dateStyle}
+        />
+      ))}
+    </div>
   );
 });
 
@@ -150,10 +154,7 @@ interface NotificationPopoverProps {
   listLoading?: boolean;
 }
 
-function mergeDisplay(
-  base: Notification[],
-  markedReadIds: ReadonlySet<string>,
-): Notification[] {
+function mergeDisplay(base: Notification[], markedReadIds: ReadonlySet<string>): Notification[] {
   return base.map((n) => ({
     ...n,
     read: n.read || markedReadIds.has(n.id),
@@ -181,6 +182,7 @@ export function NotificationPopover({
   emptyListLabel = 'Aucune notification',
   listLoading = false,
 }: NotificationPopoverProps) {
+  const reduceMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [markedReadIds, setMarkedReadIds] = useState<Set<string>>(() => new Set());
@@ -198,7 +200,7 @@ export function NotificationPopover({
 
   const notifications = useMemo(
     () => mergeDisplay(initialNotifications, markedReadIds),
-    [initialNotifications, markedReadIds],
+    [initialNotifications, markedReadIds]
   );
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
@@ -210,7 +212,7 @@ export function NotificationPopover({
       const merged = mergeDisplay(initialNotifications, nextMarked);
       onNotificationsChange?.(merged);
     },
-    [initialNotifications, onNotificationsChange],
+    [initialNotifications, onNotificationsChange]
   );
 
   const markAllAsRead = useCallback(() => {
@@ -236,7 +238,7 @@ export function NotificationPopover({
       }
       setIsOpen(false);
     },
-    [emitChange, notifications, onNotificationSelect],
+    [emitChange, notifications, onNotificationSelect]
   );
 
   useEffect(() => {
@@ -270,7 +272,7 @@ export function NotificationPopover({
         className={cn(
           'relative h-11 min-h-[44px] min-w-[44px] w-11 shrink-0 rounded-xl border border-[var(--border)] bg-[var(--bg-card-secondary)] shadow-none hover:bg-[var(--bg-hover)]',
           'focus-visible:ring-0 focus-visible:ring-offset-0',
-          buttonClassName,
+          buttonClassName
         )}
         style={{ ...themeStyles?.trigger, ...buttonStyle }}
         aria-expanded={isOpen}
@@ -304,10 +306,10 @@ export function NotificationPopover({
             />
             <motion.div
               key="notif-popover-panel"
-              initial={{ opacity: 0, y: 8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+              transition={reduceMotion ? { duration: 0.12 } : { duration: 0.18 }}
               className={cn(
                 // Mobile — même logique que le menu « Plus » (DashboardPro) : pas de clip horizontal
                 'max-sm:fixed max-sm:left-3 max-sm:right-3 max-sm:mt-0 max-sm:w-auto max-sm:max-w-none',
@@ -315,64 +317,66 @@ export function NotificationPopover({
                 // Desktop — ancré à la cloche
                 'sm:absolute sm:right-0 sm:z-50 sm:mt-2 sm:w-[min(100vw-2rem,20rem)]',
                 'max-h-[min(28rem,70dvh)] overflow-y-auto overflow-x-hidden rounded-2xl min-w-0',
-                popoverClassName,
+                popoverClassName
               )}
               style={{ ...themeStyles?.panel, ...popoverStyle }}
               role="dialog"
               aria-label={titleLabel}
             >
-            <div
-              className={cn(
-                'flex min-w-0 items-center justify-between gap-2 border-b px-3 py-3 sm:px-4 sm:py-4',
-                headerBorderClass,
-              )}
-              style={themeStyles?.header}
-            >
-              <h3
-                className="min-w-0 flex-1 truncate font-sans text-sm font-semibold leading-snug tracking-tight"
-                style={themeStyles?.headerTitle ?? themeStyles?.itemTitle}
-              >
-                {titleLabel}
-              </h3>
-              <Button
-                type="button"
-                onClick={markAllAsRead}
-                variant="ghost"
-                size="sm"
-                className="h-auto shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
-                style={themeStyles?.markAllRead}
-              >
-                {markAllReadLabel}
-              </Button>
-            </div>
-
-            {listLoading ? (
-              <NotificationListSkeleton rows={4} />
-            ) : notifications.length === 0 ? (
-              <div className="px-4 py-6 text-center sm:py-8">
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{emptyListLabel}</p>
-              </div>
-            ) : (
-              <NotificationList
-                notifications={notifications}
-                onMarkAsRead={markAsRead}
-                textColor={textColor}
-                hoverBgClass={hoverBgClass}
-                dividerClass={dividerClass}
-                titleStyle={themeStyles?.itemTitle}
-                descriptionStyle={themeStyles?.itemDescription}
-                dateStyle={themeStyles?.itemDate}
-              />
-            )}
-            {footer ? (
               <div
-                className="border-t border-[var(--border)] bg-[var(--bg-card-secondary)]/90"
+                className={cn(
+                  'flex min-w-0 items-center justify-between gap-2 border-b px-3 py-3 sm:px-4 sm:py-4',
+                  headerBorderClass
+                )}
                 style={themeStyles?.header}
               >
-                {footer({ close: () => setIsOpen(false) })}
+                <h3
+                  className="min-w-0 flex-1 truncate font-sans text-sm font-semibold leading-snug tracking-tight"
+                  style={themeStyles?.headerTitle ?? themeStyles?.itemTitle}
+                >
+                  {titleLabel}
+                </h3>
+                <Button
+                  type="button"
+                  onClick={markAllAsRead}
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                  style={themeStyles?.markAllRead}
+                >
+                  {markAllReadLabel}
+                </Button>
               </div>
-            ) : null}
-          </motion.div>
+
+              {listLoading ? (
+                <NotificationListSkeleton rows={4} />
+              ) : notifications.length === 0 ? (
+                <div className="px-4 py-6 text-center sm:py-8">
+                  <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                    {emptyListLabel}
+                  </p>
+                </div>
+              ) : (
+                <NotificationList
+                  notifications={notifications}
+                  onMarkAsRead={markAsRead}
+                  textColor={textColor}
+                  hoverBgClass={hoverBgClass}
+                  dividerClass={dividerClass}
+                  titleStyle={themeStyles?.itemTitle}
+                  descriptionStyle={themeStyles?.itemDescription}
+                  dateStyle={themeStyles?.itemDate}
+                />
+              )}
+              {footer ? (
+                <div
+                  className="border-t border-[var(--border)] bg-[var(--bg-card-secondary)]/90"
+                  style={themeStyles?.header}
+                >
+                  {footer({ close: () => setIsOpen(false) })}
+                </div>
+              ) : null}
+            </motion.div>
           </React.Fragment>
         ) : null}
       </AnimatePresence>

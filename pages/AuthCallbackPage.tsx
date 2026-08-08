@@ -117,7 +117,7 @@ export const AuthCallbackPage: React.FC = () => {
         <div className="w-full max-w-md bg-ink-surface rounded-2xl p-8 border border-ink-border shadow-sm">
           <div className="text-center">
             <AlertCircle className="text-red-400 mx-auto mb-4" size={44} />
-            <h1 className="text-2xl font-bold text-ink-text mb-2">Erreur</h1>
+            <h1 className="type-heading mb-2 text-ink-text">Erreur</h1>
             <p className="text-ink-muted">{message}</p>
             <button
               type="button"

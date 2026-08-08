@@ -80,7 +80,7 @@ export function MobileActiveSessionCard({
           <h3 className="mt-2 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {appointment.clientName || 'Client'}
           </h3>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-0.5 type-body text-muted-foreground">
             {appointment.time} · {appointment.service || 'Tatouage'}
           </p>
         </div>

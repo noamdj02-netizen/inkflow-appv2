@@ -1,122 +1,122 @@
 /**
- * Calendrier agenda studio — vue semaine / jour.
- * Structure inspirée des dashboards type « Constructor » (Figma community) : barre de période,
- * grille horaire, ligne « maintenant », cartes avec plage horaire et avatar.
+ * Agenda studio — vue timeline (maquette flat M3 / InkFlow).
+ * Strip semaine + grille horaire jour, cartes RDV, ligne « maintenant ».
  */
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { addDays, startOfDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Clock, User, Pencil, XCircle, CheckCircle } from 'lucide-react';
-import { Appointment, Client } from '../../types';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  CircleDollarSign,
+  User,
+  Pencil,
+  XCircle,
+  CheckCircle,
+} from 'lucide-react';
+import { Appointment } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { hapticSuccess } from '../../lib/haptics';
 import { addAgendaNavStep, agendaWeekStart, toLocalYmd } from '../../lib/agendaDates';
-import { formatHm, parseTimeToMinutes } from '../../lib/appointmentTime';
-import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
-import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
+import { parseTimeToMinutes } from '../../lib/appointmentTime';
+import { APPOINTMENT_STATUS_LABELS } from '@/lib/inkAppointmentStatus';
+import { cn } from '@/lib/utils';
 
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8h à 20h
-const SLOT_PX = 72;
-const WEEKDAYS_SHORT = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+const TIMELINE_START_HOUR = 8;
+const TIMELINE_END_HOUR = 20;
+const HOUR_PX = 80;
+const HOURS = Array.from(
+  { length: TIMELINE_END_HOUR - TIMELINE_START_HOUR + 1 },
+  (_, i) => i + TIMELINE_START_HOUR
+);
 
 type CalendarViewMode = 'week' | 'day';
 
 interface AppointmentCalendarProps {
   appointments: Appointment[];
-  /** Pour avatars sur les cartes créneau */
-  clients?: Client[];
   onSlotClick: () => void;
   onAppointmentClick?: (apt: Appointment) => void;
   onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
 }
 
-function getEventColor(status: Appointment['status']): string {
-  switch (status) {
-    case 'confirmed':
-      return 'bg-blue-100 dark:bg-blue-500/20 border-blue-200 dark:border-blue-500/40 text-blue-900 dark:text-blue-100';
-    case 'pending':
-      return 'bg-amber-100 dark:bg-amber-500/20 border-amber-200 dark:border-amber-500/40 text-amber-900 dark:text-amber-100';
-    case 'in_progress':
-      return 'bg-blue-100 dark:bg-blue-500/20 border-blue-200 dark:border-blue-500/40 text-blue-900 dark:text-blue-100';
-    case 'completed':
-      return 'bg-zinc-100 dark:bg-zinc-500/20 border-zinc-200 dark:border-zinc-500/40 text-zinc-800 dark:text-zinc-200';
-    case 'cancelled':
-    case 'no_show':
-      return 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-300 line-through opacity-75';
-    default:
-      return 'bg-zinc-100 dark:bg-zinc-500/20 border-zinc-200 dark:border-zinc-500/40 text-zinc-800 dark:text-zinc-200';
-  }
+function formatDurationLabel(minutes: number): string {
+  const m = Math.max(1, minutes);
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h > 0 && r > 0) return `${h}h${String(r).padStart(2, '0')}`;
+  if (h > 0) return `${h}h00`;
+  return `${r} min`;
+}
+
+function needsDepositAttention(apt: Appointment): boolean {
+  if (apt.deposit <= 0) return false;
+  if (apt.depositPaid) return false;
+  return apt.status !== 'completed' && apt.status !== 'cancelled';
+}
+
+function statusLabel(apt: Appointment): string {
+  if (needsDepositAttention(apt)) return "En attente d'acompte";
+  return APPOINTMENT_STATUS_LABELS[apt.status] ?? apt.status;
+}
+
+function weekdayShort(d: Date): string {
+  return d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+}
+
+function monthYearLabel(d: Date): string {
+  const raw = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
-  clients = [],
   onSlotClick,
   onAppointmentClick,
   onUpdateAppointment,
 }) => {
-  const getAvatar = (apt: Appointment) => getClientAvatarForAppointment(apt, clients);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
-  const [weekStart, setWeekStart] = useState(() => agendaWeekStart(new Date()));
+  const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const touchStartX = useRef<number | null>(null);
 
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const weekDays = useMemo(() => {
-    const base = startOfDay(weekStart);
-    const count = viewMode === 'day' ? 1 : 7;
-    return Array.from({ length: count }, (_, i) => addDays(base, i));
-  }, [weekStart, viewMode]);
+    const base = agendaWeekStart(selectedDay);
+    return Array.from({ length: 7 }, (_, i) => addDays(base, i));
+  }, [selectedDay]);
 
-  const isToday = (d: Date) => toLocalYmd(d) === toLocalYmd(new Date());
+  const selectedYmd = toLocalYmd(selectedDay);
+  const todayYmd = toLocalYmd(new Date());
 
-  /** Ligne « maintenant » — recalcul à chaque rendu pour suivre l’heure. */
-  const nowLineOffsetPx = (() => {
-    const now = new Date();
-    const h = now.getHours();
-    const mi = now.getMinutes();
-    if (h < 8 || h > 20) return null;
-    const minutesFrom8 = (h - 8) * 60 + mi;
-    const totalSpan = 13 * 60;
-    return (minutesFrom8 / totalSpan) * (HOURS.length * SLOT_PX);
-  })();
+  const dayAppointments = useMemo(() => {
+    return appointments
+      .filter((a) => a.date === selectedYmd)
+      .sort((a, b) => `${a.time}`.localeCompare(`${b.time}`));
+  }, [appointments, selectedYmd]);
 
-  const weekRangeLabel = useMemo(() => {
-    if (weekDays.length === 0) return '';
-    if (weekDays.length === 1) {
-      return weekDays[0].toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-    const a = weekDays[0];
-    const b = weekDays[weekDays.length - 1];
-    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
-    if (a.getMonth() !== b.getMonth() || a.getFullYear() !== b.getFullYear()) {
-      return `${a.toLocaleDateString('fr-FR', opts)} – ${b.toLocaleDateString('fr-FR', { ...opts, year: 'numeric' })}`;
-    }
-    return `${a.getDate()} – ${b.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-  }, [weekDays]);
-
-  const showNowLine =
-    nowLineOffsetPx != null && weekDays.some((d) => toLocalYmd(d) === toLocalYmd(new Date()));
+  const nowLineTop = useMemo(() => {
+    if (selectedYmd !== todayYmd) return null;
+    const now = new Date(nowTick);
+    const startM = TIMELINE_START_HOUR * 60;
+    const endM = (TIMELINE_END_HOUR + 1) * 60;
+    const nowM = now.getHours() * 60 + now.getMinutes();
+    if (nowM < startM || nowM > endM) return null;
+    return ((nowM - startM) / 60) * HOUR_PX;
+  }, [nowTick, selectedYmd, todayYmd]);
 
   const goPrev = () => {
-    setWeekStart((prev) => addAgendaNavStep(prev, viewMode === 'day' ? 'day' : 'week', -1));
+    setSelectedDay((d) => addAgendaNavStep(d, viewMode === 'day' ? 'day' : 'week', -1));
   };
 
   const goNext = () => {
-    setWeekStart((prev) => addAgendaNavStep(prev, viewMode === 'day' ? 'day' : 'week', 1));
-  };
-
-  const goToday = () => {
-    if (viewMode === 'day') {
-      setWeekStart(startOfDay(new Date()));
-      return;
-    }
-    setWeekStart(agendaWeekStart(new Date()));
+    setSelectedDay((d) => addAgendaNavStep(d, viewMode === 'day' ? 'day' : 'week', 1));
   };
 
   const handleAppointmentClick = (apt: Appointment, e: React.MouseEvent) => {
@@ -125,65 +125,101 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     onAppointmentClick?.(apt);
   };
 
-  const gridCols = `56px repeat(${weekDays.length}, minmax(112px, 1fr))`;
+  const timelineHeight = HOURS.length * HOUR_PX;
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-[0_4px_28px_-12px_rgba(15,23,42,0.12)] dark:shadow-[0_4px_28px_-12px_rgba(0,0,0,0.45)] overflow-hidden">
-      {/* Barre type Figma community calendar : Aujourd’hui | plage | Semaine / Jour */}
-      <div className="flex flex-col gap-4 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/50 px-4 py-4 sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <button
-            type="button"
-            onClick={goToday}
-            className="inline-flex w-full min-h-[44px] items-center justify-center rounded-xl border border-zinc-200/90 bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 sm:w-auto sm:justify-center"
-          >
-            Aujourd&apos;hui
-          </button>
-
-          <div className="flex flex-1 items-center justify-center gap-1 sm:gap-2 min-w-0">
+    <div className="flex min-w-0 flex-col gap-6 sm:gap-8">
+      {/* Contrôles — mois + toggle Jour/Semaine */}
+      <section className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div className="flex items-center gap-4">
+          <h2 className="type-heading-sm sm:text-2xl">{monthYearLabel(selectedDay)}</h2>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={goPrev}
-              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-transparent text-zinc-500 transition-all hover:bg-zinc-200/80 dark:hover:bg-zinc-800 active:scale-95"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 active:scale-95 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               aria-label="Période précédente"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-5 w-5" aria-hidden />
             </button>
-            <p className="min-w-0 flex-1 text-center text-sm font-semibold capitalize leading-snug text-zinc-900 dark:text-white sm:text-base px-1">
-              {weekRangeLabel}
-            </p>
             <button
               type="button"
               onClick={goNext}
-              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-transparent text-zinc-500 transition-all hover:bg-zinc-200/80 dark:hover:bg-zinc-800 active:scale-95"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 active:scale-95 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               aria-label="Période suivante"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-5 w-5" aria-hidden />
             </button>
           </div>
-
-          <div className="inline-flex w-full justify-center rounded-2xl border border-zinc-200/80 bg-zinc-100/90 p-1 dark:border-zinc-700/80 dark:bg-zinc-900/80 lg:w-auto">
-            {(['week', 'day'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setViewMode(mode)}
-                className={`min-h-[40px] flex-1 rounded-[10px] px-4 text-xs font-semibold transition-all active:scale-[0.98] sm:min-h-[36px] sm:flex-none sm:px-5 sm:text-sm ${
-                  viewMode === mode
-                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white'
-                }`}
-              >
-                {mode === 'week' ? 'Semaine' : 'Jour'}
-              </button>
-            ))}
-          </div>
         </div>
-      </div>
 
-      {/* Grille horaire + ligne maintenant */}
-      <div
-        className="overflow-x-auto"
+        <div
+          className="inline-flex w-fit rounded-lg border border-zinc-300/80 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-900"
+          role="group"
+          aria-label="Granularité de l'agenda"
+        >
+          {(['day', 'week'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              aria-pressed={viewMode === mode}
+              className={cn(
+                'min-h-[40px] rounded-md px-4 py-2 font-mono text-xs font-medium uppercase tracking-wider transition-all active:scale-[0.98]',
+                viewMode === mode
+                  ? 'border border-zinc-300/80 bg-white text-zinc-900 shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50'
+                  : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+              )}
+            >
+              {mode === 'day' ? 'Jour' : 'Semaine'}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Strip semaine */}
+      {viewMode === 'week' && (
+        <section
+          className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 scrollbar-hide"
+          aria-label="Jours de la semaine"
+        >
+          {weekDays.map((day) => {
+            const ymd = toLocalYmd(day);
+            const isSelected = ymd === selectedYmd;
+            const isToday = ymd === todayYmd;
+            const hasEvents = appointments.some((a) => a.date === ymd);
+            return (
+              <button
+                key={ymd}
+                type="button"
+                onClick={() => setSelectedDay(startOfDay(day))}
+                className={cn(
+                  'flex min-h-[80px] min-w-[64px] snap-start flex-col items-center justify-center rounded-xl border transition-colors active:scale-[0.98]',
+                  isSelected
+                    ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+                    : 'border-transparent text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/80',
+                  !isSelected && !hasEvents && 'opacity-60'
+                )}
+                aria-pressed={isSelected}
+                aria-current={isToday ? 'date' : undefined}
+              >
+                <span
+                  className={cn('text-xs uppercase', isSelected ? 'font-semibold' : 'font-normal')}
+                >
+                  {weekdayShort(day)}
+                </span>
+                <span className={cn('mt-1 type-stat', isSelected ? 'font-bold' : 'font-semibold')}>
+                  {day.getDate()}
+                </span>
+              </button>
+            );
+          })}
+        </section>
+      )}
+
+      {/* Timeline jour */}
+      <section
+        className="relative mt-2 flex flex-col"
         onTouchStart={(e) => {
           touchStartX.current = e.touches[0].clientX;
         }}
@@ -197,142 +233,92 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           touchStartX.current = null;
         }}
       >
-        <div className="min-w-[min(100%,680px)]">
-          <div
-            className="grid gap-px border-b border-zinc-200/60 bg-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-800/80"
-            style={{ gridTemplateColumns: gridCols }}
-          >
-            <div className="flex items-center justify-end bg-zinc-50 py-3 pr-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-              Heure
-            </div>
-            {weekDays.map((day) => (
-              <div
-                key={toLocalYmd(day)}
-                className={`px-2 py-3 text-center ${
-                  isToday(day) ? 'bg-blue-50 dark:bg-blue-500/15' : 'bg-zinc-50 dark:bg-zinc-950/80'
-                }`}
-              >
-                <div
-                  className={`text-[11px] font-semibold uppercase tracking-wide ${
-                    isToday(day)
-                      ? 'text-blue-700 dark:text-blue-300'
-                      : 'text-zinc-500 dark:text-zinc-400'
-                  }`}
-                >
-                  {WEEKDAYS_SHORT[day.getDay()]}
-                </div>
-                <div
-                  className={`text-lg font-bold tabular-nums ${
-                    isToday(day)
-                      ? 'text-blue-800 dark:text-blue-200'
-                      : 'text-zinc-900 dark:text-white'
-                  }`}
-                >
-                  {day.getDate()}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="relative">
-            {showNowLine && nowLineOffsetPx != null && (
-              <div
-                className="pointer-events-none absolute left-14 right-0 z-20 flex items-center"
-                style={{ top: nowLineOffsetPx }}
-                aria-hidden
-              >
-                <div className="h-0 w-full border-t-2 border-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.35)]" />
-                <span className="absolute -left-0 -top-3 rounded-md bg-orange-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  Maintenant
-                </span>
-              </div>
-            )}
-
+        <div className="relative" style={{ minHeight: timelineHeight }}>
+          {HOURS.map((hour) => (
             <div
-              className="grid gap-px bg-zinc-200/50 dark:bg-zinc-800/80"
-              style={{ gridTemplateColumns: gridCols }}
+              key={hour}
+              className="relative flex min-h-[80px] w-full border-t border-zinc-300/40 dark:border-zinc-700/50"
             >
-              {HOURS.map((hour) => (
-                <React.Fragment key={hour}>
-                  <div className="flex items-start justify-end bg-zinc-50/90 py-2 pr-2 text-xs tabular-nums text-zinc-400 dark:bg-zinc-950/90 dark:text-zinc-500">
-                    {hour}h
-                  </div>
-                  {weekDays.map((day) => {
-                    const dateStr = toLocalYmd(day);
-                    const slotApts = appointments.filter((a) => {
-                      if (a.date !== dateStr) return false;
-                      const aptHour = parseInt(a.time.split(':')[0], 10);
-                      return aptHour === hour;
-                    });
-                    return (
-                      <div
-                        key={`${dateStr}-${hour}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={onSlotClick}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onSlotClick();
-                          }
-                        }}
-                        className={`border-l border-zinc-100/90 bg-white p-1.5 transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/90 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 ${
-                          isToday(day)
-                            ? 'ring-inset ring-1 ring-blue-500/15 dark:ring-blue-500/20'
-                            : ''
-                        }`}
-                        style={{ minHeight: SLOT_PX }}
-                      >
-                        {slotApts.map((apt) => {
-                          const startM = parseTimeToMinutes(apt.time);
-                          const endM = startM + (apt.duration || 60);
-                          const avatar = getAvatar(apt);
-                          return (
-                            <button
-                              key={apt.id}
-                              type="button"
-                              onClick={(e) => handleAppointmentClick(apt, e)}
-                              className={`mb-1 w-full min-h-[56px] rounded-xl border p-2.5 text-left shadow-sm transition-all hover:shadow-md active:scale-[0.99] ${getEventColor(apt.status)}`}
-                            >
-                              <div className="mb-1.5 flex flex-wrap gap-1">
-                                <span className="inline-flex rounded-md border border-current/25 bg-white/70 px-1.5 py-0.5 text-[10px] font-bold tabular-nums dark:bg-black/25">
-                                  {(apt.time || '09:00').slice(0, 5)}
-                                </span>
-                                <span className="inline-flex rounded-md border border-current/25 bg-white/50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums opacity-90 dark:bg-black/20">
-                                  {formatHm(endM)}
-                                </span>
-                              </div>
-                              <div className="truncate text-sm font-semibold leading-tight">
-                                {apt.clientName}
-                              </div>
-                              <div className="mt-0.5 truncate text-[11px] opacity-90">
-                                {apt.service}
-                              </div>
-                              <div className="mt-2 flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-medium opacity-75">
-                                  {apt.duration} min
-                                </span>
-                                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white/80 dark:border-white/10 dark:bg-zinc-800">
-                                  <ClientPhotoAvatar
-                                    name={apt.clientName}
-                                    src={avatar}
-                                    className="h-full w-full"
-                                    textClassName="text-[10px] font-bold leading-none text-zinc-600 dark:text-zinc-300"
-                                  />
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+              <div className="w-16 shrink-0 pr-3 pt-2 text-right font-mono text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                {String(hour).padStart(2, '0')}:00
+              </div>
+              <button
+                type="button"
+                onClick={onSlotClick}
+                className="relative min-h-[80px] flex-1 border-l border-zinc-200/50 transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:hover:bg-zinc-900/40"
+                aria-label={`Créer un rendez-vous à ${hour}h`}
+              />
             </div>
+          ))}
+
+          {/* Cartes RDV positionnées */}
+          <div className="pointer-events-none absolute inset-0 left-16">
+            {dayAppointments.map((apt) => {
+              const startM = parseTimeToMinutes(apt.time || '09:00');
+              const duration = apt.duration > 0 ? apt.duration : 60;
+              const endM = startM + duration;
+              const timelineStartM = TIMELINE_START_HOUR * 60;
+              const timelineEndM = (TIMELINE_END_HOUR + 1) * 60;
+              if (endM <= timelineStartM || startM >= timelineEndM) return null;
+
+              const clampStart = Math.max(startM, timelineStartM);
+              const clampEnd = Math.min(endM, timelineEndM);
+              const top = ((clampStart - timelineStartM) / 60) * HOUR_PX + 8;
+              const height = Math.max(((clampEnd - clampStart) / 60) * HOUR_PX - 16, 72);
+              const inactive = apt.status === 'cancelled' || apt.status === 'no_show';
+
+              return (
+                <button
+                  key={apt.id}
+                  type="button"
+                  style={{ top, height }}
+                  onClick={(e) => handleAppointmentClick(apt, e)}
+                  className={cn(
+                    'pointer-events-auto absolute right-2 left-2 flex flex-col justify-between rounded-lg border border-zinc-300/80 bg-zinc-100 p-4 text-left transition-colors hover:border-zinc-900 active:scale-[0.99] dark:border-zinc-700 dark:bg-zinc-900/90 dark:hover:border-zinc-400',
+                    inactive && 'opacity-60'
+                  )}
+                >
+                  <div className="min-w-0">
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                        {apt.service}
+                      </h3>
+                      <span className="shrink-0 rounded bg-zinc-200/90 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                        {statusLabel(apt)}
+                      </span>
+                    </div>
+                    <p className="truncate type-body text-muted-foreground">{apt.clientName}</p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-4 font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-4 w-4" aria-hidden />
+                      {formatDurationLabel(duration)}
+                    </span>
+                    {apt.price > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <CircleDollarSign className="h-4 w-4" aria-hidden />
+                        {apt.price}€
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Ligne maintenant */}
+          {nowLineTop != null && (
+            <div
+              className="pointer-events-none absolute right-0 left-14 z-10 flex items-center"
+              style={{ top: nowLineTop }}
+              aria-hidden
+            >
+              <div className="absolute -left-1 h-2 w-2 rounded-full bg-zinc-900 dark:bg-zinc-100" />
+              <div className="h-0.5 w-full bg-zinc-900 dark:bg-zinc-100" />
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
       <ConfirmModal
         isOpen={showCancelConfirm && !!selectedAppointment}
@@ -346,13 +332,12 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           setShowCancelConfirm(false);
         }}
         title="Annuler ce rendez-vous ?"
-        message="Le rendez-vous passera en annulé dans l’agenda."
+        message="Le rendez-vous passera en annulé dans l'agenda."
         confirmLabel="Annuler le rendez-vous"
         cancelLabel="Retour"
         variant="warning"
       />
 
-      {/* Modal détail événement */}
       <Modal
         isOpen={!!selectedAppointment}
         onClose={() => {
@@ -378,44 +363,32 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         {selectedAppointment && (
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-              <Clock className="w-4 h-4" />
+              <Clock className="h-4 w-4" aria-hidden />
               <span>
-                {selectedAppointment.date} • {selectedAppointment.time} —{' '}
-                {selectedAppointment.duration} min
+                {selectedAppointment.date} · {selectedAppointment.time} —{' '}
+                {formatDurationLabel(selectedAppointment.duration)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <User className="w-4 h-4 text-[var(--text-tertiary)]" />
+              <User className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden />
               <span className="text-[var(--text-primary)]">{selectedAppointment.service}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-[var(--text-secondary)]">Prix :</span>
-              <span className="font-bold text-blue-600">{selectedAppointment.price}€</span>
-            </div>
-            <span
-              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                selectedAppointment.status === 'confirmed'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                  : selectedAppointment.status === 'pending'
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                    : selectedAppointment.status === 'completed'
-                      ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-              }`}
-            >
-              {selectedAppointment.status === 'confirmed'
-                ? 'Confirmé'
-                : selectedAppointment.status === 'pending'
-                  ? 'En attente'
-                  : selectedAppointment.status === 'completed'
-                    ? 'Terminé'
-                    : selectedAppointment.status}
+            {selectedAppointment.price > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <CircleDollarSign className="h-4 w-4 text-zinc-400" aria-hidden />
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {selectedAppointment.price}€
+                </span>
+              </div>
+            )}
+            <span className="inline-block rounded bg-zinc-100 px-3 py-1 font-mono text-xs font-medium uppercase tracking-wide text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {statusLabel(selectedAppointment)}
             </span>
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-2 sm:flex-row">
               {onUpdateAppointment &&
                 selectedAppointment.status !== 'completed' &&
                 selectedAppointment.status !== 'cancelled' && (
-                  <div className="flex gap-2 order-2 sm:order-1">
+                  <div className="order-2 flex gap-2 sm:order-1">
                     {selectedAppointment.status === 'pending' && (
                       <button
                         type="button"
@@ -424,9 +397,10 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                           hapticSuccess();
                           setSelectedAppointment(null);
                         }}
-                        className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                        className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 font-semibold text-white hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
                       >
-                        <CheckCircle className="w-4 h-4" /> Confirmer
+                        <CheckCircle className="h-4 w-4" aria-hidden />
+                        Confirmer
                       </button>
                     )}
                     {selectedAppointment.status === 'confirmed' && (
@@ -437,17 +411,19 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                           hapticSuccess();
                           setSelectedAppointment(null);
                         }}
-                        className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                        className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 font-semibold text-white hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
                       >
-                        <CheckCircle className="w-4 h-4" /> Terminé
+                        <CheckCircle className="h-4 w-4" aria-hidden />
+                        Terminé
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => setShowCancelConfirm(true)}
-                      className="min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center gap-2"
+                      className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 font-semibold text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
                     >
-                      <XCircle className="w-4 h-4" /> Annuler
+                      <XCircle className="h-4 w-4" aria-hidden />
+                      Annuler
                     </button>
                   </div>
                 )}
@@ -457,16 +433,10 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                   onAppointmentClick?.(selectedAppointment);
                   setSelectedAppointment(null);
                 }}
-                className="min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center justify-center gap-2"
+                className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
               >
-                <Pencil className="w-4 h-4" /> Modifier
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedAppointment(null)}
-                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 font-semibold text-[var(--text-secondary)] hover:bg-zinc-200 dark:hover:bg-zinc-700"
-              >
-                Fermer
+                <Pencil className="h-4 w-4" aria-hidden />
+                Modifier
               </button>
             </div>
           </div>

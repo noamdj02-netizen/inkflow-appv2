@@ -98,6 +98,7 @@ export function DiscoverCityStylePage({ citySlug, styleSlug }: Props) {
 
   return (
     <div
+      className="landing-scroll"
       style={{
         minHeight: '100dvh',
         background: U.pageBg,

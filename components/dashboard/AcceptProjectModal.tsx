@@ -157,7 +157,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
           <p className="mt-1.5 text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             {projectRequest.clientName}
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 truncate">
+          <p className="mt-0.5 flex items-center gap-1.5 type-body text-muted-foreground truncate">
             <Mail className="w-3.5 h-3.5 shrink-0 opacity-70" aria-hidden />
             <span className="truncate">{projectRequest.clientEmail}</span>
           </p>
@@ -188,7 +188,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-2.5 type-body text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin text-sky-500 dark:text-sky-400" aria-hidden />
             Chargement de ton planning…
           </div>
@@ -200,7 +200,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
         )}
 
         {!loading && availability && dateOptions.length === 0 && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="type-body text-muted-foreground">
             Aucune date libre dans la fenêtre actuelle. Élargis tes disponibilités dans les
             paramètres, puis réessaie.
           </p>

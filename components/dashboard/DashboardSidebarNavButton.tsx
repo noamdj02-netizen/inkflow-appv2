@@ -5,7 +5,7 @@ import { useInkflowGestures } from '@/lib/motion/inkflowGestures';
 
 export type DashboardSidebarNavButtonProps = React.ComponentProps<'button'>;
 
-/** Ligne de navigation sidebar — tap + léger slide au survol (desktop / shell Inkflow Pro). */
+/** Ligne de navigation sidebar — tap feedback (pas de hover motion : haute fréquence). */
 export function DashboardSidebarNavButton({
   type = 'button',
   className,
@@ -13,7 +13,7 @@ export function DashboardSidebarNavButton({
   onClick,
   ...props
 }: DashboardSidebarNavButtonProps) {
-  const { navTap, navHover, transition } = useInkflowGestures();
+  const { navTap, transition } = useInkflowGestures();
 
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -27,7 +27,6 @@ export function DashboardSidebarNavButton({
     <motion.button
       type={type}
       whileTap={navTap}
-      whileHover={navHover}
       transition={transition}
       className={className}
       onClick={handleClick}

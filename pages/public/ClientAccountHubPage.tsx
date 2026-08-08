@@ -362,7 +362,7 @@ export const ClientAccountHubPage: React.FC = () => {
           </a>
           <div className="text-center mb-8">
             <Logo />
-            <h1 className="mt-6 text-2xl sm:text-3xl font-bold font-display tracking-tight">
+            <h1 className="type-heading mt-6">
               Mon compte
             </h1>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">

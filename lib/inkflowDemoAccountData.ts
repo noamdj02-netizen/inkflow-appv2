@@ -2,6 +2,10 @@
  * Données de démonstration pour les comptes listés dans `demoAccount.ts`.
  * Réutilise le style du bac à sable (`demoSandboxData`).
  */
+
+/** Identifiant studio fictif — sandbox publique / compte démo (aucune écriture Supabase). */
+export const INKFLOW_DEMO_STUDIO_ID = 'ink-demo-studio';
+export const INKFLOW_DEMO_STUDIO_SLUG = 'studio-demo';
 import type { Appointment, Booking, FlashDesign, Notification, ProjectRequest } from '../types';
 import {
   getDemoFlashDesigns,

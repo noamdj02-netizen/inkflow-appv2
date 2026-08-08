@@ -359,9 +359,7 @@ export const FounderDashboardPage: React.FC<FounderDashboardPageProps> = ({ sect
         <SEO title="Accès refusé" noindex canonical="/admin" />
         <div className="max-w-lg w-full space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 sm:p-8">
           <LayoutDashboard className="w-10 h-10 text-zinc-600" aria-hidden />
-          <h1 className="text-xl font-bold text-zinc-100 font-display">
-            Espace fondateur — accès refusé
-          </h1>
+          <h1 className="type-heading-sm text-zinc-100">Espace fondateur — accès refusé</h1>
           <p className="text-sm text-zinc-400 leading-relaxed">
             Ton compte connecté doit être autorisé côté application. Variable{' '}
             <code className="text-xs text-amber-200/90 bg-zinc-950 px-1.5 py-0.5 rounded">

@@ -293,13 +293,13 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-6 md:p-8 space-y-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1.5">
-          <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+          <h3 className="type-heading flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700">
               <Palette className="w-5 h-5 text-zinc-600 dark:text-zinc-400" aria-hidden />
             </span>
             Thème de la vitrine
           </h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
+          <p className="type-subtitle max-w-2xl">
             Choisis un style puis applique avec aperçu en grand ; les modèles premium se débloquent
             avec l&apos;offre correspondante.
           </p>

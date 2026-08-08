@@ -73,6 +73,7 @@ export function DiscoverHomePage() {
 
   return (
     <div
+      className="landing-scroll"
       style={{
         minHeight: '100dvh',
         background: U.pageBg,
@@ -146,6 +147,7 @@ export function DiscoverHomePage() {
       </nav>
 
       <section
+        data-gsap-reveal
         style={{
           padding: '72px 24px 56px',
           textAlign: 'center',

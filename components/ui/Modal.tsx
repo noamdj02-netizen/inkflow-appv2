@@ -146,7 +146,8 @@ export const Modal: React.FC<ModalProps> = ({
               )}
             </div>
             <div
-              className="inkflow-modal-body min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-6 sm:pb-6 md:px-6 md:pb-6 [overflow-wrap:anywhere]"
+              className="inkflow-modal-body min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-6 sm:pb-6 md:px-6 md:pb-6 [overflow-wrap:anywhere] overscroll-contain"
+              data-lenis-prevent
               onFocusCapture={(e) => {
                 const t = e.target;
                 if (

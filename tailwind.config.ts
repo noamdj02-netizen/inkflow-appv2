@@ -6,9 +6,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-geist)', 'Geist', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['var(--font-geist)', 'Geist', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'Geist Mono', 'ui-monospace', 'monospace'],
         serif: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
-        display: ['var(--font-syne)', 'Syne', 'Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        display: ['var(--font-geist)', 'Geist', 'system-ui', 'sans-serif'],
         playfair: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
       },
       colors: {

@@ -96,13 +96,10 @@ export function BentoHeroCard({
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-400">
           Accueil studio
         </p>
-        <h2
-          id="bento-hero-title"
-          className="font-display mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white sm:text-3xl"
-        >
+        <h2 id="bento-hero-title" className="type-heading mt-2">
           {greetingWord}, <span className="text-zinc-700 dark:text-zinc-200">{displayName}</span>
         </h2>
-        <p className="mt-1.5 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400 sm:text-base">
+        <p className="type-subtitle mt-1.5 max-w-2xl">
           Pilotage du jour : créneaux, acomptes et file d’attente — sans requêtes en double.
         </p>
         {trialBannerMessage ? (
@@ -171,13 +168,13 @@ export function BentoHeroCard({
                   </p>
                   <h1
                     id="dashboard-overview-mobile-title"
-                    className="font-display text-xl font-bold leading-tight tracking-tight text-white"
+                    className="type-heading-sm leading-tight text-white"
                   >
                     {firstName?.trim()
                       ? `${greetingWord} ${firstName.trim()} 👋`
                       : `${greetingWord} 👋`}
                   </h1>
-                  <p className="mt-1 text-sm leading-snug text-zinc-300">{heroSubtitle}</p>
+                  <p className="type-subtitle mt-1 text-zinc-300">{heroSubtitle}</p>
                 </div>
                 <div className="flex shrink-0 flex-row items-center gap-1.5">
                   <motion.button

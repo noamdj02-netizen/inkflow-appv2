@@ -72,7 +72,7 @@ export const AIAssistant: React.FC = () => {
     return (
       <div className="bg-white rounded-2xl p-12 border border-neutral-200 text-center">
         <Sparkles className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-2">Assistant IA</h2>
+        <h2 className="type-heading-sm mb-2">Assistant IA</h2>
         <p className="text-neutral-600 mb-4">
           Configurez GEMINI_API_KEY dans les secrets Supabase (Edge Function call-gemini) pour
           activer l'assistant IA.
@@ -102,7 +102,7 @@ export const AIAssistant: React.FC = () => {
           <Sparkles className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="text-xl font-bold">Assistant IA</h2>
+          <h2 className="type-heading-sm">Assistant IA</h2>
           <p className="text-neutral-600 text-sm">Propulse par Gemini</p>
         </div>
       </div>

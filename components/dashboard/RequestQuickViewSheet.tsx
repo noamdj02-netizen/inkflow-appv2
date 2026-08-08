@@ -194,10 +194,8 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           </div>
           <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
             <div className="min-w-0">
-              <h3 className="font-semibold text-lg sm:text-xl text-zinc-900 dark:text-white break-words">
-                {clientName}
-              </h3>
-              <div className="flex items-start gap-2 mt-1 text-sm text-zinc-500 dark:text-zinc-400 min-w-0">
+              <h3 className="type-heading-sm break-words">{clientName}</h3>
+              <div className="flex items-start gap-2 mt-1 type-body text-muted-foreground min-w-0">
                 <Mail className="w-4 h-4 shrink-0 mt-0.5" />
                 <span className="break-all sm:break-words min-w-0">{clientEmail}</span>
               </div>
@@ -282,10 +280,8 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
             {/* Synthèse rapide */}
             <div className={cn(dashboardCard, 'p-4 space-y-2')}>
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                Synthèse
-              </h4>
-              <ul className="text-sm text-zinc-900 dark:text-white space-y-1.5 list-disc list-inside">
+              <h4 className="dashboardSectionTitle">Synthèse</h4>
+              <ul className="type-body space-y-1.5 list-disc list-inside">
                 <li>
                   Type : {requestType === 'flash' ? 'Flash / prédessiné' : 'Projet sur mesure'}
                 </li>
@@ -304,21 +300,15 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
             {/* Description */}
             <div>
-              <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
-                Description complète
-              </h4>
-              <p className="text-sm text-zinc-900 dark:text-white leading-relaxed whitespace-pre-wrap">
-                {description}
-              </p>
+              <h4 className="type-heading-sm mb-2 text-muted-foreground">Description complète</h4>
+              <p className="type-body leading-relaxed whitespace-pre-wrap">{description}</p>
             </div>
 
             {/* Disponibilités client */}
             {(requestedDate || requestedTime) && (
               <div>
-                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
-                  Disponibilités
-                </h4>
-                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 text-sm text-zinc-900 dark:text-white">
+                <h4 className="type-heading-sm mb-2 text-muted-foreground">Disponibilités</h4>
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 type-body">
                   <span className="flex items-start gap-2 min-w-0">
                     <Calendar className="w-4 h-4 shrink-0 mt-0.5" />
                     {requestedDate && (
@@ -345,9 +335,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             {/* Galerie refs (si plusieurs) */}
             {refImages.length > 1 && (
               <div>
-                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
-                  Autres références
-                </h4>
+                <h4 className="type-heading-sm mb-2 text-muted-foreground">Autres références</h4>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {refImages.slice(1, 5).map((url, i) => (
                     <img

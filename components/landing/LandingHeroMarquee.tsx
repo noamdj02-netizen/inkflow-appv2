@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { LANDING_HERO_STUDIO_MARQUEE_ENABLED } from '../../lib/landingFlags';
 
 const CITIES = [
   'Paris',
@@ -14,12 +15,31 @@ const CITIES = [
   'Rennes',
 ];
 
-export const LandingHeroMarquee: React.FC = () => {
+/**
+ * Bandeau social proof studios — désactivé via `LANDING_HERO_STUDIO_MARQUEE_ENABLED`
+ * tant qu’il n’y a pas de studios vérifiables en prod.
+ */
+export const LandingHeroMarquee: React.FC<{ variant?: 'light' | 'dark' }> = ({
+  variant = 'light',
+}) => {
+  if (!LANDING_HERO_STUDIO_MARQUEE_ENABLED) {
+    return null;
+  }
+
   const track = [...CITIES, ...CITIES];
+  const isDark = variant === 'dark';
 
   return (
-    <div className="relative mt-14 sm:mt-16 border-t border-zinc-200/80 pt-8 overflow-hidden">
-      <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+    <div
+      className={`relative mt-14 sm:mt-16 overflow-hidden border-t pt-8 ${
+        isDark ? 'border-white/10' : 'border-zinc-200/80'
+      }`}
+    >
+      <p
+        className={`mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] ${
+          isDark ? 'text-zinc-500' : 'text-zinc-400'
+        }`}
+      >
         Studios actifs en France
       </p>
       <div className="relative flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
@@ -31,7 +51,9 @@ export const LandingHeroMarquee: React.FC = () => {
           {track.map((city, i) => (
             <span
               key={`${city}-${i}`}
-              className="whitespace-nowrap text-sm font-medium text-zinc-500"
+              className={`whitespace-nowrap text-sm font-medium ${
+                isDark ? 'text-zinc-400' : 'text-zinc-500'
+              }`}
             >
               {city}
             </span>

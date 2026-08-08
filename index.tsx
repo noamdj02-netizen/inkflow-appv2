@@ -1,4 +1,5 @@
 import './instrumentation';
+import 'lenis/dist/lenis.css';
 import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';

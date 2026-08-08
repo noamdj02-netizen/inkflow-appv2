@@ -1,4 +1,4 @@
-import type { Appointment, Booking, BookingStatus, ProjectRequest } from '../types';
+import type { Appointment, Booking, BookingStatus, Client, ProjectRequest } from '../types';
 
 /** Préfixe des RDV « virtuels » construits depuis une demande (page book / brief). */
 export const CLIENT_PREVIEW_SYNTHETIC_ID_PREFIX = 'inkflow-preview:';
@@ -114,6 +114,60 @@ export function syntheticAppointmentFromProjectRequest(pr: ProjectRequest): Appo
     createdAt: pr.createdAt,
     updatedAt: pr.createdAt,
   };
+}
+
+function appointmentMatchesClient(apt: Appointment, client: Client): boolean {
+  return (
+    (client.id !== '' && apt.clientId === client.id) ||
+    (!!client.email &&
+      !!apt.clientEmail &&
+      apt.clientEmail.trim().toLowerCase() === client.email.trim().toLowerCase()) ||
+    (!!client.name &&
+      !!apt.clientName &&
+      apt.clientName.trim().toLowerCase() === client.name.trim().toLowerCase())
+  );
+}
+
+/** RDV « ancre » pour ouvrir la fiche client complète (historique RDV + CRM). */
+export function syntheticAppointmentFromClient(client: Client): Appointment {
+  const visitDate =
+    client.lastVisit?.slice(0, 10) ||
+    client.firstVisit?.slice(0, 10) ||
+    new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+  return {
+    id: `${CLIENT_PREVIEW_SYNTHETIC_ID_PREFIX}client:${client.id}`,
+    clientId: client.id,
+    clientName: client.name,
+    clientEmail: client.email,
+    clientPhone: client.phone ?? '',
+    date: visitDate,
+    time: '12:00',
+    service: 'Fiche client',
+    duration: 60,
+    price: client.totalSpent > 0 ? client.totalSpent : 0,
+    deposit: 0,
+    depositPaid: false,
+    status: 'confirmed',
+    notes: client.notes,
+    tattooType: 'custom',
+    location: 'other',
+    size: 'medium',
+    consentFormSigned: false,
+    createdAt: client.firstVisit || now,
+    updatedAt: now,
+  };
+}
+
+/** Dernier RDV du client, ou fiche synthétique si aucun historique. */
+export function pickAppointmentForClientPreview(
+  client: Client,
+  appointments: Appointment[]
+): Appointment {
+  const sorted = appointments
+    .filter((apt) => appointmentMatchesClient(apt, client))
+    .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`));
+  return sorted[0] ?? syntheticAppointmentFromClient(client);
 }
 
 /** Source pour ouvrir la fiche client riche depuis l’onglet Demandes. */

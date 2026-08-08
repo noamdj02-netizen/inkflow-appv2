@@ -140,7 +140,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({
             </button>
           )}
           <div>
-            <h2 className="text-xl font-bold text-[var(--text-primary)]">Messagerie</h2>
+            <h2 className="type-heading-sm">Messagerie</h2>
             <p className="text-[var(--text-secondary)] text-sm">
               Vos conversations avec les clients
             </p>

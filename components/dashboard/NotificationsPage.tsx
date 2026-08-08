@@ -184,9 +184,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                       {formatDate(notif.createdAt)}
                     </span>
                   </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
-                    {notif.message}
-                  </p>
+                  <p className="type-body text-muted-foreground line-clamp-2">{notif.message}</p>
                 </div>
 
                 {!notif.read && (
@@ -223,8 +221,8 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
               <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Notifications</h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <h1 className="type-heading">Notifications</h1>
+              <p className="type-body text-muted-foreground">
                 {unreadCount > 0
                   ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}`
                   : 'Toutes lues'}
@@ -301,7 +299,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
           <h3 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
             {searchQuery ? 'Aucun résultat' : 'Aucune notification'}
           </h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto">
+          <p className="type-body text-muted-foreground max-w-xs mx-auto">
             {searchQuery
               ? "Essayez avec d'autres termes de recherche"
               : 'Vous recevrez des notifications pour les nouvelles réservations, paiements et rappels.'}
@@ -324,23 +322,21 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
-                {notifications.length}
-              </p>
+              <p className="type-heading">{notifications.length}</p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Total</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{unreadCount}</p>
+              <p className="type-stat text-blue-600 dark:text-blue-400">{unreadCount}</p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Non lues</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <p className="type-stat text-blue-600 dark:text-blue-400">
                 {notifications.filter((n) => n.type === 'booking').length}
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Réservations</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              <p className="type-stat text-amber-600 dark:text-amber-400">
                 {notifications.filter((n) => n.type === 'payment').length}
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Paiements</p>

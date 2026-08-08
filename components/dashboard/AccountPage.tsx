@@ -160,7 +160,7 @@ const SubPageHeader: React.FC<{ title: string; onBack: () => void }> = ({ title,
     >
       <ChevronLeft className="w-5 h-5" />
     </button>
-    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h2>
+    <h2 className="type-heading-sm">{title}</h2>
   </div>
 );
 
@@ -281,9 +281,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               />
             ) : (
               <div className="flex size-20 items-center justify-center rounded-full bg-blue-600 ring-2 ring-zinc-100 dark:ring-zinc-800">
-                <span className="text-2xl font-bold text-white">
-                  {firstName.slice(0, 1).toUpperCase()}
-                </span>
+                <span className="type-stat text-white">{firstName.slice(0, 1).toUpperCase()}</span>
               </div>
             )}
             {avatarUploading && (
@@ -296,7 +294,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           {/* Name + email */}
           <div className="text-center">
             <p className="text-lg font-bold text-zinc-900 dark:text-white">{displayName}</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
+            <p className="type-body text-muted-foreground mt-0.5">{displayEmail}</p>
           </div>
 
           {/* Plan badge */}
@@ -461,7 +459,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 />
               ) : (
                 <div className="flex size-16 items-center justify-center rounded-full bg-blue-600">
-                  <span className="text-xl font-bold text-white">
+                  <span className="type-heading-sm text-white">
                     {firstName.slice(0, 1).toUpperCase()}
                   </span>
                 </div>

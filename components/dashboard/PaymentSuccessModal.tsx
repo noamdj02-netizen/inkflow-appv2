@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, Globe, Star, Users, Link2, Sparkles, X, Zap } from 'lucide-react';
 import type { SubscriptionPlan } from '../../types';
 import { PLAN_CONFIG, canAccessFeature } from '../../lib/subscriptionPlans';
+import { INKFLOW_EASE_OUT } from '../../lib/motion/inkflowMotion';
 
 export interface PaymentSuccessModalProps {
   open: boolean;
@@ -46,6 +47,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   vitrinePublicUrl,
   googlePlaceConfigured,
 }) => {
+  const reduceMotion = useReducedMotion();
   const confettiFiredRef = useRef(false);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -63,7 +65,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open || confettiFiredRef.current) return;
+    if (!open || confettiFiredRef.current || reduceMotion) return;
     confettiFiredRef.current = true;
     void import('canvas-confetti').then((mod) => {
       const c = mod.default;
@@ -80,7 +82,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
         c({ particleCount: 55, angle: 125, spread: 50, origin: { x: 0.85, y: 0.62 } });
       }, 360);
     });
-  }, [open]);
+  }, [open, reduceMotion]);
 
   useEffect(() => {
     if (!open) return;
@@ -106,10 +108,12 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+            transition={
+              reduceMotion ? { duration: 0.01 } : { duration: 0.22, ease: INKFLOW_EASE_OUT }
+            }
             role="dialog"
             aria-modal="true"
             aria-labelledby="payment-success-title"
@@ -121,10 +125,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                   Paiement confirmé
                 </p>
-                <h2
-                  id="payment-success-title"
-                  className="text-xl sm:text-2xl font-bold tracking-tight text-white"
-                >
+                <h2 id="payment-success-title" className="type-heading-sm sm:text-2xl text-white">
                   {isElitePlan ? (
                     <span className="inline-flex flex-wrap items-center gap-2">
                       <span>Bienvenue dans l&apos;élite, {displayName}&nbsp;!</span>

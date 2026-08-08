@@ -1,11 +1,18 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Check } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { LandingHeroProductStage } from './LandingHeroProductStage';
+import { BlurText } from '../react-bits';
+import { HeroBackgroundVideo } from '../common/HeroBackgroundVideo';
 import { LandingHeroMarquee } from './LandingHeroMarquee';
+import { LANDING_HERO_STUDIO_MARQUEE_ENABLED } from '../../lib/landingFlags';
+import { SPRING_SNAPPY } from './landingMotion';
 
 const ease = [0.22, 1, 0.36, 1] as const;
+
+const LANDING_HERO_POSTER = '/images/landing-hero-poster.jpg';
+const LANDING_HERO_MP4 = '/videos/landing-hero.mp4';
+const LANDING_HERO_WEBM = '/videos/landing-hero.webm';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -22,132 +29,162 @@ const stagger = {
 
 export const EnhanceAIHero: React.FC = () => {
   const { t } = useLanguage();
+  const reduceMotion = useReducedMotion();
 
   const features = [t('hero.feature1'), t('hero.feature2'), t('hero.feature3')];
 
   return (
-    <section className="landing-hero relative flex min-h-[100dvh] w-full min-w-0 flex-col overflow-hidden pt-[calc(4.25rem+env(safe-area-inset-top,0px))] pb-16 sm:pb-20 lg:pb-24">
-      <div className="landing-hero-mesh pointer-events-none absolute inset-0" aria-hidden />
+    <section
+      className="landing-hero relative flex min-h-[100dvh] w-full min-w-0 flex-col overflow-hidden pt-[calc(4.25rem+env(safe-area-inset-top,0px))] pb-16 sm:pb-20 lg:pb-24"
+      data-gsap-hero
+    >
+      <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+        <HeroBackgroundVideo
+          posterSrc={LANDING_HERO_POSTER}
+          mp4Src={LANDING_HERO_MP4}
+          webmSrc={LANDING_HERO_WEBM}
+          objectPosition="center"
+        />
+      </div>
+
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/75 via-black/55 to-black/80"
+        aria-hidden
+      />
+
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] opacity-[0.25]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")`,
         }}
         aria-hidden
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-1 flex-col justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
-        <div className="grid min-w-0 grid-cols-1 items-center gap-12 sm:gap-14 lg:grid-cols-2 lg:gap-12 xl:gap-20">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-1 flex-col items-start justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+        <motion.div
+          className="flex w-full max-w-3xl min-w-0 flex-col items-start text-left"
+          data-gsap-hero-content
+          data-gsap-scrub-y="28"
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+        >
           <motion.div
-            className="flex min-w-0 flex-col items-start justify-center text-left lg:max-w-[34rem] lg:py-4 xl:max-w-[36rem]"
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
+            variants={fadeUp}
+            custom={0}
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm"
           >
-            <motion.div
-              variants={fadeUp}
-              custom={0}
-              className="mb-5 inline-flex items-center gap-2 rounded-full border border-zinc-200/90 bg-white/70 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-sm"
-            >
-              <span className="flex h-6 items-center rounded-full bg-zinc-900 px-2.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                InkFlow
-              </span>
-              <span className="h-1 w-1 rounded-full bg-emerald-500" aria-hidden />
-              <span className="text-zinc-600">Centaines de studios en France</span>
-            </motion.div>
+            <span className="flex h-6 items-center rounded-full bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-zinc-900">
+              InkFlow
+            </span>
+            <span className="h-1 w-1 rounded-full bg-emerald-400" aria-hidden />
+            <span className="text-white/75">Fait pour les tatoueurs indépendants en France</span>
+          </motion.div>
 
-            <motion.h1
-              variants={fadeUp}
-              custom={1}
-              className="font-hero-title max-w-[14ch] text-[2.35rem] font-extrabold leading-[1.02] tracking-tighter text-zinc-950 sm:text-5xl lg:text-[3.35rem] xl:text-[3.65rem]"
-            >
-              Les demandes Insta
-              <span className="block text-zinc-500">qui deviennent des RDV.</span>
-            </motion.h1>
+          <motion.div variants={fadeUp} custom={1}>
+            <h1 className="font-hero-title max-w-[14ch] text-left text-[2.35rem] font-extrabold leading-[1.02] tracking-tighter text-white sm:text-5xl lg:text-[3.35rem] xl:text-[3.65rem]">
+              <BlurText
+                as="span"
+                text="Les demandes Insta"
+                animateOnMount
+                delay={90}
+                className="max-w-[14ch] text-left text-white"
+              />
+              <BlurText
+                as="span"
+                text="qui deviennent des RDV."
+                animateOnMount
+                delay={70}
+                className="block max-w-[14ch] text-left text-zinc-300"
+              />
+            </h1>
+          </motion.div>
 
-            <motion.p
-              variants={fadeUp}
-              custom={2}
-              className="mt-5 max-w-[52ch] text-base leading-relaxed text-zinc-600 sm:text-lg"
-            >
-              Tu qualifies en deux clics, l&apos;acompte part sur Stripe, le créneau se bloque dans
-              ton agenda. Moins de DM, plus de temps à la machine.
-            </motion.p>
+          <motion.p
+            variants={fadeUp}
+            custom={2}
+            className="mt-5 max-w-[52ch] text-left text-base leading-relaxed text-zinc-300 sm:text-lg"
+          >
+            Tu qualifies en deux clics, l&apos;acompte part sur Stripe, le créneau se bloque dans
+            ton agenda. Moins de DM, plus de temps à la machine.
+          </motion.p>
 
-            <motion.div
-              variants={fadeUp}
-              custom={3}
-              className="mt-7 flex w-full flex-wrap gap-2 sm:gap-2.5"
-            >
-              {features.map((label) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/90 bg-white/80 px-3 py-2 text-xs font-medium text-zinc-800 shadow-sm backdrop-blur-sm sm:text-sm"
-                >
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" strokeWidth={2.5} />
-                  {label}
-                </span>
-              ))}
-            </motion.div>
-
-            <motion.div
-              variants={fadeUp}
-              custom={4}
-              className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:items-center"
-            >
-              <motion.a
-                href="/signup"
-                className="group inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-7 py-3.5 text-sm font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_16px_32px_-12px_rgba(9,9,11,0.45)] transition-colors hover:bg-zinc-800 sm:w-auto"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+          <motion.div
+            variants={fadeUp}
+            custom={3}
+            className="mt-7 flex w-full flex-wrap justify-start gap-2 text-left sm:gap-2.5"
+          >
+            {features.map((label, i) => (
+              <motion.span
+                key={label}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-white/90 shadow-sm backdrop-blur-sm sm:text-sm"
+                style={{ transformPerspective: 1200 }}
+                whileHover={
+                  reduceMotion
+                    ? undefined
+                    : {
+                        y: -4,
+                        scale: 1.04,
+                        rotateX: 3,
+                        rotateY: i % 2 === 0 ? -2 : 2,
+                        transition: SPRING_SNAPPY,
+                      }
+                }
               >
-                Essayer gratuitement
-                <ArrowRight
-                  className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                  strokeWidth={2}
-                />
-              </motion.a>
-              <motion.a
-                href="/dashboard-demo"
-                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-white/80 px-7 py-3.5 text-sm font-semibold text-zinc-900 backdrop-blur-sm transition-colors hover:bg-zinc-50 sm:w-auto"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Voir une démo
-              </motion.a>
-            </motion.div>
-
-            <motion.p
-              variants={fadeUp}
-              custom={5}
-              className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.5} />
-                {t('hero.trialTrust')}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.5} />
-                Sans carte
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.5} />
-                Annulation libre
-              </span>
-            </motion.p>
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" strokeWidth={2.5} />
+                {label}
+              </motion.span>
+            ))}
           </motion.div>
 
           <motion.div
-            className="relative flex min-w-0 items-center justify-center pt-4 sm:pt-6 lg:justify-center lg:pt-12 xl:pt-16"
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.25, ease }}
+            variants={fadeUp}
+            custom={4}
+            className="mt-8 flex w-full flex-col items-stretch justify-start gap-3 sm:flex-row sm:items-start sm:justify-start"
           >
-            <LandingHeroProductStage />
+            <motion.a
+              href="/signup"
+              className="group inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-zinc-900 shadow-[0_16px_32px_-12px_rgba(0,0,0,0.45)] transition-colors hover:bg-zinc-100 sm:w-auto sm:justify-center"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Essayer gratuitement
+              <ArrowRight
+                className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                strokeWidth={2}
+              />
+            </motion.a>
+            <motion.a
+              href="/dashboard-demo"
+              className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/15 sm:w-auto"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Voir une démo
+            </motion.a>
           </motion.div>
-        </div>
 
-        <LandingHeroMarquee />
+          <motion.p
+            variants={fadeUp}
+            custom={5}
+            className="mt-5 flex flex-wrap justify-start gap-x-4 gap-y-1 text-left text-xs text-zinc-400"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={2.5} />
+              {t('hero.trialTrust')}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={2.5} />
+              Sans carte
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={2.5} />
+              Annulation libre
+            </span>
+          </motion.p>
+        </motion.div>
+
+        {LANDING_HERO_STUDIO_MARQUEE_ENABLED ? <LandingHeroMarquee variant="dark" /> : null}
       </div>
     </section>
   );

@@ -1,10 +1,12 @@
 import { CreditCard, ArrowUpRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { depositStatusDotClass, stripeDepositRowUiStatus } from '@/lib/depositStatusUi';
 import type { StripeDepositRow } from './types';
 import { BentoAvatar } from './BentoAvatar';
 import {
-  bentoBadge,
+  bentoAmountStat,
   bentoListBlock,
   bentoListDivided,
   bentoListItem,
@@ -12,8 +14,6 @@ import {
   formatRelativeShort,
   glassPanel,
   microHover,
-  statusChip,
-  dashboardStatusBadge,
 } from './bentoStyles';
 import { dashboardTileIcon } from '../ui/dashboardChrome';
 
@@ -86,7 +86,7 @@ export function BentoRecentDepositsTile({
         <div className={cn(bentoListBlock, 'mt-4')}>
           <ul className={bentoListDivided}>
             {deposits.slice(0, 4).map((pay, i) => {
-              const chip = statusChip('pay', pay.status);
+              const uiStatus = stripeDepositRowUiStatus(pay.status);
               return (
                 <motion.li
                   key={pay.id}
@@ -109,10 +109,19 @@ export function BentoRecentDepositsTile({
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                    <span className={bentoAmountStat}>
                       +{formatMoney(pay.amountCents, pay.currency)}
                     </span>
-                    <span className={cn(bentoBadge, chip.className)}>{chip.label}</span>
+                    <Badge variant="outline" className="gap-1.5">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'size-1.5 shrink-0 rounded-full',
+                          depositStatusDotClass(uiStatus)
+                        )}
+                      />
+                      {uiStatus}
+                    </Badge>
                   </div>
                 </motion.li>
               );

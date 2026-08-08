@@ -78,6 +78,19 @@ export function BentoAgendaTodayTile({
       ? dayPreviewClients.length
       : quickClients.length;
 
+  const badgeLabel =
+    badgeCount > 0
+      ? hasToday
+        ? badgeCount === 1
+          ? '1 créneau'
+          : `${badgeCount} créneaux`
+        : badgeCount === 1
+          ? '1 client'
+          : `${badgeCount} clients`
+      : 'Journée libre';
+
+  const subtitle = hasToday ? todayLabel : 'Planifie un RDV ou repère un client à relancer.';
+
   return (
     <motion.article
       {...itemMotion}
@@ -89,52 +102,65 @@ export function BentoAgendaTodayTile({
       )}
       aria-labelledby="bento-agenda-heading"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className={dashboardTileIcon}>
+      <header className="space-y-3 border-b border-zinc-100/90 pb-4 dark:border-zinc-800/80">
+        <div className="flex items-start gap-3">
+          <span className={cn(dashboardTileIcon, 'size-11 rounded-2xl')}>
             <CalendarClock className="size-5" strokeWidth={2} aria-hidden />
           </span>
-          <div>
-            <h2
-              id="bento-agenda-heading"
-              className="text-sm font-semibold text-zinc-900 dark:text-zinc-100"
-            >
-              {hasToday ? 'Planning du jour' : 'Planning & clients'}
-            </h2>
-            <p className="text-xs capitalize text-zinc-500 dark:text-zinc-400">
-              {hasToday ? todayLabel : 'Remplis ta journée en un clic'}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                id="bento-agenda-heading"
+                className="font-display text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-[17px]"
+              >
+                {hasToday ? 'Planning du jour' : 'Planning & clients'}
+              </h2>
+              <span
+                className={cn(
+                  bentoBadge,
+                  badgeCount > 0
+                    ? hasToday
+                      ? 'bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300'
+                      : 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                    : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300'
+                )}
+              >
+                {badgeLabel}
+              </span>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 sm:text-[13px]">
+              {subtitle}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {onOpenAgenda ? (
+
+        {onOpenAgenda ? (
+          <div className="flex flex-wrap gap-2 pl-[52px] sm:pl-[56px]">
             <button
               type="button"
               onClick={onOpenAgenda}
-              className={cn(microHover, dashboardTileIcon, 'size-11 border-0')}
-              aria-label="Ouvrir l’agenda"
+              className={cn(
+                microHover,
+                'inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-zinc-200/90 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-800 dark:border-zinc-700/80 dark:bg-zinc-900/60 dark:text-zinc-100'
+              )}
             >
-              <ArrowUpRight
-                className="size-4 text-zinc-900 dark:text-zinc-100"
-                strokeWidth={2}
-                aria-hidden
-              />
+              Voir l&apos;agenda
+              <ArrowUpRight className="size-3.5 opacity-70" aria-hidden />
             </button>
-          ) : null}
-          <span
-            className={cn(
-              bentoBadge,
-              'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300'
-            )}
-          >
-            {badgeCount > 0
-              ? `${badgeCount} ${hasToday ? 'créneau' : 'client'}${badgeCount > 1 ? 's' : ''}`
-              : 'Libre'}
-          </span>
-        </div>
-      </div>
+            {!hasToday ? (
+              <button
+                type="button"
+                onClick={onNewAppointment}
+                className={cn(microHover, bentoActionBtn, 'min-h-11 px-3.5 py-2 text-xs')}
+              >
+                Nouveau RDV
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </header>
 
-      <div className="mt-5 flex flex-col max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 [-webkit-overflow-scrolling:touch]">
+      <div className="mt-4 flex flex-col max-md:overflow-visible md:min-h-0 md:mt-5 md:flex-1 md:overflow-y-auto md:pr-1 [-webkit-overflow-scrolling:touch]">
         {hasToday ? (
           <div className={bentoListBlock}>
             <ul className={bentoListDivided}>
@@ -350,13 +376,15 @@ export function BentoAgendaTodayTile({
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={onNewAppointment}
-                className={cn(microHover, bentoActionBtn, 'flex-1')}
-              >
-                Nouveau RDV
-              </button>
+              {!onOpenAgenda ? (
+                <button
+                  type="button"
+                  onClick={onNewAppointment}
+                  className={cn(microHover, bentoActionBtn, 'flex-1')}
+                >
+                  Nouveau RDV
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onOpenFlashTab}

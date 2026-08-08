@@ -27,10 +27,14 @@ export const UpdatePasswordPage: React.FC = () => {
       if (error) throw error;
       setStatus('success');
       setMessage('');
-      setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 800);
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Erreur lors de la mise à jour du mot de passe');
+      setMessage(
+        err instanceof Error ? err.message : 'Erreur lors de la mise à jour du mot de passe'
+      );
     } finally {
       setLoading(false);
     }
@@ -55,8 +59,10 @@ export const UpdatePasswordPage: React.FC = () => {
           <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-neutral-100 flex items-center justify-center">
             <Lock className="text-neutral-600" size={22} />
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900">Nouveau mot de passe</h1>
-          <p className="text-neutral-600 mt-2">Choisissez un mot de passe sécurisé pour votre compte InkFlow.</p>
+          <h1 className="type-heading">Nouveau mot de passe</h1>
+          <p className="text-neutral-600 mt-2">
+            Choisissez un mot de passe sécurisé pour votre compte InkFlow.
+          </p>
         </div>
 
         {message && (

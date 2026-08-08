@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Calendar,
   CreditCard,
@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { LandingSectionHeader, LandingAppScreenshot, LANDING_SURFACE } from './landingUi';
+import { LandingSectionHeader, LandingAppScreenshot } from './landingUi';
+import { LandingMotionItem, LandingMotionStagger, SPRING_SNAPPY } from './landingMotion';
 
 interface FeatureItem {
   icon: LucideIcon;
@@ -52,7 +53,7 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/Mobile_Mockup_2.1.png',
         alt: 'Aperçu mobile InkFlow Pro',
-        imgClassName: 'object-center',
+        imgClassName: 'object-contain object-center p-4 sm:p-6',
       },
       caption: t('features.section1.visualTitle'),
     },
@@ -69,7 +70,7 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/ë.png',
         alt: 'Application InkFlow — fiche client et historique',
-        imgClassName: 'object-center',
+        imgClassName: 'object-contain object-center p-2 sm:p-4',
       },
       caption: t('features.section2.visualTitle'),
     },
@@ -85,7 +86,7 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/Mobile_Mockup_2.2.jpg',
         alt: 'InkFlow — paiements Stripe et suivi des acomptes',
-        imgClassName: 'object-center',
+        imgClassName: 'object-contain object-center p-4 sm:p-6',
       },
       caption: t('features.section3.visualTitle'),
     },
@@ -102,27 +103,32 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/images/azzzzssss.png',
         alt: 'Vitrine et réservation en ligne InkFlow',
-        imgClassName: 'object-contain scale-[0.84] transform-gpu object-center',
-        frameClassName:
-          'bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.22),transparent_70%)]',
-        backdropClassName:
-          'inset-x-[10%] inset-y-[12%] rounded-[1.75rem] border border-zinc-200/90 bg-white shadow-[0_32px_90px_-42px_rgba(9,9,11,0.28)]',
+        imgClassName: 'object-contain object-center p-2 sm:p-3',
       },
       caption: t('features.section4.visualTitle'),
     },
   ];
 }
 
-function FeatureScreenshot({ config, index }: { config: DetailSectionConfig; index: number }) {
+function FeatureScreenshot({
+  config,
+  index,
+  className = '',
+}: {
+  config: DetailSectionConfig;
+  index: number;
+  className?: string;
+}) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <motion.figure
-      initial={{ opacity: 0, x: config.reverse ? -20 : 20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      className={`relative ${index === 0 ? 'lg:-mt-4' : index === 2 ? 'lg:mt-6' : ''}`}
+    <LandingMotionItem
+      as="article"
+      index={index}
+      className={`relative ${index === 0 ? 'lg:-mt-4' : index === 2 ? 'lg:mt-6' : ''} ${className}`}
+      parallax={{ y: '24', scale: '0.02' }}
     >
-      <div className={`${LANDING_SURFACE} overflow-hidden p-2 sm:p-3`}>
+      <div className="overflow-hidden rounded-[1.75rem] shadow-[0_28px_56px_-28px_rgba(9,9,11,0.18)]">
         <LandingAppScreenshot
           src={config.screenshot.src}
           webpSrc={config.screenshot.webpSrc}
@@ -131,6 +137,7 @@ function FeatureScreenshot({ config, index }: { config: DetailSectionConfig; ind
           frameClassName={config.screenshot.frameClassName}
           backdropClassName={config.screenshot.backdropClassName}
           className="aspect-[4/3] sm:aspect-[16/10]"
+          variant="flush"
           priority={index === 0}
         />
       </div>
@@ -140,46 +147,56 @@ function FeatureScreenshot({ config, index }: { config: DetailSectionConfig; ind
       {index === 0 ? (
         <motion.div
           className="absolute -bottom-3 -left-2 rounded-2xl border border-zinc-200/90 bg-white px-3 py-2 shadow-[0_12px_28px_-12px_rgba(9,9,11,0.12)] sm:-left-4"
-          animate={{ y: [0, 4, 0] }}
+          animate={reduceMotion ? undefined : { y: [0, 4, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         >
           <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Agenda</p>
-          <p className="text-xs font-bold tabular-nums text-zinc-900">+3 RDV cette semaine</p>
+          <p className="text-xs font-bold tabular-nums text-zinc-900">Semaine · mois · jour</p>
         </motion.div>
       ) : null}
-    </motion.figure>
+    </LandingMotionItem>
   );
 }
 
-function FeatureTextBlock({ config }: { config: DetailSectionConfig }) {
+function FeatureTextBlock({
+  config,
+  sectionIndex,
+  className = '',
+}: {
+  config: DetailSectionConfig;
+  sectionIndex: number;
+  className?: string;
+}) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: config.reverse ? 20 : -20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      className="min-w-0"
-    >
+    <LandingMotionItem index={sectionIndex} hover3D={false} className={`min-w-0 ${className}`}>
       <h2 className="font-hero-title text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl md:text-4xl">
         {config.title}
       </h2>
       <p className="mt-4 max-w-[65ch] text-base leading-relaxed text-zinc-600 sm:text-lg">
         {config.description}
       </p>
-      <ul className="mt-8 space-y-3">
+      <LandingMotionStagger className="mt-8 space-y-3" stagger={0.06}>
         {config.features.map((f, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-3 rounded-xl border border-transparent py-1 transition-colors hover:border-zinc-200/80 hover:bg-white/60"
+          <LandingMotionItem
+            key={f.label}
+            index={i}
+            className="flex items-center gap-3 rounded-xl border border-transparent bg-white/40 px-1 py-1 transition-colors [@media(hover:hover)]:hover:border-zinc-200/80 [@media(hover:hover)]:hover:bg-white/80"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+            <motion.div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100"
+              whileHover={
+                reduceMotion ? undefined : { scale: 1.08, rotate: -4, transition: SPRING_SNAPPY }
+              }
+            >
               <f.icon className="h-5 w-5 text-zinc-800" strokeWidth={2} />
-            </div>
+            </motion.div>
             <span className="font-medium text-zinc-800">{f.label}</span>
-          </li>
+          </LandingMotionItem>
         ))}
-      </ul>
-    </motion.div>
+      </LandingMotionStagger>
+    </LandingMotionItem>
   );
 }
 
@@ -206,23 +223,26 @@ export const EnhanceAIFeaturesDetail: React.FC = () => {
             idx % 2 === 1 ? 'bg-white/50' : 'bg-[#f6f5f2]'
           }`}
         >
-          <div className="mx-auto grid max-w-[1400px] min-w-0 grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16 xl:gap-20">
+          <LandingMotionStagger
+            className="mx-auto grid max-w-[1400px] min-w-0 grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16 xl:gap-20"
+            stagger={0.12}
+          >
             {config.reverse ? (
               <>
-                <div className="lg:order-2">
-                  <FeatureTextBlock config={config} />
-                </div>
-                <div className="lg:order-1">
-                  <FeatureScreenshot config={config} index={idx} />
-                </div>
+                <FeatureTextBlock
+                  config={config}
+                  sectionIndex={idx * 2 + 1}
+                  className="lg:order-2"
+                />
+                <FeatureScreenshot config={config} index={idx * 2} className="lg:order-1" />
               </>
             ) : (
               <>
-                <FeatureTextBlock config={config} />
-                <FeatureScreenshot config={config} index={idx} />
+                <FeatureTextBlock config={config} sectionIndex={idx * 2} />
+                <FeatureScreenshot config={config} index={idx * 2 + 1} />
               </>
             )}
-          </div>
+          </LandingMotionStagger>
         </section>
       ))}
     </div>

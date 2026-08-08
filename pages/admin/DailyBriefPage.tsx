@@ -133,7 +133,7 @@ export const DailyBriefPage: React.FC = () => {
             month: 'long',
           })}
         </p>
-        <h1 className="mt-1 font-display text-2xl font-bold">Daily Brief</h1>
+        <h1 className="type-heading mt-1">Daily Brief</h1>
         <p className="mt-1 text-xs text-[#8a8a8a]">
           Données consolidées (veille, fuseau Europe/Paris).
         </p>

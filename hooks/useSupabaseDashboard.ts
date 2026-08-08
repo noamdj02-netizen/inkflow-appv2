@@ -49,6 +49,8 @@ import {
   getInkflowDemoNotifications,
   getInkflowDemoStudioAppointments,
   getInkflowDemoStudioClients,
+  INKFLOW_DEMO_STUDIO_ID,
+  INKFLOW_DEMO_STUDIO_SLUG,
 } from '../lib/inkflowDemoAccountData';
 
 const EMPTY_ARRAYS = {
@@ -184,6 +186,22 @@ export const useSupabaseDashboard = () => {
       const blockingLoad = !initializedRef.current || retryCount > lastSuccessfulRetryRef.current;
       if (blockingLoad) setLoading(true);
       try {
+        if (user.email && isInkflowDemoAccount(user.email)) {
+          setStudioId(INKFLOW_DEMO_STUDIO_ID);
+          setStudioSlug(INKFLOW_DEMO_STUDIO_SLUG);
+          setSubscriptionStatus('trialing');
+          setTrialEndsAt(null);
+          setStudioCsvImportSlots(undefined);
+          setStudioOwnerEmail(user.email.trim().toLowerCase());
+          setAppointments(getInkflowDemoStudioAppointments());
+          setClients(getInkflowDemoStudioClients());
+          setFlashDesigns(getInkflowDemoFlashDesigns());
+          setNotifications(getInkflowDemoNotifications());
+          initializedRef.current = true;
+          lastSuccessfulRetryRef.current = retryCount;
+          return;
+        }
+
         if (useSupabase) {
           const existing = await getStudioByEmail(user.email);
           if (cancelled) return;

@@ -32,12 +32,6 @@ export function inkflowGestureCardHover(
   return reduceMotion ? undefined : { y: -2 };
 }
 
-export function inkflowGestureNavHover(
-  reduceMotion: boolean | null
-): TargetAndTransition | undefined {
-  return reduceMotion ? undefined : { x: 2 };
-}
-
 export function inkflowGestureTransition(): Transition {
   return GESTURE_TRANSITION;
 }
@@ -57,7 +51,6 @@ export function useInkflowGestures() {
     cardTap: inkflowGestureCardTap(reduced),
     navTap: inkflowGestureNavTap(reduced),
     cardHover: inkflowGestureCardHover(reduced),
-    navHover: inkflowGestureNavHover(reduced),
     /** Alias landing / CTA */
     hover: reduced ? undefined : { scale: 1.02 },
   };
@@ -75,7 +68,7 @@ export function resolveInkflowGesture(
     case 'card':
       return { whileTap: gestures.cardTap, whileHover: gestures.cardHover };
     case 'nav':
-      return { whileTap: gestures.navTap, whileHover: gestures.navHover };
+      return { whileTap: gestures.navTap };
     case 'tap':
     default:
       return { whileTap: gestures.tap, whileHover: gestures.hover };

@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { getDashboardScrollRoot } from '@/hooks/useDashboardScroll';
 import { useTheme } from 'next-themes';
 import { endOfWeek, startOfWeek } from 'date-fns';
 import {
@@ -21,6 +23,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Appointment, Client } from '../../types';
 import { cn } from '@/lib/utils';
+import { inkflowTransition } from '@/lib/motion/inkflowMotion';
 import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { FullScreenCalendar } from '@/components/ui/fullscreen-calendar';
@@ -90,10 +93,10 @@ function getThisWeekYmdBounds(): { start: string; end: string } {
 
 const kpiTileButtonClass = (active: boolean) =>
   cn(
-    'ink-oled-card flex min-h-[52px] min-w-0 rounded-[20px] border-0 px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center',
+    'ink-oled-card flex min-h-[52px] min-w-0 rounded-[20px] border-0 px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center',
     active
-      ? 'bg-[#3b82f6]/10 text-zinc-900 dark:bg-[#3b82f6]/10 dark:text-white'
-      : 'bg-white/95 text-zinc-900 hover:bg-white dark:bg-black dark:text-white dark:hover:bg-white/[0.03]'
+      ? 'bg-zinc-900 text-white shadow-sm dark:bg-white dark:text-zinc-900'
+      : 'bg-white/95 text-zinc-900 hover:bg-zinc-50 dark:bg-black dark:text-white dark:hover:bg-white/[0.03]'
   );
 
 type KpiStatTileProps = {
@@ -126,7 +129,7 @@ function KpiStatTile({
           <Icon
             className={cn(
               'h-5 w-5 shrink-0',
-              isActive ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'
+              isActive ? 'text-current opacity-90' : 'text-zinc-400 dark:text-zinc-500'
             )}
             strokeWidth={1.5}
             aria-hidden
@@ -134,7 +137,7 @@ function KpiStatTile({
           <span
             className={cn(
               'truncate text-xs font-medium',
-              isActive ? 'text-white' : 'text-zinc-600 dark:text-zinc-300'
+              isActive ? 'text-current' : 'text-zinc-600 dark:text-zinc-300'
             )}
           >
             {label}
@@ -142,8 +145,8 @@ function KpiStatTile({
         </span>
         <span
           className={cn(
-            'shrink-0 font-display text-2xl font-bold tabular-nums leading-none',
-            isActive ? 'text-white' : 'text-zinc-900 dark:text-white'
+            'shrink-0 type-stat',
+            isActive ? 'text-current' : 'text-zinc-900 dark:text-white'
           )}
         >
           {count}
@@ -153,15 +156,15 @@ function KpiStatTile({
         <Icon
           className={cn(
             'h-4 w-4 shrink-0',
-            isActive ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'
+            isActive ? 'text-current opacity-90' : 'text-zinc-400 dark:text-zinc-500'
           )}
           strokeWidth={1.5}
           aria-hidden
         />
         <span
           className={cn(
-            'font-display text-xl font-bold tabular-nums leading-none sm:text-2xl',
-            isActive ? 'text-white' : 'text-zinc-900 dark:text-white'
+            'type-stat sm:text-2xl',
+            isActive ? 'text-current' : 'text-zinc-900 dark:text-white'
           )}
         >
           {count}
@@ -169,7 +172,7 @@ function KpiStatTile({
         <span
           className={cn(
             'pro-text-small font-medium leading-tight',
-            isActive ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'
+            isActive ? 'text-current opacity-90' : 'text-zinc-500 dark:text-zinc-400'
           )}
         >
           {label}
@@ -190,7 +193,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   initialSelectedDate = null,
 }) => {
   const { containerRef, pullDistance, refreshing } = usePullToRefresh(onRefresh, {
-    getScrollParent: () => containerRef.current?.closest('.app-shell-content') ?? null,
+    getScrollParent: () =>
+      containerRef.current?.closest('[data-dashboard-scroll-root]') ?? getDashboardScrollRoot(),
     disabled: !onRefresh,
   });
   const setSectionRef = useCallback(
@@ -200,9 +204,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     [containerRef]
   );
   const { resolvedTheme } = useTheme();
-  const [viewMode, setViewMode] = useState<ViewMode>(
-    planningView === 'month' ? 'calendar' : 'list'
-  );
+  const reduceMotion = useReducedMotion();
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -230,7 +233,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       setViewMode('calendar');
       setDateRangeChip(null);
     } else {
-      setViewMode('list');
+      setViewMode('calendar');
       setDateRangeChip('week');
     }
   }, [planningView]);
@@ -359,8 +362,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           ? formatDateLabel(selectedDate)
           : null;
 
-  /** Mobile : le bottom nav dit « Agenda » — le h1 porte le contexte (semaine vs mois), pas un 2e « Rendez-vous ». */
-  const appointmentsMobileHeadline = planningView === 'month' ? 'Vue mois' : 'Liste & semaine';
+  /** Mobile : le bottom nav dit « Agenda » — contexte semaine vs mois. */
+  const appointmentsMobileHeadline = planningView === 'month' ? 'Vue mois' : 'Agenda semaine';
 
   /** Mobile : 3 lignes (cibles larges) · sm+ : 3 tuiles côte à côte */
   const kpiGridClass = 'grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3';
@@ -407,13 +410,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           aria-label="Indicateurs sur la période"
         >
           <div className="mb-2 sm:mb-3">
-            <p className="pro-text-small font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Aperçu
-            </p>
-            <p
-              className="pro-text-small mt-0.5 max-w-prose text-zinc-500 dark:text-zinc-400 sm:mt-1"
-              id="kpi-hint"
-            >
+            <p className="type-caption font-medium uppercase tracking-wider">Aperçu</p>
+            <p className="type-caption mt-0.5 max-w-prose sm:mt-1" id="kpi-hint">
               <span className="sm:hidden">Tape une ligne pour filtrer la liste.</span>
               <span className="hidden sm:inline">
                 Touche un indicateur pour filtrer la liste ci-dessous.
@@ -479,7 +477,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
                   )}
                 >
-                  {m === 'list' ? 'Liste' : 'Planning'}
+                  {m === 'list' ? 'Liste' : 'Agenda'}
                 </button>
               ))}
             </div>
@@ -628,326 +626,349 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         {/* ── LAYOUT ─────────────────────────────────────────────── */}
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-5 min-w-0">
           {/* Mini cal — mobile / tablette (volet rétractable ) */}
-          <aside
-            id="agenda-mini-calendar-panel"
-            className={`flex-shrink-0 lg:hidden ${showCalendarMobile ? 'block' : 'hidden'}`}
-          >
-            <div className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
-              <div className="border-b border-zinc-100/80 px-4 py-3 dark:border-zinc-800/80">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Calendrier
-                </p>
-                <p className="mt-0.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-                  Touche un jour pour filtrer la liste
-                </p>
-              </div>
-              <MiniCalendar
-                className="!rounded-none !border-0 !shadow-none bg-transparent dark:!bg-transparent"
-                selectedDate={selectedDate}
-                onSelectDate={(d) => {
-                  setSelectedDate(d);
-                  setDateRangeChip(null);
-                  setShowCalendarMobile(false);
-                }}
-                datesWithAppointments={datesWithAppointments}
-                currentMonth={miniCalendarMonth}
-                onPrevMonth={handlePrevMonth}
-                onNextMonth={handleNextMonth}
-                onToday={() => {
-                  setSelectedDate(toDateStr(new Date()));
-                  setMiniCalendarMonth(new Date());
-                }}
-                variant={viewMode === 'calendar' && resolvedTheme === 'dark' ? 'dark' : 'default'}
-              />
-            </div>
-          </aside>
+          <AnimatePresence initial={false}>
+            {showCalendarMobile && (
+              <motion.aside
+                id="agenda-mini-calendar-panel"
+                initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, height: 'auto' }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                transition={inkflowTransition.panel(Boolean(reduceMotion))}
+                className="flex-shrink-0 overflow-hidden lg:hidden"
+              >
+                <div className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
+                  <div className="border-b border-zinc-100/80 px-4 py-3 dark:border-zinc-800/80">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Calendrier
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                      Touche un jour pour filtrer la liste
+                    </p>
+                  </div>
+                  <MiniCalendar
+                    className="!rounded-none !border-0 !shadow-none bg-transparent dark:!bg-transparent"
+                    selectedDate={selectedDate}
+                    onSelectDate={(d) => {
+                      setSelectedDate(d);
+                      setDateRangeChip(null);
+                      setShowCalendarMobile(false);
+                    }}
+                    datesWithAppointments={datesWithAppointments}
+                    currentMonth={miniCalendarMonth}
+                    onPrevMonth={handlePrevMonth}
+                    onNextMonth={handleNextMonth}
+                    onToday={() => {
+                      setSelectedDate(toDateStr(new Date()));
+                      setMiniCalendarMonth(new Date());
+                    }}
+                    variant={
+                      viewMode === 'calendar' && resolvedTheme === 'dark' ? 'dark' : 'default'
+                    }
+                  />
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
 
           <div className="min-w-0 flex-1 space-y-2 sm:space-y-3">
-            {viewMode === 'calendar' ? (
-              <AppointmentCalendar
-                appointments={filteredAppointments}
-                clients={clients}
-                onSlotClick={onNewAppointment}
-                onAppointmentClick={onSelectAppointment}
-                onUpdateAppointment={onUpdateAppointment}
-              />
-            ) : filteredAppointments.length === 0 ? (
-              <div className="rounded-pro-card bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
-                <EmptyState
-                  icon={Calendar}
-                  title="Aucun rendez-vous"
-                  description={
-                    dateRangeChip === 'today'
-                      ? "Aucun RDV aujourd'hui"
-                      : dateRangeChip === 'week'
-                        ? 'Aucun RDV cette semaine'
-                        : selectedDate
-                          ? `Aucun RDV le ${selectedDate}`
-                          : 'Vos RDV apparaîtront ici'
-                  }
-                  primaryAction={{ label: 'Nouveau RDV', onClick: onNewAppointment }}
-                  className="py-16"
-                />
-              </div>
-            ) : (
-              <>
-                {/* Mobile cards */}
-                <ul className="ink-oled-stack space-y-0 md:hidden" role="list">
-                  {filteredAppointments.map((apt) => {
-                    const isInactive = apt.status === 'cancelled' || apt.status === 'no_show';
-                    const depositDue = needsDepositAttention(apt);
-                    return (
-                      <li key={apt.id}>
-                        <button
-                          type="button"
-                          onClick={() => onSelectAppointment(apt)}
-                          className={cn(
-                            'w-full touch-manipulation overflow-hidden text-left transition-colors active:scale-[0.99]',
-                            APPOINTMENT_CARD_SURFACE,
-                            isInactive && APPOINTMENT_CARD_INACTIVE
-                          )}
-                        >
-                          <div className="flex items-center gap-3 p-6">
-                            {/* Avatar */}
-                            <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border-0 dark:bg-white/[0.05]">
-                              <ClientPhotoAvatar
-                                name={apt.clientName}
-                                src={getClientAvatarForAppointment(apt, clients)}
-                                className="absolute inset-0 h-full w-full"
-                                textClassName="text-base font-bold text-zinc-700 dark:text-zinc-200"
-                              />
-                            </div>
-                            {/* Infos */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <span className="truncate text-lg font-bold leading-snug text-zinc-900 dark:text-white">
-                                  {apt.clientName}
-                                </span>
-                                <span className="shrink-0 text-sm font-bold tabular-nums text-zinc-900 dark:text-white">
-                                  {apt.price}€
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                <span className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-[#737373]">
-                                  {apt.date}
-                                  {apt.time ? ` · ${apt.time}` : ''}
-                                </span>
-                                <span
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}
-                                >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`}
-                                  />
-                                  {STATUS_LABELS[apt.status] ?? apt.status}
-                                </span>
-                                {depositDue && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 shadow-sm dark:bg-rose-500/12 dark:text-rose-300 dark:shadow-none">
-                                    <CircleDollarSign className="w-3 h-3 shrink-0" aria-hidden />
-                                    Acompte
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <ChevronRight
-                              className="w-5 h-5 text-zinc-300 dark:text-zinc-600 shrink-0 self-center"
-                              strokeWidth={1.5}
-                              aria-hidden
-                            />
-                          </div>
-                          {/* Export — cibles tactiles ≥ 44px */}
-                          <div className="flex items-stretch justify-end gap-1 px-3 pb-3 pt-0">
-                            <a
-                              href={getGoogleCalendarAddUrl(apt)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-white active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
-                              title="Ouvrir dans Google Agenda"
-                            >
-                              <ExternalLink className="w-4 h-4 shrink-0" /> Agenda
-                            </a>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={viewMode}
+                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                transition={inkflowTransition.panel(Boolean(reduceMotion))}
+                className="min-w-0"
+              >
+                {viewMode === 'calendar' ? (
+                  <AppointmentCalendar
+                    appointments={filteredAppointments}
+                    onSlotClick={onNewAppointment}
+                    onAppointmentClick={onSelectAppointment}
+                    onUpdateAppointment={onUpdateAppointment}
+                  />
+                ) : filteredAppointments.length === 0 ? (
+                  <div className="rounded-pro-card bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
+                    <EmptyState
+                      icon={Calendar}
+                      title="Aucun rendez-vous"
+                      description={
+                        dateRangeChip === 'today'
+                          ? "Aucun RDV aujourd'hui"
+                          : dateRangeChip === 'week'
+                            ? 'Aucun RDV cette semaine'
+                            : selectedDate
+                              ? `Aucun RDV le ${selectedDate}`
+                              : 'Vos RDV apparaîtront ici'
+                      }
+                      primaryAction={{ label: 'Nouveau RDV', onClick: onNewAppointment }}
+                      className="py-16"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile cards */}
+                    <ul className="ink-oled-stack space-y-0 md:hidden" role="list">
+                      {filteredAppointments.map((apt) => {
+                        const isInactive = apt.status === 'cancelled' || apt.status === 'no_show';
+                        const depositDue = needsDepositAttention(apt);
+                        return (
+                          <li key={apt.id}>
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                downloadICS(apt);
-                              }}
-                              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-white active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
-                              title="Télécharger le fichier .ics"
+                              onClick={() => onSelectAppointment(apt)}
+                              className={cn(
+                                'w-full touch-manipulation overflow-hidden text-left transition-colors active:scale-[0.99]',
+                                APPOINTMENT_CARD_SURFACE,
+                                isInactive && APPOINTMENT_CARD_INACTIVE
+                              )}
                             >
-                              <Download className="w-4 h-4 shrink-0" /> .ics
-                            </button>
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {/* Desktop table */}
-                <div className="hidden min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none md:block">
-                  <div className="flex items-center justify-between px-4 py-3 sm:px-5">
-                    <span className="pro-text-small font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500">
-                      {filteredAppointments.length} rendez-vous
-                    </span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[36rem]">
-                      <thead>
-                        <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                          <th
-                            scope="col"
-                            className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
-                          >
-                            Client
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
-                          >
-                            Date / Heure
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
-                          >
-                            Service
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
-                          >
-                            Prix
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
-                          >
-                            Statut
-                          </th>
-                          <th scope="col" className="px-4 py-3 w-24" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredAppointments.map((apt, i) => (
-                          <tr
-                            key={apt.id}
-                            onClick={() => onSelectAppointment(apt)}
-                            className={`group cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${i !== filteredAppointments.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800' : ''}`}
-                          >
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200 shadow-sm dark:bg-zinc-700">
+                              <div className="flex items-center gap-3 p-6">
+                                {/* Avatar */}
+                                <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border-0 dark:bg-white/[0.05]">
                                   <ClientPhotoAvatar
                                     name={apt.clientName}
                                     src={getClientAvatarForAppointment(apt, clients)}
                                     className="absolute inset-0 h-full w-full"
-                                    textClassName="text-sm font-semibold text-zinc-700 dark:text-zinc-200"
+                                    textClassName="text-base font-bold text-zinc-700 dark:text-zinc-200"
                                   />
                                 </div>
-                                <div>
-                                  <div className="text-lg font-bold text-zinc-900 dark:text-white">
-                                    {apt.clientName}
+                                {/* Infos */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <span className="truncate text-lg font-bold leading-snug text-zinc-900 dark:text-white">
+                                      {apt.clientName}
+                                    </span>
+                                    <span className="shrink-0 text-sm font-bold tabular-nums text-zinc-900 dark:text-white">
+                                      {apt.price}€
+                                    </span>
                                   </div>
-                                  {apt.clientEmail && (
-                                    <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                                      {apt.clientEmail}
-                                    </div>
-                                  )}
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-[#737373]">
+                                      {apt.date}
+                                      {apt.time ? ` · ${apt.time}` : ''}
+                                    </span>
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}
+                                    >
+                                      <span
+                                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`}
+                                      />
+                                      {STATUS_LABELS[apt.status] ?? apt.status}
+                                    </span>
+                                    {depositDue && (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 shadow-sm dark:bg-rose-500/12 dark:text-rose-300 dark:shadow-none">
+                                        <CircleDollarSign
+                                          className="w-3 h-3 shrink-0"
+                                          aria-hidden
+                                        />
+                                        Acompte
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
+                                <ChevronRight
+                                  className="w-5 h-5 text-zinc-300 dark:text-zinc-600 shrink-0 self-center"
+                                  strokeWidth={1.5}
+                                  aria-hidden
+                                />
                               </div>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 tabular-nums">
-                                <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
-                                {apt.date}
-                                {apt.time ? ` · ${apt.time}` : ''}
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5 text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-                              {apt.service}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="font-bold text-blue-700 dark:text-blue-400 tabular-nums">
-                                {apt.price}€
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}
-                                >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`}
-                                  />
-                                  {STATUS_LABELS[apt.status] ?? apt.status}
-                                </span>
-                                {needsDepositAttention(apt) && (
-                                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 shadow-sm dark:bg-rose-500/12 dark:text-rose-300 dark:shadow-none">
-                                    <CircleDollarSign className="w-3 h-3" aria-hidden />
-                                    Acompte
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {/* Quick status actions */}
-                                {apt.status === 'pending' && onUpdateAppointment && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onUpdateAppointment(apt, { status: 'confirmed' });
-                                    }}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
-                                    title="Confirmer"
-                                  >
-                                    <Check className="w-3 h-3" /> Confirmer
-                                  </button>
-                                )}
-                                {apt.status === 'confirmed' && onUpdateAppointment && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onUpdateAppointment(apt, { status: 'completed' });
-                                    }}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
-                                    title="Terminer"
-                                  >
-                                    <CheckCheck className="w-3 h-3" /> Terminer
-                                  </button>
-                                )}
+                              {/* Export — cibles tactiles ≥ 44px */}
+                              <div className="flex items-stretch justify-end gap-1 px-3 pb-3 pt-0">
                                 <a
                                   href={getGoogleCalendarAddUrl(apt)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-                                  title="Google Agenda"
+                                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-white active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+                                  title="Ouvrir dans Google Agenda"
                                 >
-                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <ExternalLink className="w-4 h-4 shrink-0" /> Agenda
                                 </a>
                                 <button
+                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     downloadICS(apt);
                                   }}
-                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-                                  title=".ics"
+                                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-white active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+                                  title="Télécharger le fichier .ics"
                                 >
-                                  <Download className="w-3.5 h-3.5" />
+                                  <Download className="w-4 h-4 shrink-0" /> .ics
                                 </button>
-                                <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {/* Desktop table */}
+                    <div className="hidden min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none md:block">
+                      <div className="flex items-center justify-between px-4 py-3 sm:px-5">
+                        <span className="type-caption font-medium uppercase tracking-wider">
+                          {filteredAppointments.length} rendez-vous
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[36rem]">
+                          <thead>
+                            <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                              <th
+                                scope="col"
+                                className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
+                              >
+                                Client
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
+                              >
+                                Date / Heure
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
+                              >
+                                Service
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
+                              >
+                                Prix
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider"
+                              >
+                                Statut
+                              </th>
+                              <th scope="col" className="px-4 py-3 w-24" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredAppointments.map((apt, i) => (
+                              <tr
+                                key={apt.id}
+                                onClick={() => onSelectAppointment(apt)}
+                                className={`group cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${i !== filteredAppointments.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800' : ''}`}
+                              >
+                                <td className="px-5 py-3.5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200 shadow-sm dark:bg-zinc-700">
+                                      <ClientPhotoAvatar
+                                        name={apt.clientName}
+                                        src={getClientAvatarForAppointment(apt, clients)}
+                                        className="absolute inset-0 h-full w-full"
+                                        textClassName="text-sm font-semibold text-zinc-700 dark:text-zinc-200"
+                                      />
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-bold text-zinc-900 dark:text-white">
+                                        {apt.clientName}
+                                      </div>
+                                      {apt.clientEmail && (
+                                        <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                                          {apt.clientEmail}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 tabular-nums">
+                                    <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+                                    {apt.date}
+                                    {apt.time ? ` · ${apt.time}` : ''}
+                                  </div>
+                                </td>
+                                <td className="px-5 py-3.5 text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+                                  {apt.service}
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  <span className="font-bold text-blue-700 dark:text-blue-400 tabular-nums">
+                                    {apt.price}€
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}
+                                    >
+                                      <span
+                                        className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`}
+                                      />
+                                      {STATUS_LABELS[apt.status] ?? apt.status}
+                                    </span>
+                                    {needsDepositAttention(apt) && (
+                                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 shadow-sm dark:bg-rose-500/12 dark:text-rose-300 dark:shadow-none">
+                                        <CircleDollarSign className="w-3 h-3" aria-hidden />
+                                        Acompte
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {/* Quick status actions */}
+                                    {apt.status === 'pending' && onUpdateAppointment && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onUpdateAppointment(apt, { status: 'confirmed' });
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
+                                        title="Confirmer"
+                                      >
+                                        <Check className="w-3 h-3" /> Confirmer
+                                      </button>
+                                    )}
+                                    {apt.status === 'confirmed' && onUpdateAppointment && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onUpdateAppointment(apt, { status: 'completed' });
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                                        title="Terminer"
+                                      >
+                                        <CheckCheck className="w-3 h-3" /> Terminer
+                                      </button>
+                                    )}
+                                    <a
+                                      href={getGoogleCalendarAddUrl(apt)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                      title="Google Agenda"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        downloadICS(apt);
+                                      }}
+                                      className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                      title=".ics"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                    </button>
+                                    <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>

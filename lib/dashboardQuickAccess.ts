@@ -34,11 +34,11 @@ export const QUICK_ACCESS_CATALOG: QuickAccessItemDef[] = [
   { id: 'overview', label: "Vue d'ensemble", Icon: LayoutDashboard },
   { id: 'analytics', label: 'Statistiques', Icon: BarChart3 },
   { id: 'requests', label: 'Demandes', Icon: ClipboardList },
-  { id: 'agenda', label: 'Agenda', Icon: Calendar, requires: 'planning' },
+  { id: 'agenda', label: 'Synthèse agenda', Icon: Calendar, requires: 'planning' },
   { id: 'appointments', label: 'Planning', Icon: Calendar, requires: 'planning' },
   { id: 'clients', label: 'Clients', Icon: Users },
   { id: 'finance', label: 'Finance', Icon: Wallet, requires: 'finance' },
-  { id: 'messaging', label: 'Suivi client', Icon: Inbox },
+  { id: 'messaging', label: 'Messagerie', Icon: Inbox },
   { id: 'settings', label: 'Paramètres', Icon: Settings },
 ];
 

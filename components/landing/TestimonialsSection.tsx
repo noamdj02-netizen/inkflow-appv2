@@ -1,102 +1,95 @@
 /**
- * Section témoignages — "Ils ont dit adieu à Excel"
- * Carrousel avec photos de tatoueurs, avis variés. Avatars alignés avec le genre du prénom (M/F).
+ * Section témoignages — carrousel FR (i18n) ou embed Testimonial.to (espace inkflow).
  */
 import React, { useRef, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Check, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { AVATAR_M, AVATAR_F } from '../../lib/demoSandboxData';
-
-interface Testimonial {
-  name: string;
-  studio: string;
-  avatar: string;
-  avatarFallback: string;
-  avatarBg: string;
-  rating: number;
-  text: string;
-  metric: string;
-  plan: string;
-}
-
-const TESTIMONIALS: Testimonial[] = [
-  {
-    name: 'Maxime R.',
-    studio: 'Black Serpent Tattoo, Lyon',
-    avatar: AVATAR_M[0],
-    avatarFallback: 'M',
-    avatarBg: 'bg-zinc-800',
-    rating: 5,
-    text: "Avant Inkflow, je perdais 1h par jour à gérer les DMs Instagram et les acomptes par virement. Maintenant tout est automatique. J'ai récupéré 5h par semaine.",
-    metric: '5h/semaine économisées',
-    plan: 'Pro',
-  },
-  {
-    name: 'Sarah K.',
-    studio: 'Encre Sacrée, Paris 11e',
-    avatar: AVATAR_F[0],
-    avatarFallback: 'S',
-    avatarBg: 'bg-zinc-800',
-    rating: 5,
-    text: "Les no-shows avaient diminué de 80% depuis que je demande les acomptes via Inkflow. Le lien de paiement Stripe s'envoie automatiquement, mes clients adorent.",
-    metric: '−80% de no-shows',
-    plan: 'Business',
-  },
-  {
-    name: 'Thomas B.',
-    studio: 'Freelance, Bordeaux',
-    avatar: AVATAR_M[1],
-    avatarFallback: 'T',
-    avatarBg: 'bg-emerald-700',
-    rating: 5,
-    text: "Je travaille seul et je n'ai pas de temps pour l'admin. Inkflow c'est comme avoir une assistante qui gère tout ça pour 29€. Le ROI est immédiat.",
-    metric: 'ROI dès le 1er mois',
-    plan: 'Pro',
-  },
-  {
-    name: 'Léa M.',
-    studio: 'Ink District, Marseille',
-    avatar: AVATAR_F[1],
-    avatarFallback: 'L',
-    avatarBg: 'bg-violet-600',
-    rating: 5,
-    text: 'La messagerie centralisée a changé ma vie. Plus besoin de jongler entre Instagram et mon agenda. Les demandes arrivent qualifiées, je réponds en un clic.',
-    metric: 'Réponses 2x plus rapides',
-    plan: 'Pro',
-  },
-  {
-    name: 'Kevin D.',
-    studio: 'Tattoo Factory, Toulouse',
-    avatar: AVATAR_M[2],
-    avatarFallback: 'K',
-    avatarBg: 'bg-amber-600',
-    rating: 5,
-    text: "Mes clients paient l'acompte en ligne avant le RDV. Fini les créneaux perdus. La galerie flash sur la vitrine me génère des résas sans que je bouge le petit doigt.",
-    metric: '+40% de résas flash',
-    plan: 'Business',
-  },
-  {
-    name: 'Camille L.',
-    studio: 'Studio 34, Nantes',
-    avatar: AVATAR_F[2],
-    avatarFallback: 'C',
-    avatarBg: 'bg-rose-600',
-    rating: 5,
-    text: 'Enfin une app pensée pour les tatoueurs. La page vitrine, les RDV, les acomptes : tout est au même endroit. Je recommande à tous les collègues.',
-    metric: 'Tout-en-un qui tient la route',
-    plan: 'Pro',
-  },
-];
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { LANDING_TESTIMONIAL_TO_EMBED_ENABLED } from '../../lib/landingFlags';
+import {
+  TESTIMONIAL_TO_EMBED_SRC,
+  TESTIMONIAL_TO_IFRAME_ID,
+  TESTIMONIAL_TO_RESIZER_SCRIPT,
+  TESTIMONIAL_TO_WALL_URL,
+  TESTIMONIAL_TO_SPACE_URL,
+} from '../../lib/landingTestimonials';
+import { LandingMotionItem, LandingMotionReveal } from './landingMotion';
 
 const CARD_WIDTH = 360;
 const GAP = 24;
-const AUTO_SCROLL_INTERVAL = 5000;
+const AUTO_SCROLL_INTERVAL = 6000;
 
-export const TestimonialsSection: React.FC = () => {
+const testimonialKeys = [
+  { quoteKey: 'testimonials.quote1', nameKey: 'testimonials.name1', roleKey: 'testimonials.role1' },
+  { quoteKey: 'testimonials.quote2', nameKey: 'testimonials.name2', roleKey: 'testimonials.role2' },
+  { quoteKey: 'testimonials.quote3', nameKey: 'testimonials.name3', roleKey: 'testimonials.role3' },
+  { quoteKey: 'testimonials.quote4', nameKey: 'testimonials.name4', roleKey: 'testimonials.role4' },
+  { quoteKey: 'testimonials.quote5', nameKey: 'testimonials.name5', roleKey: 'testimonials.role5' },
+  { quoteKey: 'testimonials.quote6', nameKey: 'testimonials.name6', roleKey: 'testimonials.role6' },
+] as const;
+
+declare global {
+  interface Window {
+    iFrameResize?: (options: { log?: boolean; checkOrigin?: boolean }, selector: string) => void;
+  }
+}
+
+function loadIframeResizer(onLoad: () => void): () => void {
+  const existing = document.querySelector<HTMLScriptElement>(
+    `script[src="${TESTIMONIAL_TO_RESIZER_SCRIPT}"]`
+  );
+  if (existing) {
+    if (existing.dataset.loaded === 'true') {
+      onLoad();
+    } else {
+      existing.addEventListener('load', onLoad, { once: true });
+    }
+    return () => existing.removeEventListener('load', onLoad);
+  }
+
+  const script = document.createElement('script');
+  script.src = TESTIMONIAL_TO_RESIZER_SCRIPT;
+  script.async = true;
+  script.onload = () => {
+    script.dataset.loaded = 'true';
+    onLoad();
+  };
+  document.body.appendChild(script);
+  return () => script.removeEventListener('load', onLoad);
+}
+
+function TestimonialToEmbed() {
+  useEffect(() => {
+    const selector = `#${TESTIMONIAL_TO_IFRAME_ID}`;
+    const initResize = () => {
+      window.iFrameResize?.({ log: false, checkOrigin: false }, selector);
+    };
+    return loadIframeResizer(initResize);
+  }, []);
+
+  return (
+    <iframe
+      id={TESTIMONIAL_TO_IFRAME_ID}
+      src={TESTIMONIAL_TO_EMBED_SRC}
+      title="Avis clients InkFlow"
+      className="w-full border-0"
+      scrolling="no"
+    />
+  );
+}
+
+function TestimonialCarousel() {
+  const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+
+  const testimonials = testimonialKeys.map((item) => ({
+    id: item.quoteKey,
+    quote: t(item.quoteKey),
+    name: t(item.nameKey),
+    role: t(item.roleKey),
+  }));
 
   const updateScrollState = () => {
     const el = scrollRef.current;
@@ -111,6 +104,7 @@ export const TestimonialsSection: React.FC = () => {
     el.addEventListener('scroll', updateScrollState);
     const ro = new ResizeObserver(updateScrollState);
     ro.observe(el);
+    updateScrollState();
     return () => {
       el.removeEventListener('scroll', updateScrollState);
       ro.disconnect();
@@ -145,140 +139,113 @@ export const TestimonialsSection: React.FC = () => {
   };
 
   return (
-    <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-10 sm:mb-14">
-          <h2 className="text-2xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
-            Ils ont dit adieu à Excel
-          </h2>
-          <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto">
-            Plus de 200 tatoueurs nous font confiance en France
-          </p>
-        </div>
+    <div className="relative md:px-12">
+      <div className="absolute left-4 top-1/2 z-10 hidden -translate-y-1/2 md:flex">
+        <button
+          type="button"
+          onClick={() => scroll('left')}
+          disabled={!canScrollLeft}
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-lg transition-all hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          aria-label={t('testimonials.prev')}
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+      </div>
+      <div className="absolute right-4 top-1/2 z-10 hidden -translate-y-1/2 md:flex">
+        <button
+          type="button"
+          onClick={() => scroll('right')}
+          disabled={!canScrollRight}
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-lg transition-all hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          aria-label={t('testimonials.next')}
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      </div>
 
-        <div className="relative md:px-12">
-          {/* Boutons carrousel — desktop */}
-          <div className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-10">
-            <button
-              type="button"
-              onClick={() => scroll('left')}
-              disabled={!canScrollLeft}
-              className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-lg flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              aria-label="Avis précédent"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          </div>
-          <div className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-10">
-            <button
-              type="button"
-              onClick={() => scroll('right')}
-              disabled={!canScrollRight}
-              className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-lg flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              aria-label="Avis suivant"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
-
-          <div
-            ref={scrollRef}
-            className="testimonials-carousel flex gap-6 overflow-x-auto overflow-y-visible snap-x snap-mandatory scroll-smooth pb-2 -mx-4 px-4 sm:mx-0 sm:px-0"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            onFocus={() => setIsPaused(true)}
-            onBlur={() => setIsPaused(false)}
+      <div
+        ref={scrollRef}
+        className="testimonials-carousel -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto overflow-y-visible scroll-smooth px-4 pb-2 sm:mx-0 sm:px-0"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onFocus={() => setIsPaused(true)}
+        onBlur={() => setIsPaused(false)}
+      >
+        <style>{`.testimonials-carousel::-webkit-scrollbar { display: none; }`}</style>
+        {testimonials.map((item, idx) => (
+          <LandingMotionItem
+            key={item.id}
+            as="article"
+            index={idx}
+            standalone
+            className="w-[min(100%,340px)] flex-shrink-0 snap-center snap-always sm:w-[320px] md:w-[360px]"
           >
-            <style>{`
-              .testimonials-carousel::-webkit-scrollbar { display: none; }
-            `}</style>
-            {TESTIMONIALS.map((t, idx) => (
-              <motion.article
-                key={`${t.name}-${idx}`}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-20px' }}
-                transition={{ duration: 0.35, delay: idx * 0.05 }}
-                className="flex-shrink-0 w-[min(100%,340px)] sm:w-[320px] md:w-[360px] snap-center snap-always"
-              >
-                <div
-                  className="relative rounded-2xl p-6 sm:p-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300 h-full flex flex-col min-h-[320px]"
-                  onTouchStart={() => setIsPaused(true)}
-                  onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
-                >
-                  <div
-                    className="pointer-events-none absolute right-5 top-5 select-none font-serif text-5xl leading-none text-zinc-100 sm:right-6 sm:top-6 sm:text-6xl dark:text-zinc-500/20"
-                    aria-hidden
-                  >
-                    &ldquo;
-                  </div>
-                  <p className="relative text-zinc-700 dark:text-zinc-300 italic text-[15px] sm:text-base leading-relaxed mb-5 flex-1 pr-2">
-                    {t.text}
-                  </p>
-                  <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-medium mb-6 w-fit">
-                    <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
-                    {t.metric}
-                  </div>
-                  <div className="flex items-center gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-zinc-200 dark:bg-zinc-700 ring-2 ring-white dark:ring-zinc-800 shadow-md">
-                      <img
-                        src={t.avatar}
-                        alt=""
-                        className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const fallback = target.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.classList.remove('hidden');
-                        }}
-                      />
-                      <span
-                        className={`absolute inset-0 hidden flex items-center justify-center text-white font-bold text-base ${t.avatarBg}`}
-                      >
-                        {t.avatarFallback}
-                      </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">
-                        {t.name}
-                      </p>
-                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                        {t.studio}
-                      </p>
-                    </div>
-                    <div
-                      className="flex items-center gap-0.5 shrink-0"
-                      aria-label={`${t.rating} étoiles`}
-                    >
-                      {Array.from({ length: t.rating }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400 text-amber-400 drop-shadow-sm"
-                          aria-hidden
-                        />
-                      ))}
-                    </div>
-                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 uppercase tracking-wide shrink-0 hidden sm:inline-block">
-                      {t.plan}
-                    </span>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </div>
-
-          {/* Indicateurs de défilement — mobile */}
-          <div className="flex justify-center gap-2 mt-6 md:hidden">
-            {TESTIMONIALS.map((_, i) => (
-              <span
-                key={i}
-                className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600"
+            <div className="relative flex h-full min-h-[240px] flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition-shadow duration-300 [@media(hover:hover)]:hover:border-zinc-300 [@media(hover:hover)]:hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900 dark:[@media(hover:hover)]:hover:border-zinc-700 sm:p-8">
+              <div
+                className="pointer-events-none absolute right-5 top-5 select-none font-serif text-5xl leading-none text-zinc-100 dark:text-zinc-500/20 sm:right-6 sm:top-6 sm:text-6xl"
                 aria-hidden
-              />
-            ))}
-          </div>
-        </div>
+              >
+                &ldquo;
+              </div>
+              <p className="relative mb-6 flex-1 pr-2 text-[15px] italic leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-base">
+                {item.quote}
+              </p>
+              <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {item.name}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{item.role}</p>
+              </div>
+            </div>
+          </LandingMotionItem>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export const TestimonialsSection: React.FC = () => {
+  const { t } = useLanguage();
+  const useEmbed = LANDING_TESTIMONIAL_TO_EMBED_ENABLED;
+
+  return (
+    <section
+      id="avis"
+      className="overflow-hidden bg-zinc-50 px-4 py-16 dark:bg-zinc-950 sm:px-6 sm:py-24 lg:px-8"
+    >
+      <div className="mx-auto max-w-7xl">
+        <LandingMotionReveal as="header" className="mb-10 text-center sm:mb-14">
+          <h2 className="mb-3 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-4xl">
+            {t('testimonials.title')}
+          </h2>
+          <p className="mx-auto max-w-2xl text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
+            {t('testimonials.subtitle')}
+          </p>
+        </LandingMotionReveal>
+
+        {useEmbed ? <TestimonialToEmbed /> : <TestimonialCarousel />}
+
+        <p className="mt-10 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-6">
+          <a
+            href={TESTIMONIAL_TO_WALL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 underline-offset-4 transition-colors hover:text-zinc-900 hover:underline dark:text-zinc-300 dark:hover:text-zinc-100"
+          >
+            {t('testimonials.viewWall')}
+            <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+          </a>
+          <a
+            href={TESTIMONIAL_TO_SPACE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            {t('testimonials.leaveReview')}
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          </a>
+        </p>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useToast } from '../../contexts/ToastContext';
 import {
   addDays,
@@ -18,6 +19,7 @@ import { fr } from 'date-fns/locale';
 import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, ListOrdered } from 'lucide-react';
 import { Appointment, Client } from '../../types';
 import { cn } from '@/lib/utils';
+import { inkflowTransition } from '@/lib/motion/inkflowMotion';
 import { formatTimeRange } from '../../lib/appointmentTime';
 import {
   getClientAvatarForAppointment,
@@ -336,6 +338,7 @@ export function AgendaSummaryTab({
   onNewAppointment,
 }: AgendaSummaryTabProps) {
   const toast = useToast();
+  const reduceMotion = useReducedMotion();
   const clients = clientsProp;
   const [range, setRange] = useState<SummaryRange>('week');
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
@@ -793,46 +796,57 @@ export function AgendaSummaryTab({
       </div>
 
       <div className="mt-3 flex flex-col gap-3 md:mt-5 md:gap-4">
-        {showDayStrip && (
-          <div className={cn(inkOledSurfaceMuted, 'px-2 py-2 md:px-3 md:py-3')}>
-            <AgendaDayStrip
-              weekDays={stripWeekDays}
-              selectedYmd={selectedYmdForStrip}
-              onSelectYmd={handleStripSelect}
-            />
-          </div>
-        )}
-
-        {range === 'month' && (
-          <div className="flex flex-col gap-2">
-            {monthScope === 'day' && (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 rounded-full text-xs font-semibold"
-                  onClick={() => {
-                    setMonthScope('all');
-                    setMonthFilterYmd(null);
-                  }}
-                >
-                  Tout le mois
-                </Button>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={range}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+            transition={inkflowTransition.panel(Boolean(reduceMotion))}
+            className="flex flex-col gap-3 md:gap-4"
+          >
+            {showDayStrip && (
+              <div className={cn(inkOledSurfaceMuted, 'px-2 py-2 md:px-3 md:py-3')}>
+                <AgendaDayStrip
+                  weekDays={stripWeekDays}
+                  selectedYmd={selectedYmdForStrip}
+                  onSelectYmd={handleStripSelect}
+                />
               </div>
             )}
-            <AgendaMonthGrid
-              anchor={anchor}
-              todayYmd={today}
-              countByYmd={countInMonth}
-              focusYmd={monthFilterYmd}
-              onPickDay={handleMonthCell}
-              showAll={monthScope === 'all'}
-            />
-          </div>
-        )}
 
-        <div className="flex flex-col gap-3">{renderGroupedList()}</div>
+            {range === 'month' && (
+              <div className="flex flex-col gap-2">
+                {monthScope === 'day' && (
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 rounded-full text-xs font-semibold"
+                      onClick={() => {
+                        setMonthScope('all');
+                        setMonthFilterYmd(null);
+                      }}
+                    >
+                      Tout le mois
+                    </Button>
+                  </div>
+                )}
+                <AgendaMonthGrid
+                  anchor={anchor}
+                  todayYmd={today}
+                  countByYmd={countInMonth}
+                  focusYmd={monthFilterYmd}
+                  onPickDay={handleMonthCell}
+                  showAll={monthScope === 'all'}
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">{renderGroupedList()}</div>
+          </motion.div>
+        </AnimatePresence>
 
         {inPeriod.length > 0 && (
           <div className="pt-1">

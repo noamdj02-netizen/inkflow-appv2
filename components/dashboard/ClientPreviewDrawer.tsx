@@ -192,13 +192,10 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
             aria-hidden
           />
           <div className="min-w-0 pt-1 md:pt-0 pr-2">
-            <h2
-              id="client-preview-drawer-title"
-              className="font-display text-lg sm:text-xl font-bold tracking-tight text-[var(--text-primary)]"
-            >
+            <h2 id="client-preview-drawer-title" className="type-heading-sm sm:text-xl">
               Aperçu client
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm mt-1 max-w-[16rem] leading-snug">
+            <p className="type-caption sm:text-sm mt-1 max-w-[16rem] leading-snug">
               {appointment ? (
                 <span className="capitalize">{formatAppointmentSlotLabel(appointment)}</span>
               ) : artistName ? (

@@ -2,12 +2,8 @@
  * Utilitaires ClientList — badges pastels, pas de fonds alternés.
  */
 import type { ProjectRequest, ProjectRequestStatus } from '../../types';
-import {
-  inkBadgeError,
-  inkBadgeNeutral,
-  inkBadgePrimary,
-  inkBadgeSuccess,
-} from '@/lib/inkDesignTokens';
+import { inkBadgeError, inkBadgeNeutral, inkBadgeSuccess } from '@/lib/inkDesignTokens';
+import { BADGES } from '@/components/dashboard/DashboardOverviewDesignSystem';
 
 export function projectStatusMeta(status: ProjectRequestStatus): {
   label: string;
@@ -52,16 +48,16 @@ export function groupProjectRequestsByClient(requests: ProjectRequest[]): Array<
   return groups;
 }
 
-/** Badge statut client — fond pastel (opacité), radius 8px */
+/** Badge statut client — aligné Vue d’ensemble (BADGES design system). */
 export function getClientStatusColor(status: string): string {
   switch (status) {
     case 'vip':
-      return inkBadgePrimary;
+      return BADGES.vip;
     case 'active':
-      return inkBadgeSuccess;
+      return BADGES.growth;
     case 'inactive':
     default:
-      return inkBadgeNeutral;
+      return BADGES.neutral;
   }
 }
 

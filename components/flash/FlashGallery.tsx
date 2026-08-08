@@ -197,9 +197,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({
       <div className="space-y-6 animate-fade-in p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white mb-2">
-            Galerie de flashs
-          </h1>
+          <h1 className="type-heading mb-2">Galerie de flashs</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Parcourez et gérez vos designs disponibles à la réservation
           </p>
@@ -513,9 +511,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({
                   </div>
                   <div>
                     <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Acompte</div>
-                    <div className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
-                      {selectedDesign.depositAmount}€
-                    </div>
+                    <div className="type-stat">{selectedDesign.depositAmount}€</div>
                   </div>
                   <div>
                     <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Durée</div>

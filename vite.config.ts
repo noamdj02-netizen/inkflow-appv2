@@ -179,6 +179,7 @@ export default defineConfig(({ mode }) => {
             '**/*.map',
             '**/*.css',
             '**/index.html',
+            '**/stats.html',
             '**/apple-splash-*.png',
             '**/images/azzzzssss.png',
           ],

@@ -424,10 +424,8 @@ Pour toute question, contactez le studio !`,
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Soins post-tattoo</h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-            Templates de consignes à envoyer à vos clients
-          </p>
+          <h2 className="type-heading-sm">Soins post-tattoo</h2>
+          <p className="type-subtitle mt-1">Templates de consignes à envoyer à vos clients</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -488,9 +486,7 @@ Pour toute question, contactez le studio !`,
             <FileText className="w-8 h-8 text-zinc-400" />
           </div>
           <p className="font-semibold text-zinc-900 dark:text-white mb-2">Aucun template</p>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
-            Créez ou importez un template de soins post-tattoo
-          </p>
+          <p className="type-subtitle mb-6">Créez ou importez un template de soins post-tattoo</p>
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={() => setShowPresets(true)}

@@ -1,10 +1,16 @@
 /**
  * Hook pour vérifier les permissions liées au plan d'abonnement (Stripe)
  * côté frontend : canAccessFeature(feature), hasReachedLimit(limitKey, currentCount).
+ *
+ * Flags récents (2026-08) : facturation, traceabilite_simple, fidelite, equipe_roles — voir docs/PLANS-PERMISSIONS.md.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { getSubscription } from '../lib/subscriptionGuard';
-import { canAccessFeature as canAccessFeatureFn, hasReachedLimit as hasReachedLimitFn, getPlanLimit } from '../lib/subscriptionPlans';
+import {
+  canAccessFeature as canAccessFeatureFn,
+  hasReachedLimit as hasReachedLimitFn,
+  getPlanLimit,
+} from '../lib/subscriptionPlans';
 import type { SubscriptionPlan, PlanFeatureKey, PlanLimitKey, Subscription } from '../types';
 
 export interface UseSubscriptionPermissionsResult {
@@ -21,7 +27,9 @@ export interface UseSubscriptionPermissionsResult {
   getLimit: (limitKey: PlanLimitKey) => number;
 }
 
-export function useSubscriptionPermissions(studioId: string | null): UseSubscriptionPermissionsResult {
+export function useSubscriptionPermissions(
+  studioId: string | null
+): UseSubscriptionPermissionsResult {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(!!studioId);
 
@@ -45,7 +53,8 @@ export function useSubscriptionPermissions(studioId: string | null): UseSubscrip
   );
 
   const hasReachedLimit = useCallback(
-    (limitKey: PlanLimitKey, currentCount: number) => hasReachedLimitFn(plan, limitKey, currentCount),
+    (limitKey: PlanLimitKey, currentCount: number) =>
+      hasReachedLimitFn(plan, limitKey, currentCount),
     [plan]
   );
 

@@ -32,9 +32,7 @@ function BentoPilotageStatTile({
       <span className={cn(dashboardStatIconBadge, iconClassName)} aria-hidden>
         <Icon className="size-4" strokeWidth={2} />
       </span>
-      <span className="relative z-[1] mt-6 block font-display text-3xl font-bold tabular-nums leading-none tracking-tight text-zinc-900 dark:text-zinc-50">
-        {value}
-      </span>
+      <span className="relative z-[1] mt-6 block type-stat text-3xl">{value}</span>
       <span className="relative z-[1] mt-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
         {label}
       </span>

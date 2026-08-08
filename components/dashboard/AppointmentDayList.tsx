@@ -59,9 +59,7 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
 
   if (sorted.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-        Aucun RDV aujourd&apos;hui
-      </p>
+      <p className="py-8 text-center type-body text-muted-foreground">Aucun RDV aujourd&apos;hui</p>
     );
   }
 

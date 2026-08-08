@@ -233,7 +233,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
           Rapport statistiques
         </p>
-        <h1 className="font-display text-2xl font-bold text-zinc-900">{studioName}</h1>
+        <h1 className="type-heading">{studioName}</h1>
         <p className="text-sm text-zinc-600 mt-1">
           {periodDescription} — généré le {generatedAt}
         </p>
@@ -301,9 +301,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       {/* Indicateurs principaux — une surface, lignes */}
       <section className={`${SURFACE} analytics-print-card overflow-hidden`}>
         <div className="px-5 py-4 sm:px-6 border-b border-zinc-100 dark:border-zinc-800/80">
-          <h2 className="font-display text-base font-bold text-zinc-900 dark:text-white">
-            Chiffres clés
-          </h2>
+          <h2 className="type-heading-sm text-base">Chiffres clés</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             Calculés sur la période sélectionnée ci-dessus
           </p>
@@ -325,9 +323,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                   </span>
                 </div>
                 <div className="sm:flex-1 min-w-0">
-                  <p className="text-2xl sm:text-3xl font-bold tabular-nums tracking-tight text-zinc-950 dark:text-white">
-                    {row.value}
-                  </p>
+                  <p className="type-stat sm:text-3xl">{row.value}</p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                     {row.detail}
                   </p>
@@ -416,9 +412,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
       {/* Activité période — tableau */}
       <section className={`${SURFACE} analytics-print-card p-5 sm:p-6`}>
-        <h2 className="font-display text-base font-bold text-zinc-900 dark:text-white">
-          Activité sur la période
-        </h2>
+        <h2 className="type-heading-sm text-base">Activité sur la période</h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 mb-4">
           Répartition des statuts et moyennes liées aux séances filtrées
         </p>
@@ -450,7 +444,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         >
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
             <div>
-              <h2 className="font-display text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <h2 className="type-heading-sm flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-zinc-500" strokeWidth={1.75} aria-hidden />
                 Revenu par mois
               </h2>
@@ -529,9 +523,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
         {/* Clients */}
         <section className={`lg:col-span-2 ${SURFACE} analytics-print-card p-5 sm:p-6`}>
-          <h2 className="font-display text-base font-bold text-zinc-900 dark:text-white">
-            Base clients
-          </h2>
+          <h2 className="type-heading-sm text-base">Base clients</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 mb-5">
             Vue globale — indépendante du filtre de période
           </p>

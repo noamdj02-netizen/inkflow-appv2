@@ -22,9 +22,14 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
   if (!feature) {
     return (
       <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
-        <SEO title="Fonctionnalité introuvable" description="Cette page n'existe pas." noindex canonical={`/${slug}`} />
+        <SEO
+          title="Fonctionnalité introuvable"
+          description="Cette page n'existe pas."
+          noindex
+          canonical={`/${slug}`}
+        />
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-neutral-800 mb-4">Page non trouvée</h1>
+          <h1 className="type-heading mb-4">Page non trouvée</h1>
           <a href={LANDING_URL} className="text-blue-600 hover:underline">
             Retour à l'accueil
           </a>
@@ -83,8 +88,12 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
                   <Icon className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider">{feature.subtitle}</p>
-                  <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900">{feature.title}</h1>
+                  <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+                    {feature.subtitle}
+                  </p>
+                  <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900">
+                    {feature.title}
+                  </h1>
                 </div>
               </div>
               <p className="text-lg text-neutral-600 leading-relaxed mb-8">{feature.description}</p>
@@ -119,13 +128,18 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
               transition={{ duration: 0.5, delay: 0.1 }}
               className="lg:sticky lg:top-28"
             >
-              <div className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">Aperçu</div>
+              <div className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
+                Aperçu
+              </div>
               <FeaturePreview slug={slug} />
             </motion.div>
           </div>
 
-          <section className="mt-16 sm:mt-20 max-w-3xl border-t border-neutral-200 pt-10" aria-labelledby="faq-fonction">
-            <h2 id="faq-fonction" className="text-xl font-bold text-neutral-900 mb-6">
+          <section
+            className="mt-16 sm:mt-20 max-w-3xl border-t border-neutral-200 pt-10"
+            aria-labelledby="faq-fonction"
+          >
+            <h2 id="faq-fonction" className="type-heading-sm mb-6">
               Questions fréquentes
             </h2>
             <dl className="space-y-6">

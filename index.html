@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" style="--font-geist: 'Geist Variable', Inter, system-ui, sans-serif; --font-geist-mono: 'Geist Mono Variable', ui-monospace, monospace;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
@@ -10,10 +10,10 @@
     <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
     <style>
-      /* Anti flash — fond html avant paint React (dashboard all-black) */
-      html { background-color: #09090b; color-scheme: dark; }
-      html[data-theme='light'] { background-color: #fafafa; color-scheme: light; }
-      html[data-theme='dark'] { background-color: #09090b; color-scheme: dark; }
+      /* Anti flash — fond html avant paint React (Vercel shadcn) */
+      html { background-color: #000; color-scheme: dark; }
+      html[data-theme='light'] { background-color: #fcfcfc; color-scheme: light; }
+      html[data-theme='dark'] { background-color: #000; color-scheme: dark; }
     </style>
     <script>
       /* Auto-clear stale SW en dev (localhost, 127.0.0.1, ou port Vite 3000) */
@@ -50,7 +50,7 @@
           resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
         root.setAttribute('data-theme', resolved);
-        root.style.backgroundColor = resolved === 'light' ? '#fafafa' : '#09090b';
+        root.style.backgroundColor = resolved === 'light' ? '#fcfcfc' : '#000';
         root.style.colorScheme = resolved;
       })();
     </script>

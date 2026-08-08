@@ -85,7 +85,7 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[var(--text-primary)]">Programme de fidelite</h2>
+            <h2 className="type-heading-sm">Programme de fidelite</h2>
             <p className="text-[var(--text-secondary)] text-sm">{entries.length} membres</p>
           </div>
         </div>
@@ -103,34 +103,28 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
             <Users className="w-5 h-5 text-[var(--text-secondary)]" />
             <span className="text-sm text-[var(--text-secondary)]">Membres</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">{entries.length}</div>
+          <div className="type-heading">{entries.length}</div>
         </div>
         <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
           <div className="flex items-center gap-2 mb-2">
             <Star className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             <span className="text-sm text-[var(--text-secondary)]">Points en circulation</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
-            {totalPoints.toLocaleString()}
-          </div>
+          <div className="type-heading">{totalPoints.toLocaleString()}</div>
         </div>
         <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <span className="text-sm text-[var(--text-secondary)]">Points distribues</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
-            {totalEarned.toLocaleString()}
-          </div>
+          <div className="type-heading">{totalEarned.toLocaleString()}</div>
         </div>
         <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
           <div className="flex items-center gap-2 mb-2">
             <Gift className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <span className="text-sm text-[var(--text-secondary)]">Recompenses</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
-            {settings?.rewards?.length || 0}
-          </div>
+          <div className="type-heading">{settings?.rewards?.length || 0}</div>
         </div>
       </div>
 

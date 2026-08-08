@@ -13,7 +13,6 @@ export interface LotManualDraft {
   lot_number: string;
   expiry_date: string;
   product_label: string;
-  supplier_name: string;
 }
 
 interface InventoryPrintLabelModalProps {
@@ -291,7 +290,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
         lot_number: lotNum,
         expiry_date: lotManual.expiry_date || null,
         product_label: parentMerged ?? ASSET_KINDS.find((k) => k.id === assetKind)!.label,
-        supplier_name: lotManual.supplier_name || null,
+        supplier_name: null,
         client_id: clientId,
         appointment_id: appointmentId,
       });
@@ -354,7 +353,6 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
     lotManual.lot_number,
     lotManual.expiry_date,
     lotManual.product_label,
-    lotManual.supplier_name,
     clientId,
     appointmentId,
     onSuccess,

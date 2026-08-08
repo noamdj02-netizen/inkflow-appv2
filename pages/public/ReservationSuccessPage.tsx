@@ -238,7 +238,7 @@ export const ReservationSuccessPage: React.FC = () => {
           <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-4">
             <span className="text-red-600 text-2xl font-bold">!</span>
           </div>
-          <h1 className="text-xl font-bold text-zinc-900 tracking-tight">Impossible d&apos;afficher la confirmation</h1>
+          <h1 className="type-heading-sm">Impossible d&apos;afficher la confirmation</h1>
           <p className="text-zinc-500 text-sm mt-2 max-w-sm mx-auto leading-relaxed">{error || 'Données introuvables.'}</p>
         </section>
         <a
@@ -272,7 +272,7 @@ export const ReservationSuccessPage: React.FC = () => {
         <div className="mt-5 inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 mb-3">
           <Check className="w-7 h-7 text-emerald-600" strokeWidth={2.5} />
         </div>
-        <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Paiement confirmé</h1>
+        <h1 className="type-heading">Paiement confirmé</h1>
         <p className="text-zinc-500 text-sm mt-2 max-w-sm mx-auto leading-relaxed">
           {dateShort
             ? `Ton acompte pour le ${dateShort} est bien enregistré chez ${displayName}.`

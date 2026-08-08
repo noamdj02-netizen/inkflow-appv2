@@ -1,39 +1,71 @@
 # Gestion des permissions par plan d'abonnement (Stripe)
 
-Configuration centralisée des plans **Solo**, **Pro**, **Studio** et **Enterprise** pour `canAccessFeature()` et `hasReachedLimit()` (frontend et backend).
+Configuration centralisée des plans **Essentiel** (slug `solo`), **Pro**, **Studio** et **Enterprise** pour `canAccessFeature()` et `hasReachedLimit()` (frontend et backend).
 
 ### Taxonomie marketing vs code Stripe
 
-Les **valeurs canoniques dans le dépôt** sont les enums TypeScript **`SubscriptionPlan`** : `solo` | `pro` | `studio` | `enterprise` (voir **`lib/subscriptionPlans.ts`**).
+Les **valeurs canoniques dans le dépôt** restent les enums TypeScript **`SubscriptionPlan`** : `solo` | `pro` | `studio` | `enterprise` (voir **`lib/subscriptionPlans.ts`**).
 
-En messaging public (pricing, landing, emails), tu peux utiliser d’autres libellés (ex. Basic / Starter) tant que :
+| Libellé commercial | Slug code / Stripe metadata | Prix cible (€/mois) |
+| ------------------ | --------------------------- | ------------------- |
+| **Essentiel**      | `solo`                      | ~12–15 (cible 14)   |
+| **Pro**            | `pro`                       | ~35–39 (cible 37)   |
+| **Studio**         | `studio`                    | ~99                 |
+| **Enterprise**     | `enterprise`                | Sur devis           |
 
-1. **`plan_type`** (ou équivalent Stripe / `inkflow_subscriptions`) est **mappé explicitement** vers un des quatre ids ci-dessus.
+En messaging public (pricing, landing, emails), tu peux utiliser les libellés commerciaux ci-dessus tant que :
+
+1. **`plan`** / **`plan_type`** (Stripe / `inkflow_subscriptions`) est **mappé explicitement** vers un des quatre slugs.
 2. **Prix affichés** et **Stripe price IDs** correspondent à cette ligne — pas de confusion entre deux grilles différentes.
+3. **Aucun price ID Live** n’est modifié sans validation fondateur (voir `.cursor/rules/pricing-retention.mdc`).
 
 Document de détail métier prix / features : tableau ci‑dessous aligné **`PLAN_CONFIG`**.
 
 ---
 
-## Règles par plan
+## Règles par plan (grille cible 2026-08)
 
-| Plan           | Prix      | Artistes | Clients CRM | Features autorisées                                                                                                          |
-| -------------- | --------- | -------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Solo**       | 29€       | 1        | 100         | Réservations, paiements, vitrine publique & galerie Flash, CRM, app mobile (**sans** multi-cal./stats av./thème premium/API) |
-| **Pro**        | 49€       | 3        | 300         | Solo + multi-cal., stats av., thème premium                                                                                  |
-| **Studio**     | 99€       | 5        | Illimité    | Tout ce que Pro permet + accès développeurs **API** (clé produit `api_access`)                                               |
-| **Enterprise** | Sur devis | Illimité | Illimité    | Studio + White-label                                                                                                         |
+| Plan           | Slug         | Prix cible | Artistes | Clients CRM | Résumé fonctionnel                                                                 |
+| -------------- | ------------ | ---------- | -------- | ----------- | ---------------------------------------------------------------------------------- |
+| **Essentiel**  | `solo`       | ~14€       | 1        | 100         | Agenda, CRM, vitrine + acompte Stripe, facturation, **registre traçabilité légal** |
+| **Pro**        | `pro`        | ~37€       | 3        | 300         | Essentiel + stats avancées, fidélité, multi-cal., thèmes premium                   |
+| **Studio**     | `studio`     | ~99€       | 5        | Illimité    | Pro + **équipe / droits par rôle**, accès API                                      |
+| **Enterprise** | `enterprise` | Sur devis  | Illimité | Illimité    | Studio + white-label                                                               |
 
-Features **interdites** en Solo : API, Stats avancées (elles ne sont pas dans la liste du plan).
+---
+
+## Matrice des feature flags (`PlanFeatureKey`)
+
+| Feature               | Essentiel (`solo`) | Pro | Studio | Enterprise | Usage produit (cible gating)                         |
+| --------------------- | :----------------: | :-: | :----: | :--------: | ---------------------------------------------------- |
+| `reservations_online` |         ✓          |  ✓  |   ✓    |     ✓      | Agenda / book / RDV                                  |
+| `stripe_payments`     |         ✓          |  ✓  |   ✓    |     ✓      | Acomptes Stripe Connect                              |
+| `paypal_payments`     |         ✓          |  ✓  |   ✓    |     ✓      | PayPal via Stripe Checkout                           |
+| `vitrine_public`      |         ✓          |  ✓  |   ✓    |     ✓      | Page studio publique                                 |
+| `crm_clients`         |         ✓          |  ✓  |   ✓    |     ✓      | CRM (limite `clients_crm`)                           |
+| `galerie_flash`       |         ✓          |  ✓  |   ✓    |     ✓      | Galerie Flash vitrine                                |
+| `app_mobile`          |         ✓          |  ✓  |   ✓    |     ✓      | Parcours mobile / shell Inkflow Pro                  |
+| `facturation`         |         ✓          |  ✓  |   ✓    |     ✓      | Module finance / facturation électronique (pilotage) |
+| `traceabilite_simple` |         ✓          |  ✓  |   ✓    |     ✓      | Registre traçabilité légal (tous plans payants)      |
+| `stats_avancees`      |                    |  ✓  |   ✓    |     ✓      | Onglet Statistiques dashboard                        |
+| `fidelite`            |                    |  ✓  |   ✓    |     ✓      | Programme fidélité (tampons, points, emails)         |
+| `multi_calendriers`   |                    |  ✓  |   ✓    |     ✓      | Agendas multiples / équipe légère                    |
+| `themes_premium`      |                    |  ✓  |   ✓    |     ✓      | Thèmes vitrine premium                               |
+| `equipe_roles`        |                    |     |   ✓    |     ✓      | Multi-artistes + permissions collaborateur           |
+| `api_access`          |                    |     |   ✓    |     ✓      | Clés API / intégrations                              |
+| `white_label`         |                    |     |        |     ✓      | White-label Enterprise                               |
+
+**Note stock** : `traceabilite_simple` = registre légal (art. R.513-10-15 CSP) sur **tous les plans payants** — ce n’est pas un upsell Pro. Pro se différencie par stats + fidélité (+ multi-cal., thèmes).
 
 ---
 
 ## Fichiers
 
-- **`lib/subscriptionPlans.ts`** : config `PLAN_CONFIG`, `canAccessFeature(plan, feature)`, `hasReachedLimit(plan, limitKey, currentCount)`, `getPlanLimit()`, `getPlanConfig()`.
+- **`lib/subscriptionPlans.ts`** : `PLAN_CONFIG`, `PLAN_DISPLAY_NAMES`, `PLAN_TARGET_PRICE_EUR`, `canAccessFeature()`, `hasReachedLimit()`, `getPlanLimit()`, `getPlanConfig()`.
 - **`lib/subscriptionGuard.ts`** : réexporte ces helpers + `getSubscription(studioId)`, `canAddArtist()`, `isSubscriptionActive()`.
 - **`types/index.ts`** : `PlanFeatureKey`, `PlanLimitKey`, `SubscriptionPlan`.
 - **`hooks/useSubscriptionPermissions.ts`** : hook frontend qui charge l’abonnement du studio et expose `canAccessFeature`, `hasReachedLimit`, `getLimit`.
+- **`supabase/functions/create-subscription/index.ts`** : Checkout abonnement — secrets `STRIPE_PRICE_*` (TEST jusqu’à validation fondateur).
 
 ---
 
@@ -51,58 +83,56 @@ function MyComponent() {
 
   if (loading) return <Spinner />;
 
-  // Masquer le lien "API" si le plan n'inclut pas l'accès API
-  if (!canAccessFeature('api_access')) return null;
+  if (!canAccessFeature('fidelite')) return <Paywall feature="fidelite" />;
 
-  // Désactiver le bouton "Ajouter un artiste" si limite atteinte
-  const artistLimit = getLimit('artists');
-  const canAdd = !hasReachedLimit('artists', artists.length);
+  const canAddArtist = !hasReachedLimit('artists', artists.length);
 }
 ```
 
-### Clés des features (`PlanFeatureKey`)
+### Gating dashboard (état actuel vs cible)
 
-- `galerie_flash` — Galerie Flash
-- `app_mobile` — App mobile
-- `reservations_online` — Réservation en ligne
-- `stripe_payments` — Paiements Stripe
-- `paypal_payments` — PayPal via Stripe Checkout (à activer dans Stripe)
-- `vitrine_public` — Vitrine publique
-- `crm_clients` — CRM clients (limite via `clients_crm`)
-- `api_access` — Accès API
-- `stats_avancees` — Statistiques avancées
-- `multi_calendriers` — Multi-calendriers
-- `white_label` — White-label (Enterprise)
-
-### Clés des limites (`PlanLimitKey`)
-
-- `artists` — Nombre d’artistes
-- `clients_crm` — Nombre de clients dans le CRM
+| Zone dashboard               | Flag recommandé            | Câblé aujourd’hui                          |
+| ---------------------------- | -------------------------- | ------------------------------------------ |
+| Statistiques (`analytics`)   | `stats_avancees`           | ✓ `DashboardPro`                           |
+| Fidélité (`clients/loyalty`) | `fidelite`                 | ☐ préférence module uniquement             |
+| Stock traçabilité            | `traceabilite_simple`      | ✓ gate panel (`StockAndTraceabilityPanel`) |
+| Finance / facturation        | `facturation`              | ☐ préférence module uniquement             |
+| Artistes / permissions       | `equipe_roles` + `artists` | ☐ limite sièges via `hasReachedLimit` seul |
 
 ---
 
 ## Utilisation côté backend (Edge Functions / API)
 
-Importer les helpers depuis la config (ou depuis un module partagé) :
-
 ```ts
-import { canAccessFeature, hasReachedLimit, getPlanConfig } from './subscriptionPlans';
+import { canAccessFeature, hasReachedLimit } from './subscriptionPlans';
 
-// Après récupération du plan (ex. depuis inkflow_subscriptions)
 const plan = 'solo';
-if (!canAccessFeature(plan, 'api_access')) {
-  return new Response(JSON.stringify({ error: 'Plan non éligible à l’API' }), { status: 403 });
-}
-
-if (hasReachedLimit(plan, 'artists', currentArtistCount)) {
-  return new Response(JSON.stringify({ error: 'Limite artistes atteinte' }), { status: 403 });
+if (!canAccessFeature(plan, 'fidelite')) {
+  return new Response(JSON.stringify({ error: 'Fidélité réservée au plan Pro' }), { status: 403 });
 }
 ```
 
 ---
 
-## Intégration avec les composants existants
+## Stripe TEST — secrets Edge (placeholders)
 
-- **ArtistManager** : déjà utilisé avec `maxArtists`. Passer `maxArtists={getLimit('artists') === -1 ? 999 : getLimit('artists')}` (ou équivalent) depuis le parent qui utilise `useSubscriptionPermissions`.
-- **BillingSettings** : utilise déjà `getSubscription(studioId)` et affiche le plan ; les mêmes données alimentent le plan utilisé par `canAccessFeature` / `hasReachedLimit`.
-- **Menus / routes** : conditionner l’affichage des liens "Stats avancées", "API", "White-label" avec `canAccessFeature(plan, 'stats_avancees')`, etc.
+Créer en **mode TEST** Stripe Dashboard → Product catalog :
+
+| Produit Stripe (TEST) | Slug metadata | Secret mensuel                | Secret annuel                |
+| --------------------- | ------------- | ----------------------------- | ---------------------------- |
+| InkFlow Essentiel     | `solo`        | `STRIPE_PRICE_SOLO_MONTHLY`   | `STRIPE_PRICE_SOLO_ANNUAL`   |
+| InkFlow Pro           | `pro`         | `STRIPE_PRICE_PRO_MONTHLY`    | `STRIPE_PRICE_PRO_ANNUAL`    |
+| InkFlow Studio        | `studio`      | `STRIPE_PRICE_STUDIO_MONTHLY` | `STRIPE_PRICE_STUDIO_ANNUAL` |
+
+Valeurs placeholder documentées dans `.env.example` — **ne pas** committer de vrais `price_` Live.
+
+---
+
+## Migration abonnés existants
+
+| Situation            | Action recommandée                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| Abonnés Live         | **Aucun abonné Live au 2026-08-07** — pas de grandfathering ; nouvelle grille 14/37/99 € directe |
+| Slug `solo` en base  | **Aucun rename** — seul le libellé affiché passe à « Essentiel »                                 |
+| Flag `stock_complet` | **Retiré** (2026-08-07) — UI comparateur/catalogue supprimée ; pas de flag fantôme               |
+| Nouveaux flags       | Brancher le gating UI progressivement (`fidelite`, `equipe_roles`, etc.)                         |

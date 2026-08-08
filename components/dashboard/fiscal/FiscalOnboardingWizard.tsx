@@ -42,7 +42,7 @@ export const FiscalOnboardingWizard: React.FC<FiscalOnboardingWizardProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onDismiss} title="Profil fiscal (≈ 2 min)" size="lg">
       <div className="space-y-6">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="type-body text-muted-foreground">
           Étape {step + 1} / {STEPS} — personnaliser les estimations du pilotage (pédagogique, sans
           valeur juridique).
         </p>

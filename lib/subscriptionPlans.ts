@@ -2,10 +2,14 @@
  * Configuration des plans d'abonnement (Stripe) et permissions.
  * Utiliser canAccessFeature(plan, feature) et hasReachedLimit(plan, limitKey, currentCount)
  * côté frontend et backend.
+ *
+ * Slugs techniques (DB / Stripe metadata) : solo | pro | studio | enterprise
+ * Libellés commerciaux 2026-08 : Essentiel (solo) · Pro · Studio · Enterprise
  */
 import type { SubscriptionPlan, PlanFeatureKey, PlanLimitKey } from '../types';
 
-const CORE_FEATURES: PlanFeatureKey[] = [
+/** Socle Essentiel — agenda, CRM, vitrine, encaissements, facturation, traçabilité simple */
+const ESSENTIEL_FEATURES: PlanFeatureKey[] = [
   'reservations_online',
   'stripe_payments',
   'paypal_payments',
@@ -13,7 +17,21 @@ const CORE_FEATURES: PlanFeatureKey[] = [
   'crm_clients',
   'galerie_flash',
   'app_mobile',
+  'facturation',
+  'traceabilite_simple',
 ];
+
+/** Pro — Essentiel + stats, fidélité, multi-cal., thèmes premium (traçabilité = tous plans payants) */
+const PRO_FEATURES: PlanFeatureKey[] = [
+  ...ESSENTIEL_FEATURES,
+  'stats_avancees',
+  'fidelite',
+  'multi_calendriers',
+  'themes_premium',
+];
+
+/** Studio — Pro + équipe / rôles + API */
+const STUDIO_FEATURES: PlanFeatureKey[] = [...PRO_FEATURES, 'equipe_roles', 'api_access'];
 
 /** -1 = illimité */
 export interface PlanLimits {
@@ -23,67 +41,74 @@ export interface PlanLimits {
 
 export interface PlanConfig {
   id: SubscriptionPlan;
+  /** Nom affiché dashboard / emails (≠ slug Stripe) */
   name: string;
+  /** Prix mensuel cible documenté (€ TTC) — Stripe TEST à aligner séparément */
   priceEur: number | null;
   limits: PlanLimits;
   /** Liste des features autorisées pour ce plan */
   features: PlanFeatureKey[];
 }
 
+/** Libellés commerciaux — le slug `solo` reste « Essentiel » côté produit */
+export const PLAN_DISPLAY_NAMES: Record<SubscriptionPlan, string> = {
+  solo: 'Essentiel',
+  pro: 'Pro',
+  studio: 'Studio',
+  enterprise: 'Enterprise',
+};
+
+/** Fourchette prix cible (€/mois) — ne remplace pas les price IDs Stripe */
+export const PLAN_TARGET_PRICE_EUR: Record<
+  SubscriptionPlan,
+  { monthly: number | null; annualMonthlyEquiv?: number }
+> = {
+  solo: { monthly: 14, annualMonthlyEquiv: 12 },
+  pro: { monthly: 37, annualMonthlyEquiv: 31 },
+  studio: { monthly: 99, annualMonthlyEquiv: 79 },
+  enterprise: { monthly: null },
+};
+
 export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
   solo: {
     id: 'solo',
-    name: 'Solo',
-    priceEur: 29,
+    name: PLAN_DISPLAY_NAMES.solo,
+    priceEur: PLAN_TARGET_PRICE_EUR.solo.monthly,
     limits: {
       artists: 1,
       clients_crm: 100,
     },
-    features: CORE_FEATURES,
-    // Interdit : api_access, stats_avancees, multi_calendriers, themes_premium.
+    features: ESSENTIEL_FEATURES,
   },
   pro: {
     id: 'pro',
-    name: 'Pro',
-    priceEur: 49,
+    name: PLAN_DISPLAY_NAMES.pro,
+    priceEur: PLAN_TARGET_PRICE_EUR.pro.monthly,
     limits: {
       artists: 3,
       clients_crm: 300,
     },
-    features: [...CORE_FEATURES, 'multi_calendriers', 'stats_avancees', 'themes_premium'],
+    features: PRO_FEATURES,
   },
   studio: {
     id: 'studio',
-    name: 'Studio',
-    priceEur: 99,
+    name: PLAN_DISPLAY_NAMES.studio,
+    priceEur: PLAN_TARGET_PRICE_EUR.studio.monthly,
     limits: {
       artists: 5,
       clients_crm: -1,
     },
-    features: [
-      ...CORE_FEATURES,
-      'multi_calendriers',
-      'stats_avancees',
-      'api_access',
-      'themes_premium',
-    ],
+    features: STUDIO_FEATURES,
   },
   enterprise: {
     id: 'enterprise',
-    name: 'Enterprise',
+    name: PLAN_DISPLAY_NAMES.enterprise,
     priceEur: null,
     limits: {
       artists: -1,
       clients_crm: -1,
     },
-    features: [
-      ...CORE_FEATURES,
-      'multi_calendriers',
-      'stats_avancees',
-      'api_access',
-      'white_label',
-      'themes_premium',
-    ],
+    features: [...STUDIO_FEATURES, 'white_label'],
   },
 };
 
@@ -102,7 +127,7 @@ export function canAccessFeature(
 
 /**
  * Vérifie si la limite du plan est atteinte (ou dépassée).
- * @param plan - Plan actuel (solo | studio | enterprise)
+ * @param plan - Plan actuel (solo | pro | studio | enterprise)
  * @param limitKey - 'artists' ou 'clients_crm'
  * @param currentCount - Nombre actuel (ex. nombre d’artistes, nombre de clients CRM)
  * @returns true si la limite est atteinte ou dépassée (il ne faut pas autoriser l’ajout)

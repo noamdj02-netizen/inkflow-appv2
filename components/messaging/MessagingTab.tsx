@@ -877,8 +877,8 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
   return (
     <div className="min-w-0">
       <div className="mb-5">
-        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Suivi client</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-2xl">
+        <h1 className="type-heading">Suivi client</h1>
+        <p className="type-subtitle mt-1.5 max-w-2xl">
           Dossiers actifs, étapes acompte / consentement / santé — fiche complète au clic.
         </p>
       </div>
@@ -938,12 +938,12 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
 
           <div className="max-h-[70vh] overflow-y-auto">
             {loading ? (
-              <div className="p-6 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+              <div className="p-6 type-body text-muted-foreground flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Chargement…
               </div>
             ) : filteredCases.length === 0 ? (
-              <div className="p-6 text-sm text-zinc-500 dark:text-zinc-400">
+              <div className="p-6 type-body text-muted-foreground">
                 Aucun dossier ne correspond.
               </div>
             ) : (
@@ -1026,7 +1026,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
           )}
         >
           {!selected ? (
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 text-sm text-zinc-500 dark:text-zinc-400">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 type-body text-muted-foreground">
               Sélectionne un dossier à gauche pour ouvrir la fiche client.
             </div>
           ) : (
@@ -1063,7 +1063,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                         {selected.statusRaw || 'en cours'}
                       </span>
                     </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+                    <p className="type-body text-muted-foreground mt-2">
                       {selected.clientEmail || 'E-mail non renseigné'}
                       {selected.clientPhone ? ` · ${selected.clientPhone}` : ''}
                       {selected.clientInstagram
@@ -1268,7 +1268,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                                 {step.title}
                               </p>
                               {step.subtitle ? (
-                                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                                <p className="type-body text-muted-foreground mt-1">
                                   {step.subtitle}
                                 </p>
                               ) : null}
@@ -1305,7 +1305,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
 
                 <div className="mt-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/30 p-4 sm:p-5">
                   <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Relances</p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                  <p className="type-body text-muted-foreground mt-1">
                     Copie les liens à envoyer au client (e-mail, WhatsApp, SMS).
                   </p>
                   <div className="mt-3 flex flex-col sm:flex-row flex-wrap gap-2">

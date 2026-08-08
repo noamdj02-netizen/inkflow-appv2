@@ -1,4 +1,4 @@
-import { inkOledCard, inkOledStack, inkSubtitle, inkTitle } from '@/lib/inkDesignTokens';
+import { inkOledCard, inkOledStack } from '@/lib/inkDesignTokens';
 import { cn } from '@/lib/utils';
 
 /** Fond page dashboard — OLED true black */
@@ -85,10 +85,15 @@ export function projectStatusBadgeClass(status: string): string {
   return dashboardStatusBadge.neutral;
 }
 
-export const dashboardPageHeader =
-  'font-display text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white sm:text-3xl';
+export const dashboardPageHeader = 'type-heading';
 
-export const dashboardPageSubtitle = cn('mt-1.5 max-w-2xl text-sm sm:text-base', inkSubtitle);
+export const dashboardPageSubtitle = cn('type-subtitle mt-1.5 max-w-2xl');
+
+export const dashboardBodyText = 'type-body';
+
+export const dashboardCaptionText = 'type-caption';
+
+export const dashboardSectionHeading = 'type-heading-sm';
 
 export const dashboardSectionTitle =
   'text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-[#737373]';

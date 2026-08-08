@@ -38,7 +38,7 @@ export function AdminShell({
           'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.99]',
           activeNavPath === '/admin'
             ? 'bg-zinc-100 text-zinc-900 shadow-sm'
-            : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
+            : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
         )}
       >
         <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Tout</span>
@@ -54,7 +54,9 @@ export function AdminShell({
             onClick={() => onPick?.()}
             className={cn(
               'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.99]',
-              active ? 'bg-zinc-100 text-zinc-900 shadow-sm' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
+              active
+                ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
             )}
             aria-current={active ? 'page' : undefined}
           >
@@ -74,7 +76,7 @@ export function AdminShell({
         aria-label="Navigation admin"
       >
         <div className="border-b border-zinc-100 px-5 py-6">
-          <p className="font-display text-lg font-bold tracking-tight text-zinc-900">InkFlow</p>
+          <p className="type-heading-sm">InkFlow</p>
           <p className="mt-0.5 text-xs font-medium text-zinc-500">Admin</p>
         </div>
         <div className="flex flex-1 flex-col px-3 py-4">
@@ -162,13 +164,15 @@ export function AdminShell({
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
-                <h1 className="font-display text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{pageTitle}</h1>
+                <h1 className="type-heading-sm sm:text-2xl">{pageTitle}</h1>
                 {pageSubtitle ? (
                   <p className="mt-1 max-w-2xl text-sm text-zinc-500">{pageSubtitle}</p>
                 ) : null}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 founder-admin-no-print">{actions}</div>
+            <div className="flex flex-wrap items-center gap-2 founder-admin-no-print">
+              {actions}
+            </div>
           </div>
         </header>
 

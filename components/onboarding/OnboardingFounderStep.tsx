@@ -62,7 +62,7 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
           >
             <div className="inline-flex items-center gap-2 mb-6 sm:mb-8">
               <Logo className="dark:invert" />
-              <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+              <span className="type-heading-sm">InkFlow</span>
             </div>
 
             <h1

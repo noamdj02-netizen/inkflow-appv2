@@ -4,7 +4,7 @@ import { ArrowLeft, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
-import { LANDING_URL, APP_URL, sanitizePostAuthRedirect } from '../lib/urls';
+import { LANDING_URL, sanitizePostAuthRedirect } from '../lib/urls';
 import {
   resolvePostLoginPath,
   remapSunsetClientPortalPaths,
@@ -17,9 +17,12 @@ import {
   useAuth,
 } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { HeroBackgroundVideo } from '../components/common/HeroBackgroundVideo';
 
-const LOGIN_HERO_PRIMARY = '/images/login-hero.jpg';
-const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
+const LOGIN_HERO_POSTER = '/images/login-hero-poster.jpg';
+const LOGIN_HERO_POSTER_FALLBACK = '/images/login-hero.jpg';
+const LOGIN_HERO_MP4 = '/videos/login-hero.mp4';
+const LOGIN_HERO_WEBM = '/videos/login-hero.webm';
 
 function readLoginPageQueryOnce(): {
   checkEmail: boolean;
@@ -49,14 +52,6 @@ export const LoginPage: React.FC = () => {
   const [loginEmailForResend, setLoginEmailForResend] = useState(initialQ.confirmEmail);
   const [resendLoading, setResendLoading] = useState(false);
   const canResendConfirmation = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmailForResend.trim());
-  const [heroSrc, setHeroSrc] = useState(LOGIN_HERO_PRIMARY);
-  const handleHeroError = () => {
-    setHeroSrc((prev) => {
-      if (prev === LOGIN_HERO_PRIMARY) return LOGIN_HERO_ABSOLUTE;
-      return prev;
-    });
-  };
-
   useEffect(() => {
     try {
       if (sessionStorage.getItem(INKFLOW_EMAIL_UNVERIFIED_KEY)) {
@@ -188,9 +183,7 @@ export const LoginPage: React.FC = () => {
                   <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
                     Bon retour !
                   </h1>
-                  <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                    Connectez-vous à votre compte
-                  </p>
+                  <p className="type-body text-muted-foreground">Connectez-vous à votre compte</p>
                 </div>
 
                 {/* Email confirmation message */}
@@ -273,13 +266,19 @@ export const LoginPage: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <img
-            src={heroSrc}
-            alt="Tatoueur"
-            className="absolute inset-0 w-full min-h-full object-cover object-bottom"
-            loading="eager"
-            fetchPriority="high"
-            onError={handleHeroError}
+          <HeroBackgroundVideo
+            posterSrc={LOGIN_HERO_POSTER}
+            posterFallbackSrc={LOGIN_HERO_POSTER_FALLBACK}
+            mp4Src={LOGIN_HERO_MP4}
+            webmSrc={LOGIN_HERO_WEBM}
+            alt="Tatoueur au travail dans un studio"
+            className="min-h-full"
+            objectPosition="bottom"
+          />
+
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10"
+            aria-hidden
           />
 
           <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">

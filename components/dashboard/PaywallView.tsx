@@ -20,14 +20,12 @@ export const PaywallView: React.FC<PaywallViewProps> = ({ onChoosePlan, onOpenBi
           <Sparkles className="w-4 h-4" />
           Essai terminé
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-4">
-          Votre mois d&apos;essai gratuit est terminé
-        </h1>
-        <p className="text-[var(--text-secondary)] text-base leading-relaxed mb-2">
+        <h1 className="type-heading mb-4">Votre mois d&apos;essai gratuit est terminé</h1>
+        <p className="type-body text-[var(--text-secondary)] mb-2">
           Reprenez l’agenda, les réservations et les paiements en un clic : vos données restent en
           place, rien à reconfigurer.
         </p>
-        <p className="text-[var(--text-tertiary)] text-sm leading-relaxed mb-8">
+        <p className="type-caption mb-8">
           Paiement sécurisé par Stripe — annulez quand vous voulez selon les conditions de votre
           formule.
         </p>

@@ -29,6 +29,11 @@ import {
   isSubscriptionActive,
 } from '../../lib/subscriptionGuard';
 import { createSubscription, createPortalSession } from '../../lib/stripeClient';
+import {
+  PLAN_CONFIG,
+  PLAN_DISPLAY_NAMES,
+  PLAN_TARGET_PRICE_EUR,
+} from '../../lib/subscriptionPlans';
 import { TrialCountdown } from '../TrialCountdown';
 import { useToast } from '../../contexts/ToastContext';
 import { Badge } from '@/components/ui/badge';
@@ -56,72 +61,83 @@ interface BillingSettingsProps {
   onStudioSubscriptionRefresh?: () => void | Promise<void>;
 }
 
-const plans: {
+const BILLING_PLAN_IDS: SubscriptionPlan[] = ['solo', 'pro', 'studio'];
+
+type BillingPlanCard = {
   id: SubscriptionPlan;
   name: string;
   description: string;
-  /** Texte pied de carte : complète les bullets (vérité produit PLAN_CONFIG). */
   details: string;
-  /** Lignes clés affichées sur la carte — ce qui fait vraiment monter ou baisser d’un palier. */
   highlights: string[];
   priceMonthly: number;
   priceAnnual: number;
   popular?: boolean;
   icon: React.ReactNode;
   color: string;
-}[] = [
-  {
-    id: 'solo',
-    name: 'Solo',
-    description: 'Indépendant · socle fonctionnel InkFlow avec plafonds',
+};
+
+const BILLING_PLAN_COPY: Record<
+  (typeof BILLING_PLAN_IDS)[number],
+  Omit<BillingPlanCard, 'id' | 'name' | 'priceMonthly' | 'priceAnnual'>
+> = {
+  solo: {
+    description: 'Indépendant · socle fonctionnel avec plafonds Essentiel',
     highlights: [
-      '1 poste tatoueur et jusqu’à 100 contacts CRM suivis.',
-      'Même bloc « cœur » que les autres formules : réservations en ligne, encaissements Stripe / PayPal, vitrine publique et galerie Flash.',
-      'Espace client et parcours mobile inclus.',
-      'Multi-calendriers étendus, statistiques avancées et thèmes vitrine premium : passer au Pro lorsque vos besoins grandissent.',
+      '1 poste tatoueur et jusqu’à 100 contacts CRM.',
+      'Réservations en ligne, encaissements Stripe / PayPal, vitrine publique et galerie Flash.',
+      'Registre de traçabilité légal, facturation et espace client inclus.',
+      'Statistiques avancées, fidélité et thèmes premium : passer au Pro si besoin.',
     ],
     details:
-      'Pas de « petite formule bridée » : Solo offre tout le bloc fonctionnel commun (réservations, paiements, vitrine, CRM…). Ce qui manque jusqu’à Pro, ce sont vos plafonds et trois briques équipe très visibles.',
-    priceMonthly: 29,
-    priceAnnual: 24,
+      'Essentiel couvre tout le cœur métier (agenda, paiements, vitrine, traçabilité légale). Les paliers supérieurs relèvent vos plafonds et activent stats, fidélité ou équipe.',
+    popular: false,
     icon: <Zap className="w-5 h-5" />,
     color: 'blue',
   },
-  {
-    id: 'pro',
-    name: 'Pro',
-    description: 'Petite équipe · plafonds relevés + options « équipe InkFlow »',
+  pro: {
+    description: 'Petite équipe · plafonds relevés + pilotage avancé',
     highlights: [
       'Jusqu’à 3 tatoueurs et 300 fiches CRM.',
-      'Tout le socle Solo, plus plusieurs créneaux d’agenda / multi-calendriers, indicateurs financiers poussés et thèmes vitrine premium.',
-      'Idéal lorsque plusieurs agendas ou la mise en avant visuelle dépassent le terrain « solo ».',
-      'Pas d’accès API : si vous automatisez ou branchez des outils tiers, voyez Studio.',
+      'Tout Essentiel, plus statistiques avancées, programme fidélité et thèmes vitrine premium.',
+      'Multi-calendriers pour plusieurs agendas.',
+      'Gestion d’équipe avec rôles : plan Studio si vous structurez plusieurs collaborateurs.',
     ],
     details:
-      'Pro élève vos plafonds (sièges, fiches CRM) et active dans le logiciel précisément : multi-calendriers, statistiques avancées et thèmes vitrine premium.',
-    priceMonthly: 49,
-    priceAnnual: 39,
+      'Pro ajoute stats, fidélité, multi-calendriers et thèmes premium. L’API et la gestion d’équipe avancée restent sur Studio.',
     popular: true,
     icon: <Shield className="w-5 h-5" />,
     color: 'violet',
   },
-  {
-    id: 'studio',
-    name: 'Studio',
-    description: 'Studio structuré · volumes larges et branchements techniques',
+  studio: {
+    description: 'Studio structuré · volumes larges et interopérabilité',
     highlights: [
       'Jusqu’à 5 tatoueurs et contacts CRM illimités.',
       'Toutes les fonctionnalités Pro incluses.',
-      'Seule formule de cette grille où l’API développeurs InkFlow est prévue comme accessible.',
+      'Invitations collaborateurs, rôles et permissions dans l’app.',
+      'Accès API développeurs InkFlow pour automatiser ou brancher vos outils.',
     ],
     details:
-      "À ce niveau, vous élargissez surtout les volumes (sièges, CRM) et la couche d'interopérabilité : l'accès API n'est disponible ni en Solo ni en Pro.",
-    priceMonthly: 99,
-    priceAnnual: 79,
+      'Studio élargit volumes (sièges, CRM), ouvre la gestion d’équipe avec rôles et l’accès API — indisponibles en Essentiel et Pro.',
+    popular: false,
     icon: <Crown className="w-5 h-5" />,
     color: 'amber',
   },
-];
+};
+
+const plans: BillingPlanCard[] = BILLING_PLAN_IDS.map((id) => {
+  const config = PLAN_CONFIG[id];
+  const pricing = PLAN_TARGET_PRICE_EUR[id];
+  const monthly = pricing.monthly ?? 0;
+  const annual = pricing.annualMonthlyEquiv ?? monthly;
+
+  return {
+    id,
+    name: config.name || PLAN_DISPLAY_NAMES[id],
+    priceMonthly: monthly,
+    priceAnnual: annual,
+    ...BILLING_PLAN_COPY[id],
+  };
+});
 
 /** Comparaison alignée sur `PLAN_CONFIG` / `PlanFeatureKey` — pas de promesse hors enums. */
 const features = [
@@ -168,6 +184,20 @@ const features = [
     icon: <Smartphone className="w-4 h-4" />,
   },
   {
+    name: 'Registre traçabilité légal',
+    solo: true,
+    pro: true,
+    studio: true,
+    icon: <Database className="w-4 h-4" />,
+  },
+  {
+    name: 'Programme fidélité',
+    solo: false,
+    pro: true,
+    studio: true,
+    icon: <Sparkles className="w-4 h-4" />,
+  },
+  {
     name: 'Multi-calendriers équipe',
     solo: false,
     pro: true,
@@ -187,6 +217,13 @@ const features = [
     pro: true,
     studio: true,
     icon: <Palette className="w-4 h-4" />,
+  },
+  {
+    name: 'Équipe & rôles collaborateurs',
+    solo: false,
+    pro: false,
+    studio: true,
+    icon: <Users className="w-4 h-4" />,
   },
   {
     name: 'Accès API & intégrations',
@@ -209,7 +246,7 @@ const features = [
  * + inspiration grille pricing commerciale (réf. 21st / AuthenticUI).
  */
 interface BillingPlanPricingCardProps {
-  plan: (typeof plans)[number];
+  plan: BillingPlanCard;
   price: number;
   isAnnual: boolean;
   isCurrent: boolean;
@@ -271,9 +308,7 @@ const BillingPlanPricingCard: React.FC<BillingPlanPricingCardProps> = ({
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Formule
             </p>
-            <CardTitle className="font-display text-xl font-bold tracking-tight text-foreground">
-              {plan.name}
-            </CardTitle>
+            <CardTitle className="type-heading-sm">{plan.name}</CardTitle>
             <CardDescription className="text-sm leading-snug">{plan.description}</CardDescription>
           </div>
         </div>
@@ -282,9 +317,7 @@ const BillingPlanPricingCard: React.FC<BillingPlanPricingCardProps> = ({
       <CardContent className="flex flex-1 flex-col gap-6">
         <div className="flex flex-col gap-1 rounded-xl border border-border bg-muted/40 px-4 py-4">
           <div className="flex flex-wrap items-end gap-x-1.5 gap-y-0.5">
-            <span className="font-display text-4xl font-bold tabular-nums tracking-tight text-foreground">
-              {price}
-            </span>
+            <span className="type-stat text-4xl">{price}</span>
             <span className="pb-1 text-base font-semibold text-muted-foreground">€</span>
             <span className="pb-1 text-sm font-medium text-muted-foreground">/ mois</span>
           </div>
@@ -461,17 +494,15 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
       {/* Header style landing */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">
-            Abonnement
-          </h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-xl">
+          <h2 className="type-heading">Abonnement</h2>
+          <p className="type-subtitle mt-1.5 max-w-xl">
             Choisissez une formule selon vos volumes : sièges tatoueurs, niveau des analyses, puis
             besoin ou non d’API. Stripe reste la source de vérité sur les prix affichés. Changer de
             formule conserve vos données ; seuls les usages autorisés par le palier s’actualisent.{' '}
             <span className="text-zinc-600 dark:text-zinc-300">
-              Solo partage avec Pro le même socle : réservation, paiements, vitrine, CRM. À chaque
-              palier suivant augmentent vos plafonds puis s’activent des briques listées ci-dessous
-              (pas une autre « app fermée » au départ).
+              Essentiel partage avec Pro le même socle : réservation, paiements, vitrine, CRM et
+              traçabilité légale. À chaque palier suivant augmentent vos plafonds puis s’activent
+              stats, fidélité, équipe ou API.
             </span>
           </p>
         </div>
@@ -513,7 +544,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
               <p className="font-semibold text-zinc-900 dark:text-white">
                 Plan {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} actif
               </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <p className="type-body text-muted-foreground mt-0.5">
                 {subscription.status === 'trialing'
                   ? "Période d'essai gratuit — accès complet à toutes les fonctionnalités"
                   : subscription.currentPeriodEnd
@@ -534,7 +565,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-zinc-900 dark:text-white">Période d'essai</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              <p className="type-body text-muted-foreground mt-1">
                 Profitez de toutes les fonctionnalités Pro pendant 1 mois, sans carte bancaire.
                 Choisissez votre plan ci-dessous pour continuer après l'essai.
               </p>
@@ -570,7 +601,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
 
       {/* Billing Toggle — style pill landing avec détails */}
       <div className="flex flex-col items-center gap-4">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center">
+        <p className="type-body text-muted-foreground text-center">
           Facturation mensuelle : paiement chaque mois, annulable à tout moment. Facturation
           annuelle : paiement unique par an, 2 mois offerts.
         </p>
@@ -605,7 +636,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
             Économisez 2 mois par an — facturé une fois par an
           </p>
         ) : (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="type-body text-muted-foreground">
             Facturé chaque mois — changez ou annulez quand vous voulez
           </p>
         )}
@@ -635,7 +666,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
       <div className="flex justify-center">
         <button
           onClick={() => setShowComparison(!showComparison)}
-          className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+          className="flex items-center gap-2 type-body text-muted-foreground hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
         >
           {showComparison ? 'Masquer' : 'Voir'} la comparaison détaillée
           <ArrowRight
@@ -658,7 +689,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
                     <th key={plan.id} className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
                         <span className="font-bold text-zinc-900 dark:text-white">{plan.name}</span>
-                        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        <span className="type-body text-muted-foreground">
                           {isAnnual ? plan.priceAnnual : plan.priceMonthly}€/mois
                         </span>
                       </div>
