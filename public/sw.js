@@ -5,7 +5,12 @@ import { NetworkFirst } from 'workbox-strategies';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
-/** Avec `registerType: 'prompt'`, le client envoie SKIP_WAITING quand l’utilisateur accepte la maj (virtual:pwa-register). */
+/** Active immédiatement le nouveau SW (autoUpdate + reload client via virtual:pwa-register). */
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+/** Fallback si le client envoie SKIP_WAITING explicitement (virtual:pwa-register). */
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

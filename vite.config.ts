@@ -148,7 +148,7 @@ export default defineConfig(({ mode }) => {
         strategies: 'injectManifest',
         srcDir: 'public',
         filename: 'sw.js',
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         /** Pas de apple-splash dans precache (fichiers lourds + iOS les prend via <link> au besoin). */
         includeAssets: [
           'favicon.ico',
