@@ -32,6 +32,7 @@ export type Database = {
     };
   };
   public: {
+    /** Index + intersection : satisfait `Record<string, GenericTable>` pour @supabase/supabase-js ≥ 2.95 */
     Tables: {
       daily_briefs: {
         Row: {

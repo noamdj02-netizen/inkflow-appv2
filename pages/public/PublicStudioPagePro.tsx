@@ -182,7 +182,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     return () => {
       cancelled = true;
     };
-  }, [studioSlug]);
+  }, [studio?.slug, studioSlug]);
 
   const vitrineViewRecordedRef = useRef(false);
   useEffect(() => {

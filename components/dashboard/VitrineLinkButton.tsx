@@ -373,6 +373,16 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     }
   }, [studioName, studioSlugFromDb, toast, vitrineUrl]);
 
+  useEffect(() => {
+    if (showQr && qrCanvasRef.current) {
+      QRCodeLib.toCanvas(qrCanvasRef.current, vitrineUrl, {
+        width: 180,
+        margin: 2,
+        color: { dark: '#171717', light: '#FAFAFA' },
+      }).catch(() => {});
+    }
+  }, [showQr, vitrineUrl]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(vitrineUrl);

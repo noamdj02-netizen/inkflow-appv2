@@ -18,6 +18,23 @@ export interface WeeklySchedule {
 import type { Appointment } from '../types';
 import { appointmentsToBusySlots, mergeBusySlots } from './bookingBusySlots';
 
+export interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+  breaks: { start: string; end: string }[];
+}
+
+export interface WeeklySchedule {
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
+}
+
 export interface StudioAvailabilityResponse {
   busySlots: Record<string, string[]>;
   /** Créneaux fixes configurés par le studio. Vide = utiliser DEFAULT_TIME_SLOTS. */

@@ -55,6 +55,44 @@ interface AvailabilitySettings {
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
+interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+  breaks: { start: string; end: string }[];
+}
+
+interface WeeklySchedule {
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
+}
+
+interface BlockedRange {
+  start: string;
+  end: string;
+  label?: string;
+}
+
+interface AvailabilitySettings {
+  customSlots?: string[];
+  offDays?: number[];
+  bookingWindowDays?: number;
+  blockedRanges?: BlockedRange[];
+  slotDuration?: number;
+  bufferTime?: number;
+  overrunMargin?: number;
+  maxDailyBookings?: number;
+  advanceBookingDays?: number;
+  weeklySchedule?: WeeklySchedule;
+}
+
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+
 function normalizeTime(t: string | null): string | null {
   if (!t) return null;
   const s = String(t).trim().toLowerCase();
