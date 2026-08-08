@@ -6,6 +6,13 @@ import { isPosthogInitialized, posthog } from './posthogInit';
  */
 export const AnalyticsEvents = {
   SIGNUP_COMPLETED: 'signup_completed',
+  LOGIN_COMPLETED: 'login_completed',
+  ONBOARDING_COMPLETED: 'onboarding_completed',
+  BOOKING_REQUEST_SUBMITTED: 'booking_request_submitted',
+  PROJECT_REQUEST_SUBMITTED: 'project_request_submitted',
+  CRM_CLIENTS_IMPORTED: 'crm_clients_imported',
+  INSTAGRAM_CONNECTION_STARTED: 'instagram_connection_started',
+  INSTAGRAM_DISCONNECTED: 'instagram_disconnected',
   /** Funnel tatoueur — étapes explicites pour graphiques PostHog */
   ONBOARDING_FUNNEL: 'onboarding_funnel',
   /** North star — séquence inscription → lien public → RDV/agenda → acompte (voir docs/NORTH-STAR-FUNNEL.md) */

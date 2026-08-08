@@ -1,43 +1,19 @@
 /**
  * LoginForm — contraste correct clair / sombre (fond blanc login : CTA foncé, Google lisible)
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { AppleSignInButton } from '../AppleSignInButton';
-import { loginSchema } from '../../lib/authValidation';
+import { getLoginSchema } from '../../lib/authValidation';
+import { getAuthErrorMessage } from '../../lib/authErrors';
 import { resolvePostLoginPath } from '../../lib/postLoginRedirect';
 import { getPostSignupDashboardPath } from '../../lib/urls';
 import { verifyTurnstileTokenOrThrow } from '../../lib/verifyTurnstileToken';
 import { AuthTurnstile } from './AuthTurnstile';
-
-/** Mappe les erreurs Supabase Auth vers messages utilisateur */
-function getAuthErrorMessage(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
-  const lower = msg.toLowerCase();
-  if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect';
-  if (msg.includes('Email not confirmed'))
-    return 'Vérifiez votre boîte mail pour confirmer votre compte';
-  /* Timeout / lent — avant toute règle qui matche « réseau » dans la même phrase */
-  if (msg.includes('expirée') || lower.includes('timeout') || msg.includes('auth_timeout')) {
-    return 'Connexion trop lente (délai dépassé). Réessaie sur un autre réseau ou vérifie que le projet Supabase est actif.';
-  }
-  if (
-    lower.includes('failed to fetch') ||
-    lower.includes('networkerror') ||
-    lower.includes('load failed') ||
-    msg.includes('TypeError')
-  ) {
-    return 'Impossible de joindre Supabase (réseau ou configuration). Vérifie ta connexion. En production : Vercel → Settings → Environment Variables → VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY, puis redéploiement.';
-  }
-  if (lower.includes('réseau') || lower.includes('network') || lower.includes('fetch')) {
-    return 'Erreur réseau. Vérifiez votre connexion.';
-  }
-  if (msg.includes('Redirect URLs') || msg.includes('URL de retour')) return msg;
-  if (msg.length > 0 && msg.length < 600) return msg;
-  return 'Une erreur est survenue. Réessayez.';
-}
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
 
 export interface LoginFormProps {
   /** Préremplissage (ex. e-mail après inscription + nettoyage de l’URL). */
@@ -47,6 +23,8 @@ export interface LoginFormProps {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChange }) => {
+  const { t } = useLanguage();
+  const loginSchema = useMemo(() => getLoginSchema(t), [t]);
   const [email, setEmail] = useState(() => prefillEmail?.trim() ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -79,13 +57,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
     setError('');
     const parsed = loginSchema.safeParse({ email: email.trim(), password });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Vérifiez les champs');
+      setError(parsed.error.issues[0]?.message ?? t('auth.checkFields'));
       return;
     }
     setLoading(true);
     try {
       await verifyTurnstileTokenOrThrow(turnstileToken);
       await login(parsed.data.email, parsed.data.password);
+      captureEvent(AnalyticsEvents.LOGIN_COMPLETED, { login_method: 'email_password' });
       setSuccess(true);
       const rawFallback =
         (typeof sessionStorage !== 'undefined' &&
@@ -100,7 +79,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
       window.history.pushState({}, '', redirectUrl);
       window.dispatchEvent(new Event('inkflow-navigate'));
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -108,7 +87,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ── Error ── */}
       {error && (
         <div
           className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60"
@@ -119,19 +97,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
         </div>
       )}
 
-      {/* ── Success ── */}
       {success && (
         <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60">
           <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
             <Check className="w-3 h-3 text-white" />
           </div>
           <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-            Connexion réussie !
+            {t('auth.login.success')}
           </p>
         </div>
       )}
 
-      {/* ── Email ── */}
       <div className="space-y-1.5">
         <label
           htmlFor="login-email"
@@ -148,31 +124,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
             setEmail(v);
             onEmailChange?.(v);
           }}
-          className="
-            w-full px-4 py-3.5 min-h-[50px] text-[15px]
-            bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
-            text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500
-            rounded-2xl
-            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950
-            focus:ring-zinc-900/35 dark:focus:ring-white/50
-            focus:border-zinc-900 dark:focus:border-white
-            transition-all duration-150
-            disabled:opacity-40
-          "
-          placeholder="vous@exemple.com"
+          className="w-full px-4 py-3.5 min-h-[50px] text-[15px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 rounded-2xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950 focus:ring-zinc-900/35 dark:focus:ring-white/50 focus:border-zinc-900 dark:focus:border-white transition-all duration-150 disabled:opacity-40"
+          placeholder={t('auth.emailPlaceholder')}
           required
           autoComplete="email"
           disabled={loading}
         />
       </div>
 
-      {/* ── Password ── */}
       <div className="space-y-1.5">
         <label
           htmlFor="login-password"
           className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-500 uppercase tracking-widest"
         >
-          Mot de passe
+          {t('auth.login.password')}
         </label>
         <div className="relative">
           <input
@@ -180,18 +145,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="
-            w-full px-4 py-3.5 pr-12 min-h-[50px] text-[15px]
-            bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
-            text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500
-            rounded-2xl
-            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950
-            focus:ring-zinc-900/35 dark:focus:ring-white/50
-            focus:border-zinc-900 dark:focus:border-white
-            transition-all duration-150
-            disabled:opacity-40
-          "
-            placeholder="••••••••"
+            className="w-full px-4 py-3.5 pr-12 min-h-[50px] text-[15px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 rounded-2xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950 focus:ring-zinc-900/35 dark:focus:ring-white/50 focus:border-zinc-900 dark:focus:border-white transition-all duration-150 disabled:opacity-40"
+            placeholder={t('auth.passwordPlaceholder')}
             required
             autoComplete="current-password"
             disabled={loading}
@@ -200,60 +155,46 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl"
-            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* ── Remember / Forgot (colonne sur très petit écran pour éviter coupure Safari) ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-0.5">
         <label className="flex items-center gap-2 cursor-pointer min-h-[44px] shrink-0">
           <input
             type="checkbox"
             className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 accent-white shrink-0"
           />
-          <span className="text-xs text-zinc-500">Se souvenir de moi</span>
+          <span className="text-xs text-zinc-500">{t('auth.login.remember')}</span>
         </label>
         <a
           href="/reset-password"
           className="text-xs text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors min-h-[44px] flex items-center sm:justify-end py-1 sm:py-0"
         >
-          Mot de passe oublié ?
+          {t('auth.login.forgot')}
         </a>
       </div>
 
       <AuthTurnstile onToken={setTurnstileToken} />
 
-      {/* ── CTA — visible sur fond blanc (mode clair) ── */}
       <button
         type="submit"
         disabled={loading || success}
-        className="
-          w-full min-h-[50px] py-3.5
-          bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98]
-          dark:bg-white dark:hover:bg-zinc-100 dark:active:bg-zinc-200
-          text-white dark:text-zinc-900
-          text-[15px] font-semibold
-          rounded-2xl
-          transition-all duration-150
-          disabled:opacity-50 disabled:cursor-not-allowed
-          flex items-center justify-center gap-2
-          mt-2
-        "
+        className="w-full min-h-[50px] py-3.5 bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:hover:bg-zinc-100 dark:active:bg-zinc-200 text-white dark:text-zinc-900 text-[15px] font-semibold rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
       >
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Connexion…
+            {t('auth.login.submitting')}
           </>
         ) : (
-          'Se connecter'
+          t('auth.login.submit')
         )}
       </button>
 
-      {/* ── Google / Apple ── */}
       {(isGoogleAuthEnabled || isAppleAuthEnabled) && (
         <>
           <div className="relative my-2">
@@ -262,7 +203,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
             </div>
             <div className="relative flex justify-center">
               <span className="px-3 bg-white dark:bg-zinc-950 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                ou
+                {t('auth.or')}
               </span>
             </div>
           </div>
@@ -284,13 +225,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
                     }
                     await loginWithGoogle();
                   } catch (err) {
-                    setError(getAuthErrorMessage(err));
+                    setError(getAuthErrorMessage(err, t));
                   } finally {
                     setGoogleLoading(false);
                   }
                 }}
                 disabled={loading || googleLoading || appleLoading}
-                label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
+                label={googleLoading ? t('auth.redirecting') : t('auth.login.google')}
               />
             )}
             {isAppleAuthEnabled && (
@@ -310,13 +251,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
                     }
                     await loginWithApple();
                   } catch (err) {
-                    setError(getAuthErrorMessage(err));
+                    setError(getAuthErrorMessage(err, t));
                   } finally {
                     setAppleLoading(false);
                   }
                 }}
                 disabled={loading || googleLoading || appleLoading}
-                label={appleLoading ? 'Redirection…' : 'Se connecter avec Apple'}
+                label={appleLoading ? t('auth.redirecting') : t('auth.login.apple')}
               />
             )}
           </div>
@@ -325,5 +266,3 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
     </form>
   );
 };
-
-export { getAuthErrorMessage };

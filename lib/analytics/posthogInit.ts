@@ -15,7 +15,7 @@ export function initPosthogAfterConsent(): void {
     api_host: apiHost,
     ui_host: 'https://eu.posthog.com',
     person_profiles: 'identified_only',
-    capture_pageview: true,
+    capture_pageview: 'history_change',
     capture_pageleave: true,
     persistence: 'localStorage+cookie',
     session_recording: {

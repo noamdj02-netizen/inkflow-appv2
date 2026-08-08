@@ -21,6 +21,7 @@ import {
   mergeBusySlots,
   normalizeSlotTime,
 } from '../../lib/bookingBusySlots';
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
 
 interface BookingFormProps {
   onSubmit: (data: BookingFormData) => void | Promise<void>;
@@ -243,6 +244,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       if (result && typeof (result as Promise<unknown>).then === 'function') {
         await (result as Promise<unknown>);
       }
+      captureEvent(AnalyticsEvents.BOOKING_REQUEST_SUBMITTED, {
+        booking_type: data.tattooType,
+        placement: data.location,
+        size: data.size,
+        has_deposit_agreement: data.agreedToDeposit,
+      });
     } finally {
       setSubmitting(false);
     }

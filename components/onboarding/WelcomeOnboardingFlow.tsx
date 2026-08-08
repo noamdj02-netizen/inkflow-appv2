@@ -25,6 +25,7 @@ import { supabase } from '../../lib/supabase';
 import { getVitrineDataFromSupabase, saveVitrineDataToSupabase } from '../../lib/supabaseDashboard';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { useToast } from '../../contexts/ToastContext';
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
 
 export interface WelcomeOnboardingFlowProps {
   userScopedId: string;
@@ -70,6 +71,7 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
   const [step, setStep] = useState<WelcomeStep>(() => initialWelcomeStep(userScopedId));
   const [pendingStudioName, setPendingStudioName] = useState<string | undefined>();
   const [pendingStyles, setPendingStyles] = useState<string[]>([]);
+  const [pendingBookingWindowDays, setPendingBookingWindowDays] = useState<number | null>(null);
 
   const handleStudioComplete = useCallback(
     async (studioName: string, styles: string[]) => {
@@ -146,6 +148,7 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
         } as typeof existing & { tattoo_styles?: string[] };
         await saveVitrineDataToSupabase(studioId, mergedAvail);
 
+        setPendingBookingWindowDays(bookingWindowDays);
         setWelcomeFlowCheckpoint(userScopedId, 'establishment');
         setStep('establishment');
       } catch (e) {
@@ -167,12 +170,25 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
 
   const finishWelcome = useCallback(() => {
     const studioName = pendingStudioName ?? initialStudioName;
+    captureEvent(AnalyticsEvents.ONBOARDING_COMPLETED, {
+      selected_style_count: pendingStyles.length,
+      ...(pendingBookingWindowDays != null
+        ? { booking_window_days: pendingBookingWindowDays }
+        : {}),
+    });
     setWelcomeDone(userScopedId);
     clearWelcomeFlowCheckpoint(userScopedId);
     clearWelcomeRequired(userScopedId);
     clearJustSignedUp();
     onComplete(studioName);
-  }, [userScopedId, pendingStudioName, initialStudioName, onComplete]);
+  }, [
+    userScopedId,
+    pendingStudioName,
+    initialStudioName,
+    pendingStyles.length,
+    pendingBookingWindowDays,
+    onComplete,
+  ]);
 
   if (step === 'founder') {
     return (
@@ -235,7 +251,9 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
   }
 
   if (step === 'notifications') {
-    return <OnboardingNotificationsStep studioId={studioId} onComplete={handleNotificationsComplete} />;
+    return (
+      <OnboardingNotificationsStep studioId={studioId} onComplete={handleNotificationsComplete} />
+    );
   }
 
   return (

@@ -8,6 +8,7 @@ import { ReferenceImageUpload } from './ReferenceImageUpload';
 import { uploadBookingReferenceImages } from '../../lib/supabaseBookings';
 import { useToast } from '../../contexts/ToastContext';
 import { HealthQuestionnaireForm, type HealthFormData } from './HealthQuestionnaireForm';
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
 
 const schema = z.object({
   clientName: z.string().min(2, 'Nom requis (min. 2 caractères)'),
@@ -20,6 +21,17 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+function trackProjectRequestSubmitted(
+  data: Pick<FormData, 'clientInstagram' | 'placement' | 'size' | 'budget'>
+) {
+  captureEvent(AnalyticsEvents.PROJECT_REQUEST_SUBMITTED, {
+    has_instagram_handle: Boolean(data.clientInstagram?.trim()),
+    has_placement: Boolean(data.placement?.trim()),
+    has_size: Boolean(data.size?.trim()),
+    has_budget: Boolean(data.budget?.trim()),
+  });
+}
 
 const PLACEMENT_OPTIONS = [
   { value: '', label: 'Sélectionner...' },
@@ -121,6 +133,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
         setPendingProjectPayload(payload);
         if (!healthEnabled) {
           await onSubmit(payload);
+          trackProjectRequestSubmitted(data);
           return;
         }
         setStep(2);
@@ -142,6 +155,12 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
             onBack={() => setStep(1)}
             onComplete={async (healthData) => {
               await onSubmit(pendingProjectPayload, healthData);
+              trackProjectRequestSubmitted({
+                clientInstagram: pendingProjectPayload.clientInstagram,
+                placement: pendingProjectPayload.placement,
+                size: pendingProjectPayload.size,
+                budget: pendingProjectPayload.budget,
+              });
             }}
           />
           <div className="flex items-center justify-center">
@@ -149,6 +168,12 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
               type="button"
               onClick={async () => {
                 await onSubmit(pendingProjectPayload);
+                trackProjectRequestSubmitted({
+                  clientInstagram: pendingProjectPayload.clientInstagram,
+                  placement: pendingProjectPayload.placement,
+                  size: pendingProjectPayload.size,
+                  budget: pendingProjectPayload.budget,
+                });
               }}
               className="text-sm font-semibold text-zinc-600 hover:text-zinc-900 underline"
             >

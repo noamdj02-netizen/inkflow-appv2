@@ -17,6 +17,7 @@ import {
   Keyboard,
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
 import {
   parseClientImportFile,
   isClientImportFileNameOk,
@@ -410,6 +411,10 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
     setSubmitting(true);
     try {
       await onImport(validatedRows);
+      captureEvent(AnalyticsEvents.CRM_CLIENTS_IMPORTED, {
+        client_count: validatedRows.length,
+        import_source: importSource,
+      });
       toast.success('Import terminé');
       reset();
       onCancel?.();
