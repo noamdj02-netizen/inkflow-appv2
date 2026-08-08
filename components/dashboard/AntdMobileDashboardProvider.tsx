@@ -16,7 +16,7 @@ export function AntdMobileDashboardProvider({
 }: AntdMobileDashboardProviderProps) {
   return (
     <ConfigProvider locale={frFR} theme={getAntdMobileDashboardTheme(isDark)}>
-      {children}
+      <div className="adm-dashboard-scope flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </ConfigProvider>
   );
 }

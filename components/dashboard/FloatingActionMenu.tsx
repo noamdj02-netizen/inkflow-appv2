@@ -192,7 +192,7 @@ const FloatingActionMenu = ({
           ref={rootRef}
           className={cn(
             'relative z-[60] flex min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-0',
-            compactBottomNavFab ? 'min-h-[36px]' : 'min-h-[42px]',
+            compactBottomNavFab ? 'min-h-[44px] min-w-[44px]' : 'min-h-[44px] min-w-[44px]',
             className
           )}
         >

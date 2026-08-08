@@ -621,6 +621,11 @@ video {
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
+  /* Mobile layout tokens — lib/mobileLayout.ts */
+  --inkflow-touch-min: 44px;
+  --inkflow-mobile-dock-reserve: 4.75rem;
+  --inkflow-mobile-dock-reserve-shell: 4.25rem;
+  --inkflow-landing-sticky-cta: 4.5rem;
 }
 
 /* Default + Mode Clair — shadcn Vercel (21st.dev / tweakcn) + legacy dashboard vars */
@@ -1826,6 +1831,14 @@ select,
 .app-root:has(.dashboard-pro-inkflow-pro-shell) {
   padding-bottom: 0 !important;
 }
+
+/* Landing / vitrine / booking scroll interne — pas de double safe-area sur #root */
+#root:has(.landing-scroll),
+#root:has(.book-public-root),
+.app-root:has(.landing-scroll),
+.app-root:has(.book-public-root) {
+  padding: 0 !important;
+}
 /* Enfants directs de .app-root remplissent la hauteur (login, spinner, etc.) */
 .app-root > * {
   flex: 1;
@@ -2130,10 +2143,6 @@ textarea {
 
   /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
      Réserve bas : dock fixe + FAB + badges (évite contenu masqué sous la barre). */
-  .dashboard-pro-shell {
-    --inkflow-mobile-dock-reserve: 4.75rem; /* pill dock + safe-area */
-  }
-
   .dashboard-pro-shell .app-shell-content {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
@@ -2147,6 +2156,10 @@ textarea {
     -webkit-overflow-scrolling: touch;
   }
 
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell {
+    --inkflow-mobile-dock-reserve: var(--inkflow-mobile-dock-reserve-shell);
+  }
+
   /* Accueil Bento : contenu long (planning + clients) — marge bas un peu plus généreuse */
   .dashboard-pro-shell .app-shell-content.dashboard-overview-bg {
     padding-bottom: calc(
@@ -2155,10 +2168,6 @@ textarea {
     scroll-padding-bottom: calc(
       var(--inkflow-mobile-dock-reserve) + env(safe-area-inset-bottom, 0px) + 2rem
     );
-  }
-
-  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell {
-    --inkflow-mobile-dock-reserve: 4.25rem;
   }
 
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-content {
@@ -3470,4 +3479,27 @@ summary {
 .dashboard-pro-shell [data-slot='chart'] {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Mobile architecture — antd-mobile scope + landing sticky CTA ── */
+.dashboard-pro-shell .adm-dashboard-scope {
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-dashboard-scope .adm-pull-to-refresh,
+.adm-dashboard-scope .adm-capsule-tabs {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.adm-dashboard-scope .adm-capsule-tabs-tab {
+  min-height: var(--inkflow-touch-min, 44px);
+}
+
+.landing-mobile-sticky-cta {
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
 }

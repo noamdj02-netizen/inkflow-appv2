@@ -2,6 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { EnhanceAINavbar } from './EnhanceAINavbar';
 import { EnhanceAIHero } from './EnhanceAIHero';
+import { LandingMobileStickyCta } from '@/components/mobile/LandingMobileStickyCta';
 import { SEO, faqPageSchemaFr } from '../SEO';
 
 const LandingDemoSection = lazy(() =>
@@ -42,7 +43,7 @@ export const LandingEnhanceAI: React.FC = () => {
   }, []);
 
   return (
-    <div className="landing-scroll min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2]">
+    <div className="landing-scroll min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2] pb-[calc(var(--inkflow-landing-sticky-cta,4.5rem)+env(safe-area-inset-bottom,0px))] md:pb-0">
       <SEO
         title={t('seo.landing.title')}
         description={t('seo.landing.description')}
@@ -55,7 +56,7 @@ export const LandingEnhanceAI: React.FC = () => {
         }
         schema={faqPageSchemaFr}
       />
-      <EnhanceAINavbar hideOnMobile />
+      <EnhanceAINavbar />
       <main className="min-h-[60vh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2]">
         <EnhanceAIHero />
         <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
@@ -69,6 +70,7 @@ export const LandingEnhanceAI: React.FC = () => {
           <EnhanceAIFooter />
         </Suspense>
       </main>
+      <LandingMobileStickyCta />
     </div>
   );
 };

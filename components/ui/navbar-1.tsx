@@ -115,7 +115,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
 
           <motion.button
             type="button"
-            className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 md:hidden"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 md:hidden touch-manipulation"
             onClick={toggleMenu}
             whileTap={{ scale: 0.92 }}
             aria-label={isOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
@@ -129,7 +129,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
       <AnimatePresence>
         {isOpen && !hideOnMobile && (
           <motion.div
-            className="fixed inset-0 z-[9999] bg-white pt-24 px-6 md:hidden"
+            className="fixed inset-0 z-[9999] bg-white pt-[calc(4.5rem+env(safe-area-inset-top,0px))] px-6 md:hidden"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
@@ -137,7 +137,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
           >
             <motion.button
               type="button"
-              className="absolute right-4 top-[max(1.25rem,env(safe-area-inset-top))] inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-zinc-200"
+              className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-zinc-200 touch-manipulation"
               onClick={closeMenu}
               whileTap={{ scale: 0.92 }}
               initial={{ opacity: 0 }}
