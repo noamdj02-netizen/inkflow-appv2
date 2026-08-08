@@ -65,3 +65,12 @@
 3. `PlanningCalendarPicker.tsx` — fix type DayButton
 4. `supabase/functions/_shared/cronGate.ts` — fail-closed si secret cron absent
 5. UI Demandes/Clients — tokens `dashboardPilotagePage.ts`
+
+## Fixes appliqués (follow-up InkCheck P0/P1)
+
+6. `send-loyalty-emails` — `assertCronAuthorized` (cron fail-closed)
+7. `restrict-expired-trials` — `assertCronAuthorized` + `verify_jwt = false` dans `config.toml`
+8. `post-appointment-closeout` / `process-stamp-loyalty-db` — gate `INTERNAL_FUNCTION_SECRET` si configuré
+9. `vite.config.ts` — visualizer uniquement si `ANALYZE=1` ; chunks `vendor-antd-mobile` / `vendor-gsap`
+
+**Action fondateur avant prod crons :** définir `EDGE_CRON_SECRET` + headers pg_cron ; optionnel `INTERNAL_FUNCTION_SECRET` + header `X-Inkflow-Secret` sur triggers pg_net.

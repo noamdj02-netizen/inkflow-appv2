@@ -32,6 +32,8 @@ function inkflowManualChunks(id: string): string | undefined {
   if (id.includes('lucide-react')) return 'vendor-icons';
   if (id.includes('@sentry')) return 'vendor-sentry';
   if (id.includes('posthog-js')) return 'vendor-analytics';
+  if (id.includes('antd-mobile')) return 'vendor-antd-mobile';
+  if (id.includes('gsap')) return 'vendor-gsap';
   if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'vendor-radix';
   if (
     id.includes('/react-dom/') ||
@@ -123,8 +125,8 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
-      // Rapport treemap à chaque `vite build` (prod) — `npm run analyze` ouvre le navigateur (ANALYZE=1).
-      ...(isProductionBuild
+      // Rapport treemap uniquement avec ANALYZE=1 — évite stats.html dans le precache PWA.
+      ...(isProductionBuild && bundleAnalyze
         ? [
             visualizer({
               filename: path.resolve(__dirname, 'dist/stats.html'),

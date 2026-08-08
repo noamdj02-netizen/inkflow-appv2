@@ -23,6 +23,7 @@ import { sendEmail as sendResendEmail, htmlToPlainTextFallback } from "../_share
 import { listUnsubscribeHeaders } from "../_shared/marketingUnsubscribe.ts";
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertCronAuthorized } from "../_shared/cronGate.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -107,10 +108,14 @@ function buildJ30Html(clientName: string, service: string, studioName: string, v
 }
 
 Deno.serve(async (req: Request) => {
-  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  const cronDeny = assertCronAuthorized(req, origin);
+  if (cronDeny) return cronDeny;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const now = new Date().toISOString();

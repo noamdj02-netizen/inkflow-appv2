@@ -115,6 +115,10 @@ verify_jwt = false
 [functions.remind-slot-closeout-nudge]
 verify_jwt = false
 
+# Cron : trial expiré → subscription_status restricted (pg_cron / pg_net).
+[functions.restrict-expired-trials]
+verify_jwt = false
+
 # Facture PDF post-paiement — JWT ou service role (handler).
 [functions.generate-payment-invoice]
 verify_jwt = false
