@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Instagram, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { getInstagramStatus, getInstagramAuthUrl, disconnectInstagram } from '../../lib/instagram';
 import { useToast } from '../../contexts/ToastContext';
+import posthog from '../../lib/posthog';
 
 interface InstagramConnectProps {
   studioId: string;
@@ -34,6 +35,7 @@ export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) 
     setError(null);
     try {
       const authUrl = await getInstagramAuthUrl(studioId);
+      posthog.capture('instagram_connection_started');
       window.location.href = authUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion');
@@ -47,6 +49,7 @@ export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) 
     setError(null);
     try {
       await disconnectInstagram(studioId);
+      posthog.capture('instagram_disconnected');
       setConnected(false);
       setIgUsername(null);
     } catch (err) {

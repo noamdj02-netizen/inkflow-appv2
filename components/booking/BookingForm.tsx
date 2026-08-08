@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Mail, Phone, MapPin, DollarSign } from 'lucide-react';
 import { BookingFormData } from '../../types';
+import posthog from '../../lib/posthog';
 
 interface BookingFormProps {
   onSubmit: (data: BookingFormData) => void | Promise<void>;
@@ -48,6 +49,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       if (result && typeof (result as Promise<unknown>).then === 'function') {
         await (result as Promise<unknown>);
       }
+      posthog.capture('booking_request_submitted', {
+        booking_type: data.tattooType,
+        placement: data.location,
+        size: data.size,
+        has_deposit_agreement: data.agreedToDeposit,
+      });
     } finally {
       setSubmitting(false);
     }

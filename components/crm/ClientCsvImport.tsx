@@ -22,6 +22,7 @@ import {
   isClientImportFileNameOk,
   downloadClientImportTemplateXlsx,
 } from '../../lib/parseClientImportFile';
+import posthog from '../../lib/posthog';
 
 /** Ligne prête pour l’API après validation (date normalisée ISO jour ou null) */
 export interface ClientCsvImportRow {
@@ -409,6 +410,10 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
     setSubmitting(true);
     try {
       await onImport(validatedRows);
+      posthog.capture('crm_clients_imported', {
+        client_count: validatedRows.length,
+        import_source: importSource,
+      });
       toast.success('Import terminé');
       reset();
       onCancel?.();

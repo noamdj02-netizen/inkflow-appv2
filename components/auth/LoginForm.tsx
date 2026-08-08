@@ -6,6 +6,7 @@ import { AlertCircle, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { loginSchema } from '../../lib/authValidation';
+import posthog from '../../lib/posthog';
 
 /** Mappe les erreurs Supabase Auth vers messages utilisateur */
 function getAuthErrorMessage(err: unknown): string {
@@ -39,6 +40,7 @@ export const LoginForm: React.FC = () => {
     setLoading(true);
     try {
       await login(parsed.data.email, parsed.data.password);
+      posthog.capture('login_completed', { login_method: 'email_password' });
       setSuccess(true);
       const redirectUrl =
         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||

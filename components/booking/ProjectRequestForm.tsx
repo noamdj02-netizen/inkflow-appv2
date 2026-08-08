@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, Instagram, MapPin, Ruler, Euro, FileText } from 'lucide-react';
 import type { ProjectRequestFormData } from '../../types';
+import posthog from '../../lib/posthog';
 
 const schema = z.object({
   clientName: z.string().min(2, 'Nom requis (min. 2 caractères)'),
@@ -65,8 +66,18 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
     }
   });
 
+  const handleProjectSubmit = async (data: FormData) => {
+    await onSubmit(data as ProjectRequestFormData);
+    posthog.capture('project_request_submitted', {
+      has_instagram_handle: Boolean(data.clientInstagram?.trim()),
+      has_placement: Boolean(data.placement),
+      has_size: Boolean(data.size),
+      has_budget: Boolean(data.budget?.trim()),
+    });
+  };
+
   return (
-    <form onSubmit={handleSubmit(async (data) => onSubmit(data as ProjectRequestFormData))} className="space-y-6">
+    <form onSubmit={handleSubmit(handleProjectSubmit)} className="space-y-6">
       <div>
         <h3 className="text-xl font-bold mb-4">Votre demande de projet</h3>
         <p className="text-sm text-neutral-600 mb-6">

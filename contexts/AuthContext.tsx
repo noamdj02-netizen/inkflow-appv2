@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from 'react';
 import { User } from '../types';
+import posthog from '../lib/posthog';
 import { supabase } from '../lib/supabase';
 import { ensureStudio } from '../lib/supabaseDashboard';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
@@ -66,6 +67,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const isSupabaseAuthEnabled = useSupabaseEnabled();
+  const identifiedUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      if (identifiedUserIdRef.current && identifiedUserIdRef.current !== user.id) {
+        posthog.reset();
+      }
+      if (identifiedUserIdRef.current !== user.id) {
+        posthog.identify(user.id, {
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          studio_name: user.studioName,
+        });
+        identifiedUserIdRef.current = user.id;
+      }
+    } else if (identifiedUserIdRef.current) {
+      posthog.reset();
+      identifiedUserIdRef.current = null;
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isSupabaseAuthEnabled) {
@@ -228,6 +250,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isSupabaseAuthEnabled]);
 
   const logout = useCallback(() => {
+    posthog.reset();
+    identifiedUserIdRef.current = null;
     setUser(null);
     clearAllInkflowStorage();
     if (isSupabaseAuthEnabled) supabase.auth.signOut();

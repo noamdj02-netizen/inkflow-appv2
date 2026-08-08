@@ -10,6 +10,7 @@ import { isWelcomeDone, setWelcomeDone } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { getVitrineDataFromSupabase, saveVitrineDataToSupabase } from '../../lib/supabaseDashboard';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
+import posthog from '../../lib/posthog';
 
 export interface WelcomeOnboardingFlowProps {
   studioId: string;
@@ -67,6 +68,10 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
       }
 
       setWelcomeDone();
+      posthog.capture('onboarding_completed', {
+        selected_style_count: pendingStyles.length,
+        booking_window_days: bookingWindowDays,
+      });
       onComplete(studioName);
     },
     [studioId, studioSlug, onComplete, pendingStudioName, pendingStyles, initialStudioName]

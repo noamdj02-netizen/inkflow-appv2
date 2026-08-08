@@ -10,6 +10,7 @@ import { GoogleSignInButton } from '../GoogleSignInButton';
 import { signupSchema } from '../../lib/authValidation';
 import { getAuthErrorMessage } from './LoginForm';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
+import posthog from '../../lib/posthog';
 
 const inputBase =
   'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all';
@@ -68,6 +69,10 @@ export const SignupForm: React.FC = () => {
         parsed.data.studioName ?? '',
         formData.referralCode?.trim().toUpperCase() || undefined
       );
+      posthog.capture('signup_completed', {
+        signup_method: 'email_password',
+        has_referral_code: Boolean(formData.referralCode.trim()),
+      });
       setSuccess(true);
       if (needsEmailConfirmation) {
         window.location.href = '/login?message=check-email';
