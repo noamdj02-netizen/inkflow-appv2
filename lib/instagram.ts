@@ -3,23 +3,40 @@
  * Appelle les Edge Functions Supabase via fetch pour pouvoir lire le corps d'erreur (non-2xx).
  */
 
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+function getSupabaseConfig() {
+  const url = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+  return { url, key };
+}
 
 async function invokeInstagram<T>(body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/instagram`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const { url, key } = getSupabaseConfig();
+  if (!url || !key) {
+    throw new Error('Application non configurée (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${url}/functions/v1/instagram`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
+  }
+
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; details?: string };
   if (!res.ok) {
     const msg = data?.error
-      ? (data.details ? `${data.error}: ${data.details}` : data.error)
-      : res.statusText || 'Edge Function a échoué';
+      ? data.details
+        ? `${data.error}: ${data.details}`
+        : data.error
+      : res.statusText || 'Service Instagram temporairement indisponible.';
     throw new Error(msg);
   }
   return data as T;
@@ -35,6 +52,10 @@ export interface InstagramConversation {
   participantId: string;
   participantName: string;
   participantAvatar: string | null;
+  /** Lien instagram.com/[username]/ si résolu depuis l’API Meta */
+  participantProfileUrl?: string | null;
+  /** Pseudo sans @ résolu depuis Graph (optionnel) */
+  participantUsername?: string | null;
   lastMessage: string;
   lastAt: string;
   unread: number;
@@ -54,12 +75,19 @@ export async function getInstagramStatus(studioId: string): Promise<InstagramSta
 
 export async function getInstagramAuthUrl(studioId: string): Promise<string> {
   const data = await invokeInstagram<{ authUrl: string }>({ action: 'initiate', studioId });
-  if (!data?.authUrl) throw new Error('URL d\'autorisation non disponible');
+  if (!data?.authUrl) throw new Error("URL d'autorisation non disponible");
   return data.authUrl;
 }
 
-export async function exchangeInstagramCode(studioId: string, code: string): Promise<{ redirectUrl: string }> {
-  const data = await invokeInstagram<{ redirectUrl: string }>({ action: 'callback', studioId, code });
+export async function exchangeInstagramCode(
+  studioId: string,
+  code: string
+): Promise<{ redirectUrl: string }> {
+  const data = await invokeInstagram<{ redirectUrl: string }>({
+    action: 'callback',
+    studioId,
+    code,
+  });
   if (!data?.redirectUrl) throw new Error('Redirection non disponible');
   return data;
 }
@@ -68,13 +96,25 @@ export async function disconnectInstagram(studioId: string): Promise<void> {
   await invokeInstagram<{ success?: boolean }>({ action: 'disconnect', studioId });
 }
 
-export async function getInstagramConversations(studioId: string): Promise<InstagramConversation[]> {
-  const data = await invokeInstagram<InstagramConversation[]>({ action: 'conversations', studioId });
+export async function getInstagramConversations(
+  studioId: string
+): Promise<InstagramConversation[]> {
+  const data = await invokeInstagram<InstagramConversation[]>({
+    action: 'conversations',
+    studioId,
+  });
   return data ?? [];
 }
 
-export async function getInstagramMessages(studioId: string, participantId: string): Promise<InstagramMessage[]> {
-  const data = await invokeInstagram<InstagramMessage[]>({ action: 'messages', studioId, participantId });
+export async function getInstagramMessages(
+  studioId: string,
+  participantId: string
+): Promise<InstagramMessage[]> {
+  const data = await invokeInstagram<InstagramMessage[]>({
+    action: 'messages',
+    studioId,
+    participantId,
+  });
   return data ?? [];
 }
 

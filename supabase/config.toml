@@ -1,0 +1,135 @@
+# Configuration Edge Functions — voir https://supabase.com/docs/guides/functions/function-configuration
+#
+# stripe-webhook : Stripe envoie uniquement Stripe-Signature (pas de Bearer Supabase).
+# Sans verify_jwt = false, la passerelle répond 401 et les webhooks échouent (abonnement, Connect, etc.).
+[functions.stripe-webhook]
+verify_jwt = false
+
+# stripe-connect-onboarding : la passerelle peut renvoyer 401 avant le code Deno même avec un JWT valide
+# (cas fréquents : refresh / headers). La fonction valide déjà le Bearer via auth.getUser(jwt).
+[functions.stripe-connect-onboarding]
+verify_jwt = false
+
+# sync / login_links / disconnect — valide le JWT dans le handler (comme onboarding).
+[functions.stripe-connect-actions]
+verify_jwt = false
+
+# JWT vérifié dans le handler (comme stripe-connect-actions) ; évite 401 passerelle avec certains jetons.
+[functions.stripe-terminal]
+verify_jwt = false
+
+# Invitation collaborateur : évite 401 côté passerelle avec certains JWT (ex. ES256). Session vérifiée dans le handler (GET /auth/v1/user).
+[functions.send-collaborator-invite]
+verify_jwt = false
+
+# Proposition de date alternative (e-mail) : même cause ES256 sur la passerelle ; identité vérifiée dans le handler (getGoTrueUser).
+[functions.send-alternative-date-proposal]
+verify_jwt = false
+
+# Lien d’activation studio (magic link) — appel public avec anon + apikey (comme send-client-magic-link).
+[functions.send-studio-auth-link]
+verify_jwt = false
+
+# Réinitialisation mot de passe (Resend + Upstash) — appel public avec anon + apikey.
+[functions.send-password-recovery]
+verify_jwt = false
+
+# Vérification Cloudflare Turnstile (anti-bot) avant login / signup côté client.
+[functions.verify-turnstile]
+verify_jwt = false
+
+# google-business-auth : callback OAuth = GET depuis Google (pas de Bearer Supabase). POST dashboard = JWT ES256 peut être rejeté par la passerelle.
+[functions.google-business-auth]
+verify_jwt = false
+
+# google-places : public_reviews / business_public_reviews sont appelés depuis la vitrine publique sans session.
+# Sans verify_jwt = false, la passerelle répond 401 avant le handler. Les actions sensibles vérifient le JWT dans le code (getUserEmailFromJwt).
+[functions.google-places]
+verify_jwt = false
+
+# Cron pg_net : pas d’Authorization JWT — sans verify_jwt = false la passerelle répond 401 avant Deno.
+# Optionnel : secret EDGE_CRON_SECRET + en-tête x-cron-secret (voir _shared/cronGate.ts).
+[functions.send-appointment-reminders]
+verify_jwt = false
+
+[functions.remind-unpaid-deposits]
+verify_jwt = false
+
+# Rappel solde jour J (pg_cron) — pas de JWT ; optionnel EDGE_CRON_SECRET + x-cron-secret
+[functions.remind-balance-day-of]
+verify_jwt = false
+
+# Réservation publique : POST avec { studioId } sans session Supabase.
+[functions.get-studio-availability]
+verify_jwt = false
+
+# Acceptation / refus demande projet — JWT vérifié dans le handler (getGoTrueUser), comme send-alternative-date-proposal.
+[functions.project-request-accept]
+verify_jwt = false
+
+[functions.project-request-reject]
+verify_jwt = false
+
+# Web Push : JWT vérifié dans le handler (getGoTrueUser / service role).
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = false
+
+# Founder dashboard — JWT vérifié dans le handler (getGoTrueUser + FOUNDER_ADMIN_EMAILS).
+[functions.admin-founder-metrics]
+verify_jwt = false
+
+# RGPD : export / suppression de compte — identité vérifiée dans le handler (getGoTrueUser + studio owner).
+[functions.export-studio-gdpr]
+verify_jwt = false
+
+[functions.delete-studio-account]
+verify_jwt = false
+
+# Séquence onboarding (cron) — secret EDGE_CRON_SECRET ; pas de JWT.
+[functions.onboarding-automation]
+verify_jwt = false
+
+[functions.remind-tattooer-pending-inbox]
+verify_jwt = false
+
+# Webhook Resend (Svix) — signature RESEND_WEBHOOK_SECRET, pas de JWT.
+[functions.resend-webhook]
+verify_jwt = false
+
+# Désinscription marketing (List-Unsubscribe one-click) — GET/POST, pas de JWT.
+[functions.email-marketing-unsubscribe]
+verify_jwt = false
+
+# Cron fidélisation J+1 / J+7 / J+30 — souvent appelé par pg_cron / sans JWT.
+[functions.send-loyalty-emails]
+verify_jwt = false
+
+# Trigger pg_net (sans JWT) — push clôture après RDV completed.
+[functions.post-appointment-closeout]
+verify_jwt = false
+
+# Trigger pg_net (sans JWT) — tampons fidélité après RDV completed.
+[functions.process-stamp-loyalty-db]
+verify_jwt = false
+
+# Webhook Database Supabase → push (header X-Inkflow-Secret requis).
+[functions.notification-webhook]
+verify_jwt = false
+
+# Cron pg_net : rappel si créneau dépassé sans clôture (confirmed / in_progress).
+[functions.remind-slot-closeout-nudge]
+verify_jwt = false
+
+# Cron : trial expiré → subscription_status restricted (pg_cron / pg_net).
+[functions.restrict-expired-trials]
+verify_jwt = false
+
+# Facture PDF post-paiement — JWT ou service role (handler).
+[functions.generate-payment-invoice]
+verify_jwt = false
+
+[functions.submit-product-feedback]
+verify_jwt = false

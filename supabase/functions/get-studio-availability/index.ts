@@ -11,14 +11,49 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+  breaks: { start: string; end: string }[];
+}
+
+interface WeeklySchedule {
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
+}
+
+interface BlockedRange {
+  start: string;
+  end: string;
+  label?: string;
+}
+
+interface AvailabilitySettings {
+  customSlots?: string[];
+  offDays?: number[];
+  bookingWindowDays?: number;
+  blockedRanges?: BlockedRange[];
+  closedDates?: string[];
+  slotDuration?: number;
+  bufferTime?: number;
+  overrunMargin?: number;
+  maxDailyBookings?: number;
+  advanceBookingDays?: number;
+  weeklySchedule?: WeeklySchedule;
+}
+
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
 interface DaySchedule {
   enabled: boolean;
@@ -163,6 +198,7 @@ function getBufferBlockedSlots(
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -215,6 +251,14 @@ Deno.serve(async (req: Request) => {
       ? settings.blockedRanges.filter((r) => r && typeof r.start === "string" && typeof r.end === "string")
       : [];
 
+    const closedDates = new Set(
+      Array.isArray(settings.closedDates)
+        ? settings.closedDates
+            .filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d.trim()))
+            .map((d) => d.trim())
+        : [],
+    );
+
     for (const range of blockedRanges) {
       const start = new Date(range.start);
       const end = new Date(range.end);
@@ -223,6 +267,12 @@ Deno.serve(async (req: Request) => {
         if (!busy[dateStr]) busy[dateStr] = new Set();
         busy[dateStr].add("__blocked__");
       }
+    }
+
+    // Dates fermées (jours précis) : bloque la journée entière
+    for (const dateStr of closedDates) {
+      if (!busy[dateStr]) busy[dateStr] = new Set();
+      busy[dateStr].add("__blocked__");
     }
 
     // Récupérer les RDV existants
@@ -243,17 +293,52 @@ Deno.serve(async (req: Request) => {
       }
     });
 
-    // Récupérer les réservations confirmées
+    // Réservations vitrine : en attente ou confirmées (créneau réservé côté client)
     const { data: bookings } = await supabase
       .from("inkflow_bookings")
       .select("requested_date, requested_time")
       .eq("studio_id", studioId)
       .gte("requested_date", today)
-      .in("status", ["confirmed", "accepted"]);
+      .in("status", ["pending", "confirmed", "accepted"]);
+
+    // Projets acceptés avec créneau proposé (en attente de confirmation client)
+    const { data: projectSlots } = await supabase
+      .from("inkflow_project_requests")
+      .select("proposed_slot, slot_expires_at")
+      .eq("studio_id", studioId)
+      .eq("status", "accepted")
+      .not("proposed_slot", "is", null);
 
     (bookings || []).forEach((r) => {
       const date = (r.requested_date as string)?.toString?.()?.split?.("T")?.[0];
       const time = normalizeTime((r.requested_time as string) ?? null);
+      if (date && time) {
+        addToBusy(busy, date, time);
+        existingAppointments.push({ date, time });
+      }
+    });
+
+    const tz = timezone?.trim?.() || "Europe/Paris";
+    const nowMs = Date.now();
+    (projectSlots || []).forEach((r) => {
+      const proposedRaw = (r.proposed_slot as string)?.toString?.()?.trim?.();
+      if (!proposedRaw) return;
+      const expiresRaw = (r.slot_expires_at as string)?.toString?.()?.trim?.();
+      if (expiresRaw) {
+        const exp = new Date(expiresRaw).getTime();
+        if (!Number.isNaN(exp) && exp < nowMs) return;
+      }
+      const d = new Date(proposedRaw);
+      if (Number.isNaN(d.getTime())) return;
+      const date = d.toLocaleDateString("en-CA", { timeZone: tz });
+      const time = normalizeTime(
+        d.toLocaleTimeString("en-GB", {
+          timeZone: tz,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+      );
       if (date && time) {
         addToBusy(busy, date, time);
         existingAppointments.push({ date, time });

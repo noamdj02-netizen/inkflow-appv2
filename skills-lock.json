@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "skills": {
+    "ant-design-mobile": {
+      "source": "full-stack-skills/antd-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ant-design-mobile/SKILL.md",
+      "computedHash": "0d46336c3f1c5e34f696be482f9b9977b0bc2d798ca1926f3d3c036b7169fcdd"
+    },
+    "apple-design": {
+      "source": "DavidHDev/react-bits",
+      "sourceType": "github",
+      "skillPath": "AGENTS/SKILLS/apple-design/SKILL.md",
+      "computedHash": "8b94db67cb9edaad5f1501010804caa610131f1d2dfda0a27664b2e858deade3"
+    },
+    "caveman": {
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "computedHash": "ac5fb2168c653fa5d660b5f510a4688d210717c7e10eb8fd91ef0d9b59f4e96e"
+    },
+    "caveman-commit": {
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "computedHash": "89fd592e14079fc99a3ccd4dfca5d609bac6a0252e4ec4e3939f1497e53c4cbe"
+    },
+    "caveman-compress": {
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "computedHash": "4f3cad023d7153f247fa6d9fda7b39477ee9c0c08054b8740c9a9dd9ec26aed7"
+    },
+    "caveman-help": {
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "computedHash": "3468ac41877d388fc19d902ed9d442cd36609bd9e8d16205c41b362f481ea731"
+    },
+    "caveman-review": {
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "computedHash": "368a26f2b079ffe0d584f48006524f65cf997cb9369411aa8c6ead216dee22eb"
+    },
+    "churn-prevention": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "e1f4abdffeae2104cecd05d87fbe4c752c6fbcf6a6e856ad584493ed99a69e75"
+    },
+    "competitor-alternatives": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "d763652f36568b03d8daec3e1e98ac2cc730dcab663d87e2560acee3b9af1a3c"
+    },
+    "compress": {
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "computedHash": "f71138e885d3e0df8c78b4814554ae146a1a6dbe76bafcc32e95f2ba6d4073c9"
+    },
+    "content-strategy": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "e1ab02527702ead90a9e5774cfe1be9a222bdcc6e861f2cae778ad7cc293f225"
+    },
+    "copy-editing": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "cf63a13e3b5c25f5125afefa437999d5ea280b52f74508366a2f342e935c5c09"
+    },
+    "copywriting": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "c008c80aff1eec1aba190edf421772a3f350e91405d4207575092b663c3702a7"
+    },
+    "customer-research": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "f080ef2f66e3a42581ea4a8eb3188e97334e20eb28314a77e3f006a4d9ee0173"
+    },
+    "find-animation-opportunities": {
+      "source": "DavidHDev/react-bits",
+      "sourceType": "github",
+      "skillPath": "AGENTS/SKILLS/find-animation-opportunities/SKILL.md",
+      "computedHash": "15dc983ce2cd00489fcdc4a92e2752d47e1620f7619038b00eb84c2b97d50597"
+    },
+    "framer-motion-gestures": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "5729e0fd140ec8fb26dbea2592aac830cad61f6458b4891b5920220690dd6ff0"
+    },
+    "framer-motion-layout": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "731a80c91da6e4975f452245e72eb398698ba18ca5040b1b424d5ac8418c0fb3"
+    },
+    "framer-motion-react": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "05afba82bf872e148b95c300ed1ca41432878c63aca79d9c1280a029a41af3bd"
+    },
+    "framer-motion-scroll": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "238eabe19ce3cf6396f7bf555036a008184e869a073cea6f874e5aa266b976b1"
+    },
+    "framer-motion-variants": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "a186d6cad8c75ff61efa8d70cf3ba2246bfbf62bba157b433d13c516557f81ac"
+    },
+    "gsap-frameworks": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-frameworks/SKILL.md",
+      "computedHash": "4852e85a48088d9044b08ebd1db607915b628c0c3ec7e04300713f546728fbdf"
+    },
+    "gsap-scrolltrigger": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-scrolltrigger/SKILL.md",
+      "computedHash": "1cdc5647693783cb7a662d84a5de434c88a051ed56b4d33597c9b5782b5973e6"
+    },
+    "higgsfield-product-photoshoot": {
+      "source": "higgsfield-ai/skills",
+      "sourceType": "github",
+      "skillPath": "higgsfield-product-photoshoot/SKILL.md",
+      "computedHash": "128d1926c2a70ad1c08e7de17e4b7485a2ada9a02ce3e7cad80053311d619ce7"
+    },
+    "implement_lenis_scroll": {
+      "source": "jerrar670/surf-website",
+      "sourceType": "github",
+      "skillPath": ".agent/skills/implement_lenis_scroll/SKILL.md",
+      "computedHash": "595d911a46b2953b97ad2d77bf3bd59b335a5a728355a8ef1091f3615c08c0db"
+    },
+    "improve-animations": {
+      "source": "DavidHDev/react-bits",
+      "sourceType": "github",
+      "skillPath": "AGENTS/SKILLS/improve-animations/SKILL.md",
+      "computedHash": "32f23d860467841f5b07cef198fb53efc70f2adaaa6144cf1a3434d782aed246"
+    },
+    "market-pulse": {
+      "source": "eronred/aso-skills",
+      "sourceType": "github",
+      "computedHash": "42c5ed44e30c2c5b4a095d9c75f90c462aa939fca8a932c4ef1e084abf49e199"
+    },
+    "page-cro": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "97fa14549ae123830f1096821a0aadc898f48542c0473897e0bc3d0c90b024f4"
+    },
+    "premium-frontend-ui": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "e7f3d02a0233beafdd6fe5335427388109b9699ebcdc6a8782a8bada2826d916"
+    },
+    "reactive-programming": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/reactive-programming/SKILL.md",
+      "computedHash": "747cef359002fa06d23794648a84fe9dc59ff9fbe7a60d19d14a31878e1538df"
+    },
+    "repomix-explorer": {
+      "source": "yamadashy/repomix",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/repomix-explorer/SKILL.md",
+      "computedHash": "13eb769ba1b7446d46304e02ae77ea416eb49def9b651954957808d181ec9298"
+    },
+    "review-animations": {
+      "source": "DavidHDev/react-bits",
+      "sourceType": "github",
+      "skillPath": "AGENTS/SKILLS/review-animations/SKILL.md",
+      "computedHash": "c92905bff59c3007d07c2638a2a83d5d71c901feef108cce1da0bf3c7cafd579"
+    },
+    "site-architecture": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "040cf6fcceb0d57322c97aff2e75e1f8d2bf49df7a4e1faccd6f34ebf7f3fab1"
+    },
+    "social-content": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "686dd263804497f05ff8ddb5d83381371bea33241c296c21200733cb898ecd75"
+    },
+    "travel-planner": {
+      "source": "ailabs-393/ai-labs-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8320b1c4b544113788926eee4cb7a31ed1f354227d59cd9f880a51a0c02e101d"
+    },
+    "ux-designer": {
+      "source": "aj-geddes/claude-code-bmad-skills",
+      "sourceType": "github",
+      "computedHash": "6743914ac9a5fcb57080d6e4cb26032123314261614e4c5254904aff81aed3b8"
+    },
+    "vibe-security": {
+      "source": "raroque/vibe-security-skill",
+      "sourceType": "github",
+      "computedHash": "cc047d5ac9ba92065ce7464f4ea6ce48ec52fb907caacd564019915b2a847fa4"
+    }
+  }
+}

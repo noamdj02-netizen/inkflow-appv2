@@ -47,7 +47,7 @@ function setLink(rel: string, href: string) {
 
 export const SEO: React.FC<SEOProps> = ({
   title = 'InkFlow - Logiciel de gestion pour tatoueurs',
-  description = 'Gérez vos rendez-vous, clients et portfolio de tatouage en un seul endroit. La solution professionnelle pour les artistes tatoueurs.',
+  description = 'Logiciel de gestion pour tatoueurs et studios en France : agenda partagé, réservations en ligne, acomptes Stripe (EUR), CRM clients, vitrine et galerie flash. Essai gratuit 1 mois, sans carte.',
   canonical,
   ogImage = DEFAULT_OG_IMAGE,
   ogImageAlt = 'InkFlow — logiciel de gestion pour tatoueurs et studios',
@@ -58,7 +58,10 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
   const fullTitle = title.includes('InkFlow') ? title : `${title} | InkFlow`;
   /** Landing (/) : canonical = SITE_URL (Framer) pour éviter doublon. Pages app : canonical = APP_URL. */
-  const fullCanonical = !canonical || canonical === '/' ? SITE_URL : `${APP_URL.replace(/\/$/, '')}${canonical.startsWith('/') ? canonical : `/${canonical}`}`;
+  const fullCanonical =
+    !canonical || canonical === '/'
+      ? SITE_URL
+      : `${APP_URL.replace(/\/$/, '')}${canonical.startsWith('/') ? canonical : `/${canonical}`}`;
   const absoluteOgImage = toAbsoluteUrl(ogImage, DEFAULT_OG_IMAGE);
   const JSONLD_ID = 'inkflow-jsonld';
 
@@ -107,7 +110,17 @@ export const SEO: React.FC<SEOProps> = ({
       const existing = document.getElementById(JSONLD_ID);
       if (existing) existing.remove();
     }
-  }, [fullTitle, description, fullCanonical, absoluteOgImage, ogImageAlt, ogType, noindex, keywords, schema]);
+  }, [
+    fullTitle,
+    description,
+    fullCanonical,
+    absoluteOgImage,
+    ogImageAlt,
+    ogType,
+    noindex,
+    keywords,
+    schema,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -127,7 +140,9 @@ export const organizationSchema: object = {
   name: 'InkFlow',
   url: SITE_URL,
   logo: `${SITE_URL}/og-image.png`,
-  description: 'Logiciel SaaS de gestion, réservations en ligne et CRM pour tatoueurs et studios de tatouage en France.',
+  description:
+    'Logiciel SaaS de gestion, réservations en ligne et CRM pour tatoueurs et studios de tatouage en France (facturation en euros, conformité RGPD).',
+  areaServed: { '@type': 'Country', name: 'France' },
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer support',
@@ -142,7 +157,8 @@ export const websiteSchema: object = {
   '@type': 'WebSite',
   name: 'InkFlow',
   url: SITE_URL,
-  description: 'Réservations, paiements Stripe, vitrine et agenda pour studios de tatouage.',
+  description:
+    'Réservations en ligne, paiements Stripe (EUR), vitrine publique et agenda pour tatoueurs et studios de tatouage en France.',
   inLanguage: 'fr-FR',
   publisher: { '@type': 'Organization', name: 'InkFlow', url: SITE_URL },
 };
@@ -155,16 +171,22 @@ export const softwareApplicationSchema: object = {
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   browserRequirements: 'Requires JavaScript',
+  availableLanguage: 'French',
+  audience: {
+    '@type': 'Audience',
+    audienceType: 'Artistes tatoueurs et studios de tatouage',
+    geographicArea: { '@type': 'Country', name: 'France' },
+  },
   offers: {
     '@type': 'AggregateOffer',
-    lowPrice: '24',
+    lowPrice: '29',
     highPrice: '99',
     priceCurrency: 'EUR',
     offerCount: '3',
     availability: 'https://schema.org/InStock',
   },
   description:
-    'Plateforme tout-en-un : agenda tatouage, réservation en ligne, acomptes Stripe, galerie flash, CRM clients.',
+    'Agenda, réservations en ligne, acomptes Stripe en euros, galerie flash, CRM et vitrine pour tatoueurs en France.',
 };
 
 /** FAQ — type éligible aux « résultats enrichis » FAQ dans Google (contrairement à SoftwareApplication seul). */
@@ -177,23 +199,23 @@ export const faqPageSchemaFr: object = {
       name: "Qu'est-ce que l'assistant IA Inkflow ?",
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "L'assistant IA Inkflow vous aide à répondre aux demandes de réservation instantanément, à suggérer des créneaux et à personnaliser les réponses selon le type de tatouage. Il apprend de vos habitudes pour optimiser vos réponses.",
+        text: 'Il te propose des brouillons et des créneaux quand une demande arrive. Tu relis, tu envoies. Rien ne part sans ton accord.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Comment fonctionnent les paiements Stripe ?',
+      name: 'Comment fonctionnent les paiements Stripe et PayPal ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Inkflow s'intègre directement avec Stripe. Vos clients paient l'acompte en ligne lors de la réservation. Les fonds arrivent sur votre compte Stripe en quelques jours. Aucune configuration complexe.",
+        text: "Inkflow utilise Stripe Checkout. Tes clients paient l'acompte en ligne lors de la réservation, par carte et PayPal si PayPal est activé dans ton compte Stripe. Les fonds arrivent sur ton compte Stripe en quelques jours.",
       },
     },
     {
       '@type': 'Question',
-      name: 'Quelle est la différence entre le plan Solo et Studio ?',
+      name: 'Quelle est la différence entre Solo, Pro et Studio ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Le plan Solo est conçu pour les tatoueurs indépendants (1 artiste, 100 clients CRM). Le plan Studio inclut plusieurs artistes, des clients CRM illimités et des statistiques avancées par artiste.',
+        text: 'Solo conserve réservation · paiements · vitrine avec plafonds 1 siège / 100 fiches CRM, sans encore activer multi-calendriers étendus, statistiques avancées ou thème vitrine premium. Pro élève tes plafonds (3 sièges · 300 fiches) et active ces trois options. Studio reprend Pro, cinq sièges, CRM illimité sur notre grille et accès développeurs (API InkFlow documentée).',
       },
     },
     {
@@ -201,7 +223,7 @@ export const faqPageSchemaFr: object = {
       name: 'Puis-je gérer mon propre portail client ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Vous contrôlez les accès depuis votre dashboard.",
+        text: "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Tu contrôles les accès depuis ton dashboard.",
       },
     },
     {
@@ -209,7 +231,23 @@ export const faqPageSchemaFr: object = {
       name: 'Comment est gérée la galerie flash unique ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Publiez vos flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
+        text: "Publie tes flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'InkFlow est-il adapté aux tatoueurs en France ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Oui. InkFlow cible les professionnels du tatouage en France : interface en français, tarifs en euros, paiements via Stripe (cartes et acomptes), et données hébergées pour un usage conforme au RGPD. L'essai gratuit d'un mois ne nécessite pas de carte bancaire.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Quel logiciel pour gérer les rendez-vous d’un salon de tatouage ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "InkFlow centralise l'agenda, les demandes clients, les acomptes en ligne et le suivi CRM dans une seule application web. Les clients peuvent réserver via votre page vitrine ou un lien de réservation ; vous gardez le contrôle des créneaux et des statuts de rendez-vous.",
       },
     },
   ],
@@ -228,6 +266,40 @@ export function createBreadcrumbSchema(items: { name: string; url: string }[]): 
   };
 }
 
+/** FAQ par page (fonctionnalités, aide…) — extractible par Google / IA */
+export function createFaqSchemaFromPairs(pairs: { question: string; answer: string }[]): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: pairs.map((p) => ({
+      '@type': 'Question',
+      name: p.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: p.answer,
+      },
+    })),
+  };
+}
+
+export function createWebPageSchema(opts: {
+  name: string;
+  description: string;
+  url: string;
+  dateModified?: string;
+}): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    inLanguage: 'fr-FR',
+    isPartOf: { '@type': 'WebSite', name: 'InkFlow', url: SITE_URL },
+    ...(opts.dateModified ? { dateModified: opts.dateModified } : {}),
+  };
+}
+
 export function createTattooStudioSchema(studio: {
   name: string;
   description: string;
@@ -241,7 +313,9 @@ export function createTattooStudioSchema(studio: {
   slug?: string;
 }): object {
   const appBase = APP_URL.replace(/\/$/, '');
-  const base = studio.slug ? `${appBase}/studio/${studio.slug}` : `${appBase}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
+  const base = studio.slug
+    ? `${appBase}/studio/${studio.slug}`
+    : `${appBase}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',

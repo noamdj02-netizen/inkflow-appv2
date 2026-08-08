@@ -5,6 +5,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const META_APP_ID = Deno.env.get("META_APP_ID") || "";
 const META_APP_SECRET = Deno.env.get("META_APP_SECRET") || "";
@@ -12,12 +13,92 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const SITE_URL = (Deno.env.get("SITE_URL") || Deno.env.get("APP_URL") || "https://ink-flow.me").replace(/\/+$/, "");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+/** Pseudo Instagram sécurisé pour une URL instagram.com/[username]/ */
+function sanitizeInstagramUsername(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  const s = raw.trim().replace(/^@/, "");
+  if (!/^[A-Za-z0-9._]{1,64}$/.test(s)) return null;
+  return s;
+}
+
+/**
+ * Nom, @username et photo pour un interlocuteur DM (Instagram Scoped ID ou PSID IG).
+ * Tente Graph Facebook puis Instagram ; si Meta refuse (RGPD / permissions), champs laissés vides.
+ */
+async function fetchInstagramDmParticipantPreview(
+  participantId: string,
+  pageAccessToken: string,
+): Promise<{
+  name: string | null;
+  username: string | null;
+  profilePictureUrl: string | null;
+}> {
+  const empty = (): {
+    name: string | null;
+    username: string | null;
+    profilePictureUrl: string | null;
+  } => ({
+    name: null,
+    username: null,
+    profilePictureUrl: null,
+  });
+
+  const pid = participantId.trim();
+  if (!pid || !pageAccessToken) return empty();
+
+  const fields = encodeURIComponent("name,username,profile_pic,picture.type(large)");
+  const fbUrl =
+    `https://graph.facebook.com/v18.0/${encodeURIComponent(pid)}?fields=${fields}&access_token=${encodeURIComponent(pageAccessToken)}`;
+
+  async function parseFb(body: Record<string, unknown>): Promise<ReturnType<typeof empty>> {
+    const pictureUrl =
+      typeof body.profile_pic === "string"
+        ? body.profile_pic
+        : typeof (body.picture as { data?: { url?: string } } | undefined)?.data?.url === "string"
+        ? (body.picture as { data: { url: string } }).data.url
+        : null;
+    const name = typeof body.name === 'string' ? body.name.trim() || null : null;
+    const u = sanitizeInstagramUsername(typeof body.username === 'string' ? body.username : undefined);
+    return {
+      name,
+      username: u,
+      profilePictureUrl: typeof pictureUrl === "string" ? pictureUrl : null,
+    };
+  }
+
+  try {
+    const fbRes = await fetch(fbUrl);
+    const fbJson = (await fbRes.json()) as Record<string, unknown>;
+    if (fbRes.ok && !fbJson.error) {
+      const preview = await parseFb(fbJson);
+      if (preview.username || preview.name || preview.profilePictureUrl) return preview;
+    }
+
+    const igUrl =
+      `https://graph.instagram.com/v18.0/${encodeURIComponent(pid)}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(pageAccessToken)}`;
+    const igRes = await fetch(igUrl);
+    const igJson = (await igRes.json()) as Record<string, unknown>;
+    if (igRes.ok && !igJson.error) {
+      const username = sanitizeInstagramUsername(igJson.username as string | undefined);
+      const name = typeof igJson.name === "string" ? igJson.name.trim() || null : null;
+      const pic = typeof igJson.profile_picture_url === "string" ? igJson.profile_picture_url : null;
+      if (username || name || pic) return { name, username, profilePictureUrl: pic };
+    }
+  } catch {
+    // Réseau / parse
+  }
+
+  return empty();
+}
+
+function shortParticipantLabel(participantId: string): string {
+  const id = participantId.trim();
+  if (id.length <= 14) return id;
+  return `${id.slice(0, 10)}…`;
+}
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -180,7 +261,11 @@ Deno.serve(async (req: Request) => {
     if (action === "conversations") {
       if (!studioId) return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: conn } = await supabase.from("instagram_connections").select("ig_account_id").eq("studio_id", studioId).single();
+      const { data: conn } = await supabase
+        .from("instagram_connections")
+        .select("ig_account_id, page_access_token")
+        .eq("studio_id", studioId)
+        .single();
       if (!conn) return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const { data: rows } = await supabase
@@ -198,15 +283,30 @@ Deno.serve(async (req: Request) => {
           participants.set(pid, { lastMessage: r.text || "", lastAt: r.timestamp || "", unread: 0 });
         }
       }
-      const convs = Array.from(participants.entries()).map(([participantId, p]) => ({
-        id: participantId,
-        participantId,
-        participantName: participantId,
-        participantAvatar: null,
-        lastMessage: p.lastMessage,
-        lastAt: p.lastAt,
-        unread: p.unread,
-      }));
+
+      const pageToken = conn.page_access_token;
+      const convs = await Promise.all(
+        Array.from(participants.entries()).map(async ([participantId, p]) => {
+          const preview = await fetchInstagramDmParticipantPreview(participantId, pageToken);
+          const label =
+            preview.name ||
+            (preview.username ? `@${preview.username}` : shortParticipantLabel(participantId));
+          const participantProfileUrl = preview.username
+            ? `https://www.instagram.com/${preview.username}/`
+            : null;
+          return {
+            id: participantId,
+            participantId,
+            participantName: label,
+            participantUsername: preview.username,
+            participantProfileUrl,
+            participantAvatar: preview.profilePictureUrl,
+            lastMessage: p.lastMessage,
+            lastAt: p.lastAt,
+            unread: p.unread,
+          };
+        }),
+      );
       return new Response(JSON.stringify(convs), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

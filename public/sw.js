@@ -1,12 +1,15 @@
 /* eslint-disable no-restricted-globals */
 import { precacheAndRoute } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { registerRoute, setCatchHandler } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Nouveau SW s’active tout de suite après déploi (évite ancienne version en cache)
-self.addEventListener('install', () => self.skipWaiting());
+/** Avec `registerType: 'prompt'`, le client envoie SKIP_WAITING quand l’utilisateur accepte la maj (virtual:pwa-register). */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 registerRoute(
@@ -18,7 +21,23 @@ registerRoute(
   })
 );
 
-// ─── Web Push Notifications ───
+setCatchHandler(({ event }) => {
+  if (event.request.destination === 'document') {
+    return caches.match('/offline.html', { ignoreSearch: true }).then((r) => {
+      if (r) return r;
+      return new Response('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Hors ligne</title></head><body><p>Hors ligne</p></body></html>', {
+        status: 503,
+        statusText: 'Offline',
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    });
+  }
+  return Promise.resolve(Response.error());
+});
+
+// ─── Web Push Notifications (VAPID) — InkFlow prod : https://app.ink-flow.me
+const INKFLOW_APP_ORIGIN = 'https://app.ink-flow.me';
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let payload = { title: 'InkFlow', body: 'Nouvelle notification' };
@@ -29,8 +48,8 @@ self.addEventListener('push', (event) => {
   }
   const options = {
     body: payload.body,
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
     tag: payload.tag || 'inkflow-notification',
     data: payload.data || {},
     requireInteraction: !!payload.requireInteraction,
@@ -41,16 +60,20 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || event.notification.data?.actionUrl || '/dashboard';
+  const raw = event.notification.data?.url || event.notification.data?.actionUrl || '/dashboard';
+  const pathOrUrl = typeof raw === 'string' ? raw : '/dashboard';
+  const targetUrl = pathOrUrl.startsWith('http')
+    ? pathOrUrl
+    : `${INKFLOW_APP_ORIGIN}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
+          client.navigate(targetUrl);
           return client.focus();
         }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });

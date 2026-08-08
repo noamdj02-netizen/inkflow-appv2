@@ -63,14 +63,14 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     name: 'Minimalist Light',
     premium: false,
     productTier: 'full',
-    description: 'Blanc épuré, élégant et minimaliste',
-    containerClasses: 'bg-[#fafaf9] text-neutral-900',
-    accentColor: '#7c5cfc',
+    description: 'Blanc épuré, style éditorial (type Pinterest)',
+    containerClasses: 'bg-[#f7f7f5] text-neutral-900',
+    accentColor: '#171717',
     preview: {
-      bg: 'bg-[#fafaf9]',
+      bg: 'bg-[#f7f7f5]',
       card: 'bg-white',
       text: 'text-neutral-900',
-      accent: 'bg-violet-500',
+      accent: 'bg-neutral-900',
     },
   },
   {
@@ -121,6 +121,12 @@ export const VITRINE_THEMES: VitrineTheme[] = [
 ];
 
 export const DEFAULT_VITRINE_THEME_ID = 'light';
+
+/**
+ * Thèmes listés dans Paramètres → vitrine (tous les ids connus ;
+ * les thèmes premium peuvent être verrouillés selon l’abo).
+ */
+export const VITRINE_THEMES_SELECTOR: readonly VitrineTheme[] = VITRINE_THEMES;
 
 export function getVitrineTheme(id: string): VitrineTheme | undefined {
   return VITRINE_THEMES.find((t) => t.id === id);

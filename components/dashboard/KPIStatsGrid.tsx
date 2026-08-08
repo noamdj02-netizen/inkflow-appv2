@@ -31,7 +31,12 @@ function parseTrend(trend: string): { value: string; isPositive: boolean } {
 }
 
 export const KPIStatsGrid: React.FC<KPIStatsGridProps> = ({ items, columns = 4 }) => {
-  const gridCols = columns === 2 ? 'grid-cols-1 sm:grid-cols-2' : columns === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
+  const gridCols =
+    columns === 2
+      ? 'grid-cols-1 sm:grid-cols-2'
+      : columns === 3
+        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+        : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
 
   return (
     <div className={`grid ${gridCols} gap-4`}>
@@ -62,13 +67,15 @@ export const KPIStatsGrid: React.FC<KPIStatsGridProps> = ({ items, columns = 4 }
             {trendParsed && (
               <div className="mt-2 flex items-center gap-1">
                 {trendParsed.isPositive ? (
-                  <TrendingUp className="w-4 h-4 text-emerald-500 flex-shrink-0" strokeWidth={2} />
+                  <TrendingUp className="w-4 h-4 text-blue-500 flex-shrink-0" strokeWidth={2} />
                 ) : (
                   <TrendingDown className="w-4 h-4 text-red-500 flex-shrink-0" strokeWidth={2} />
                 )}
                 <span
                   className={`text-sm font-semibold ${
-                    trendParsed.isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                    trendParsed.isPositive
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-red-600 dark:text-red-400'
                   }`}
                 >
                   {trendParsed.value}

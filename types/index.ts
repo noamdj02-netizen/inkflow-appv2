@@ -4,6 +4,8 @@ export interface User {
   name: string;
   studioName: string;
   avatar?: string;
+  /** Équipe InkFlow (@ink-flow.me / @inkflow.me ou liste founder) — pas de ligne studio tatoueur imposée */
+  isInkflowStaff?: boolean;
   role: 'artist' | 'studio_owner';
   phone?: string;
   address?: string;
@@ -24,10 +26,14 @@ export interface Appointment {
   price: number;
   deposit: number;
   depositPaid: boolean;
+  /** Horodatage encaissement solde (Stripe Checkout type balance), si présent en base. */
+  balancePaidAt?: string | null;
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   notes?: string;
   tattooType: 'custom' | 'flash';
   flashId?: string;
+  /** Lien optionnel vers inkflow_project_requests (demande vitrine / chat). */
+  projectRequestId?: string | null;
   location: 'arm' | 'leg' | 'back' | 'chest' | 'other';
   size: 'small' | 'medium' | 'large' | 'extra_large';
   images?: string[];
@@ -53,6 +59,14 @@ export interface FlashDesign {
   createdAt: string;
   reservedBy?: string;
   reservedUntil?: string;
+  /** URL slug public (/flash/[slug]) — généré côté serveur si vide */
+  slug?: string | null;
+  /** Lien vers inkflow_artists.id (même id que compte artiste dashboard) */
+  artistId?: string | null;
+  /** Mis en avant dans l’app client / aperçu pro */
+  featured?: boolean;
+  /** Ordre d’affichage (slider « populaire ») */
+  displayOrder?: number;
 }
 
 export interface Client {
@@ -68,6 +82,10 @@ export interface Client {
   lastVisit?: string;
   firstVisit: string;
   notes?: string;
+  /** Compte espace client (auth) si synchronisé via paiement */
+  portalUserId?: string | null;
+  /** Questionnaire santé copié au dernier paiement (JSON) */
+  healthProfileSnapshot?: import('./database').Json | null;
   tattoos: TattooRecord[];
   preferences?: ClientPreferences;
   status: 'active' | 'inactive' | 'vip';
@@ -105,7 +123,7 @@ export interface Revenue {
 
 export interface Notification {
   id: string;
-  type: 'booking' | 'payment' | 'reminder' | 'cancellation' | 'review';
+  type: 'booking' | 'payment' | 'reminder' | 'cancellation' | 'review' | 'message';
   title: string;
   message: string;
   read: boolean;
@@ -127,9 +145,12 @@ export interface BookingFormData {
   description: string;
   referenceImages?: File[];
   agreedToDeposit: boolean;
+  /** Flux studio uniquement (nouvelle réservation manuelle) — prix et acompte saisis par le tatoueur */
+  price?: number;
+  deposit?: number;
 }
 
-export type ProjectRequestStatus = 'pending' | 'accepted' | 'rejected';
+export type ProjectRequestStatus = 'pending' | 'accepted' | 'confirmed' | 'rejected';
 
 export interface ProjectRequest {
   id: string;
@@ -147,6 +168,12 @@ export interface ProjectRequest {
   referenceImageUrl?: string;
   referenceImages: string[];
   createdAt: string;
+  /** Créneau proposé par l’artiste (acceptation) */
+  proposedSlot?: string | null;
+  /** Expiration de la proposition */
+  slotExpiresAt?: string | null;
+  /** Message libre artiste → client */
+  artistMessage?: string | null;
 }
 
 export interface ProjectRequestFormData {
@@ -175,10 +202,18 @@ export interface Booking {
   requestedTime: string | null;
   status: BookingStatus;
   referenceImages?: string[];
+  /**
+   * Photo profil client (URL) si connecté via l’espace client / OAuth au moment de la demande.
+   * Le fil messagerie partagé avec le pro utilise `id` (ex. `bk_…`) comme `thread_id`.
+   */
+  clientAvatarUrl?: string;
   /** Zone du corps (optionnel, depuis formulaire vitrine) */
   placement?: string;
   /** Taille estimée (optionnel) */
   size?: string;
+  /** Téléphone saisi vitrine + opt-in SMS (confirmation / lien paiement). */
+  clientPhone?: string;
+  smsConfirmationOptIn?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -193,6 +228,12 @@ export interface VitrineBookingFormData {
   referenceImages?: string[];
   /** Pseudo / lien Instagram (optionnel) — fluidifie l’échange avec le tatoueur */
   clientInstagram?: string;
+  /** Photo profil si le client est connecté (espace client) */
+  clientAvatarUrl?: string;
+  /** Mobile pour SMS transactionnels (opt-in séparé) */
+  clientPhone?: string;
+  /** Consentement explicite : SMS courte confirmation + lien (Twilio configuré). */
+  smsConfirmationOptIn?: boolean;
 }
 
 export interface StudioSettings {
@@ -209,7 +250,7 @@ export interface StudioSettings {
   cancellationPolicy: string;
 }
 
-// Payments
+// Payments — inkflow_payments.status (voir supabase/functions/_shared/inkflowPaymentRecordStatus.ts)
 export interface Payment {
   id: string;
   studioId: string;
@@ -229,12 +270,27 @@ export interface Payment {
 export type SubscriptionPlan = 'solo' | 'pro' | 'studio' | 'enterprise';
 
 /** Statut d'abonnement studio */
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'incomplete' | 'restricted';
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'cancelled'
+  | 'incomplete'
+  | 'restricted';
 
 /** Clés des fonctionnalités gérées par le plan (Stripe) */
 export type PlanFeatureKey =
+  | 'reservations_online'
+  | 'stripe_payments'
+  | 'paypal_payments'
+  | 'vitrine_public'
+  | 'crm_clients'
   | 'galerie_flash'
   | 'app_mobile'
+  | 'facturation'
+  | 'traceabilite_simple'
+  | 'fidelite'
+  | 'equipe_roles'
   | 'api_access'
   | 'stats_avancees'
   | 'multi_calendriers'
@@ -276,7 +332,7 @@ export interface Message {
   id: string;
   studioId: string;
   threadId: string;
-  senderType: 'artist' | 'client';
+  senderType: 'artist' | 'client' | 'system';
   senderName: string;
   content: string;
   read: boolean;
@@ -291,6 +347,11 @@ export interface MessageThread {
   lastMessageAt: string;
   unreadCount: number;
   projectRequestId?: string;
+  /**
+   * RDV lié pour traçabilité juridique du consentement (fil `bk_*` → recap, `pr_*` → projet).
+   * Absent si aucun RDV n’a pu être résolu (consentement générique au fil).
+   */
+  linkedAppointmentId?: string | null;
   /** Photo de profil (démo / affichage) */
   avatar?: string;
 }
@@ -337,3 +398,15 @@ export interface LoyaltyEntry {
   totalRedeemed: number;
   createdAt: string;
 }
+
+export type {
+  StudioModuleId,
+  StudioDashboardPreferences,
+  StudioModuleToggle,
+  SidebarGroupId,
+  StudioSidebarItemConfig,
+} from './studioPreferences';
+export {
+  STUDIO_PREFERENCES_SCHEMA_VERSION,
+  DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+} from './studioPreferences';

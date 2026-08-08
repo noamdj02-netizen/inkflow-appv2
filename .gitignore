@@ -9,12 +9,18 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# Playwright / E2E
+test-results/
+playwright-report/
+
 dist-ssr
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
@@ -29,6 +35,12 @@ dist-ssr
 .env
 .env.local
 .env.production
+env.local1
+
+# Dumps Postgres locaux (scripts/backup-postgres.sh)
+backups/
+inkflow-pg-*.sql.gz
+inkflow-pg-*.dump
 
 .vercel
 
@@ -44,3 +56,20 @@ supabase/.temp
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Artefact Figma (scripts/build-figma-logo-code.mjs) — ne pas bundler
+.figma-logo-code.js
+.tmp-logo-b64.txt
+
+# Repomix (skill repomix-explorer) — packs codebase pour analyse IA
+.repomix/
+repomix-output.xml
+repomix-output.*
+
+# UI UX Pro Max (skill) — fichiers générés par --persist
+/design-system/
+.cursor/skills/**/__pycache__/
+
+# Doublon Expo par erreur (ne pas versionner si recréé localement)
+inkflow-mobile/inkflow-mobile/
+.env*.local

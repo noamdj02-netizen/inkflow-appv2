@@ -2,16 +2,14 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { rateLimitByIp, verifyTattooerOwnsStudio } from "../_shared/edgeInvokeAuth.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const SUPABASE_ANON_KEY = (Deno.env.get("SUPABASE_ANON_KEY") || "").trim();
 
 interface AftercarePayload {
   appointmentId: string;
@@ -52,11 +50,18 @@ function buildAftercareHtml(payload: AftercarePayload): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
+    if (!rateLimitByIp(req, "send-aftercare-email", 40)) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
     const payload: AftercarePayload = await req.json();
 
     if (!payload.appointmentId || !payload.studioId) {
@@ -64,6 +69,20 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "appointmentId and studioId are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    const allowed = await verifyTattooerOwnsStudio(
+      req,
+      payload.studioId,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY,
+    );
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     let clientEmail = payload.clientEmail;

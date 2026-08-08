@@ -1,6 +1,7 @@
 # Emails non reçus — débogage Resend
 
 **Fonctions qui envoient des emails** (utilisent `APP_URL` pour les liens CTA, `RESEND_FROM_EMAIL` si défini) :
+- **send-tattooer-welcome** : email de bienvenue tatoueur après confirmation (appel depuis `AuthCallbackPage`, JWT utilisateur)
 - **send-client-conversation-link** : lien conversation quand le studio accepte une demande de projet
 - **send-booking-confirmation** : confirmation RDV vitrine quand le tatoueur clique « Confirmer »
 - **send-booking-refusal** : refus de demande (RDV, RDV vitrine, projet) quand le tatoueur clique « Refuser »
@@ -17,6 +18,8 @@ Les liens Stripe (acompte, abo) et Google Calendar utilisent **APP_URL** ou **SI
 npx supabase secrets set APP_URL=https://app.ink-flow.me
 ```
 Puis redéploie : `send-booking-confirmation`, `send-client-conversation-link`, `send-message-notification`, `create-portal-session`.
+
+**Emails Supabase Auth** (confirmation d’inscription, reset mot de passe) : ils **ne passent pas** par ces Edge Functions. Ils sont envoyés par **Auth** (SMTP dashboard ou transport par défaut). Checklist SMTP, Redirect URLs et distinction Auth / Resend API : **[SUPABASE-AUTH-SMTP.md](./SUPABASE-AUTH-SMTP.md)**.
 
 ---
 

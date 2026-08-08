@@ -21,14 +21,14 @@
 | **Liste d'attente (Waitlist)** | ⚠️ Partiel | State uniquement | **Perdu au rechargement.** Fallback localStorage ajouté. |
 | **Artistes** | ⚠️ Partiel | State uniquement | **Perdu au rechargement.** Fallback localStorage ajouté. |
 | **Fidélité (Loyalty)** | ⚠️ Partiel | State uniquement | **Perdu au rechargement.** Fallback localStorage ajouté. |
-| **Messagerie** | ⚠️ Partiel | Tables Supabase existent | Threads non chargés dans le dashboard (liste vide). À brancher sur Supabase. |
+| **Messagerie** | ✅ Prêt | `inkflow_messages` + Realtime | Liste des fils construite dans `DashboardPro` (requête par `studio_id`) ; onglet `MessagingTab` reçoit `messageThreads`. |
 
 ## Recommandations pour un usage 100 % quotidien
 
 1. **Configurer Supabase** (`.env` : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) pour que RDV, clients, flash, notifications, vitrine et widgets soient persistés en base et synchronisés (realtime).
 2. **Créer un compte Supabase Auth** (même email/mot de passe que le studio) pour que la sauvegarde vitrine et les écritures RLS fonctionnent sans erreur.
 3. **Consentement / Waitlist / Artistes / Fidélité** : la persistance locale (localStorage) a été ajoutée pour éviter la perte au rechargement. Pour une synchro multi-appareils, prévoir un jour des appels Supabase (tables déjà en place).
-4. **Messagerie** : connecter l’onglet Messagerie au chargement des threads depuis `inkflow_messages` (et enregistrement des réponses) pour un usage quotidien complet.
+4. **Messagerie** : chargement des threads côté dashboard — OK (voir `DashboardPro` → `inkflow_messages`). Vérifier manuellement Realtime + cas limites (fils orphelins, Instagram branché).
 
 ## Points forts actuels
 

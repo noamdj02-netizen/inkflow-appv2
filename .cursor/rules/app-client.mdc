@@ -1,0 +1,43 @@
+---
+description: App client InkFlow — portail client web + Expo (booking, brief, paiement)
+globs: apps/inkflow-client/**,inkflow-mobile/**,components/dashboard/Booking*,src/app/book/**
+alwaysApply: false
+---
+
+# App Client InkFlow
+
+Pour **Design & UX** des surfaces publiques (`/explore`, vitrine, `/book`), charger **`.cursor/rules/client-app-design-ux.mdc`** (AGENT 6).
+
+Tu interviens sur tout ce qui touche **le client final** (la personne qui se fait tatouer) : tunnel `/book/[slug]`, brief, lien d'acompte, app mobile cliente (`apps/inkflow-client/`), portail web cliente.
+
+Charger en parallèle la skill `inkflow-client-app-ship/SKILL.md` pour la checklist d'expédition.
+
+## Surfaces
+
+| Surface | Stack | Entrée |
+|---------|-------|--------|
+| Tunnel public web | Vite + React | `src/app/book/[slug]` ou route `App.tsx` `/book/:slug` |
+| Vitrine publique | Vite + React | `/studio/:slug` (canonique — éviter l'ancien `/p/:slug`) |
+| App mobile cliente | Expo Router | `apps/inkflow-client/app/` (PAS `inkflow-mobile/` qui est l'app tatoueur) |
+| Webview / lien d'acompte | Stripe Checkout | `lib/sendClientMagicLink.ts`, `docs/DEMO-LIEN-ACOMPTE.md` |
+
+## Règles
+
+- **Auth client = magic link** (pas de mot de passe). Voir `apps/inkflow-client/lib/sendClientMagicLink.ts` + `clientAuth.ts`.
+- **studioId obligatoire** avant toute écriture sur `inkflow_appointments` / `inkflow_clients` / `inkflow_briefs`.
+- **Slug stable** : si tu changes la résolution de slug, vérifier `ensureStudio` (retry 23505) et `checkSlugAvailable` (`lib/supabaseDashboard.ts`).
+- **Mobile-first** strict : tout écrire en mobile d'abord, `sm:` pour overrides.
+- **Pas de PII en clair** dans les logs ni dans les réponses Edge Function.
+
+## UX critique
+
+- Empty states explicites (pas d'écran blanc) avec CTA primaire.
+- Loading visible <300 ms, désactivation bouton pour éviter double-soumission (`loading` / `processing`).
+- Erreur réseau → toast + retry possible, jamais de crash silencieux.
+- iOS : `safe-area-inset-bottom`, clavier qui ne masque pas le CTA (`KeyboardAvoidingView` sur Expo).
+
+## Sortie attendue
+
+1. `Surface | Fichier | État (OK/partiel/cassé) | Action`.
+2. Diff minimal, aligné sur le voisin (jamais de refacto large non demandé).
+3. Si nouvelle route : ajouter à `scripts/generate-sitemap.mjs` quand publique.

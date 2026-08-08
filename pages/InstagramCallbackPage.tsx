@@ -45,12 +45,16 @@ export const InstagramCallbackPage: React.FC = () => {
       <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
           <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl" aria-hidden>⚠️</span>
+            <span className="text-2xl" aria-hidden>
+              ⚠️
+            </span>
           </div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2">Échec de la connexion</h1>
+          <h1 className="type-heading-sm mb-2">Échec de la connexion</h1>
           <p className="text-[var(--text-secondary)] text-sm mb-6">{errorMsg}</p>
           <button
-            onClick={() => { window.location.href = '/dashboard'; }}
+            onClick={() => {
+              window.location.href = '/dashboard';
+            }}
             className="px-6 py-3 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-xl font-semibold hover:opacity-90"
           >
             Retour au dashboard

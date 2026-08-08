@@ -75,8 +75,8 @@ export default function HomeScreen() {
     }, 1200);
   }, []);
 
-  const handleAppointmentPress = useCallback((id: string) => {
-    // TODO: navigation vers détail RDV
+  const handleAppointmentPress = useCallback((_id: string) => {
+    /* Détail RDV : brancher sur l’écran dédié quand le stack mobile expose la route. */
   }, []);
 
   return (
@@ -101,7 +101,7 @@ export default function HomeScreen() {
           style={styles.header}
         >
           <View style={styles.headerLeft}>
-            <Text style={[styles.greeting, { color: colors.text }]}>Bonjour Noam 👋</Text>
+            <Text style={[styles.greeting, { color: colors.text }]}>Bonjour Noam</Text>
           </View>
           <Pressable style={styles.notifButton} hitSlop={12}>
             <Bell size={22} color={colors.text} strokeWidth={2} />
@@ -127,7 +127,7 @@ export default function HomeScreen() {
             android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
           >
             <Share2 size={20} color={colors.textSecondary} strokeWidth={2} />
-            <Text style={[styles.btnSecondaryText, { color: colors.textSecondary }]}>Partager Vitrine</Text>
+            <Text style={[styles.btnSecondaryText, { color: colors.textSecondary }]}>Lien vitrine</Text>
           </Pressable>
         </MotiView>
 

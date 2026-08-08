@@ -74,7 +74,7 @@ Si **Supabase n’est pas actif** (variables d’environnement manquantes ou err
   - Après succès, `useIncomingBookings` met à jour l’état local **et** appelle **refetch** (`load()`) pour resynchroniser la liste avec la BDD.
 
 - **Demandes de projet (project requests)**  
-  - Changement de statut : `updateProjectRequestStatus(id, status)` → UPDATE dans `inkflow_project_requests`.  
+  - Changement de statut : `updateProjectRequestStatus(id, status, studioId)` → UPDATE dans `inkflow_project_requests` (filtre `studio_id`).  
   - Après succès, **refetch** pour garder la liste alignée avec la BDD.
 
 - **RDV (appointments) / Clients / Flash**  

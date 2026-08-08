@@ -5,8 +5,11 @@
 
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { isServiceRoleOrInternalSecret } from "../_shared/edgeInvokeAuth.ts";
 
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
 
 interface Payload {
   studioEmail: string;
@@ -16,11 +19,6 @@ interface Payload {
   amountPaid: number;
   serviceName: string;
 }
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 function buildHtml(payload: Payload): string {
   const safeClientName = escapeHtml(payload.clientName);
@@ -52,8 +50,16 @@ function buildHtml(payload: Payload): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  if (!isServiceRoleOrInternalSecret(req, SUPABASE_SERVICE_ROLE_KEY)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 
   try {

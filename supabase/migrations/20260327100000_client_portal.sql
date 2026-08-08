@@ -34,17 +34,27 @@ ALTER TABLE inkflow_client_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inkflow_client_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inkflow_client_referrals ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "client_wallet_self" ON inkflow_client_wallets;
 CREATE POLICY "client_wallet_self"   ON inkflow_client_wallets FOR SELECT  USING (email = auth.email());
+DROP POLICY IF EXISTS "client_wallet_svc" ON inkflow_client_wallets;
 CREATE POLICY "client_wallet_svc"    ON inkflow_client_wallets FOR ALL     USING (auth.role()='service_role') WITH CHECK (auth.role()='service_role');
 
+DROP POLICY IF EXISTS "client_code_self" ON inkflow_client_codes;
 CREATE POLICY "client_code_self"     ON inkflow_client_codes   FOR SELECT  USING (email = auth.email());
+DROP POLICY IF EXISTS "client_code_insert" ON inkflow_client_codes;
 CREATE POLICY "client_code_insert"   ON inkflow_client_codes   FOR INSERT  WITH CHECK (email = auth.email());
+DROP POLICY IF EXISTS "client_code_svc" ON inkflow_client_codes;
 CREATE POLICY "client_code_svc"      ON inkflow_client_codes   FOR ALL     USING (auth.role()='service_role') WITH CHECK (auth.role()='service_role');
 
+DROP POLICY IF EXISTS "client_ref_self" ON inkflow_client_referrals;
 CREATE POLICY "client_ref_self"      ON inkflow_client_referrals FOR SELECT USING (referrer_email = auth.email() OR referee_email = auth.email());
+DROP POLICY IF EXISTS "client_ref_insert" ON inkflow_client_referrals;
 CREATE POLICY "client_ref_insert"    ON inkflow_client_referrals FOR INSERT WITH CHECK (referrer_email = auth.email());
+DROP POLICY IF EXISTS "client_ref_svc" ON inkflow_client_referrals;
 CREATE POLICY "client_ref_svc"       ON inkflow_client_referrals FOR ALL   USING (auth.role()='service_role') WITH CHECK (auth.role()='service_role');
 
 -- Les clients peuvent lire leurs propres RDV et réservations
+DROP POLICY IF EXISTS "client_apt_self" ON inkflow_appointments;
 CREATE POLICY "client_apt_self"      ON inkflow_appointments FOR SELECT USING (client_email = auth.email());
+DROP POLICY IF EXISTS "client_booking_self" ON inkflow_bookings;
 CREATE POLICY "client_booking_self"  ON inkflow_bookings     FOR SELECT USING (client_email = auth.email());

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Plus, Trash2, Save, Calendar, AlertCircle, Timer, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../contexts/ToastContext';
 
 interface AvailabilitySettingsProps {
   studioId?: string | null;
@@ -25,23 +26,49 @@ interface WeeklySchedule {
 }
 
 const DEFAULT_SCHEDULE: WeeklySchedule = {
-  monday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-  tuesday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-  wednesday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-  thursday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-  friday: { enabled: true, open: '10:00', close: '20:00', breaks: [{ start: '13:00', end: '14:00' }] },
+  monday: {
+    enabled: true,
+    open: '10:00',
+    close: '19:00',
+    breaks: [{ start: '13:00', end: '14:00' }],
+  },
+  tuesday: {
+    enabled: true,
+    open: '10:00',
+    close: '19:00',
+    breaks: [{ start: '13:00', end: '14:00' }],
+  },
+  wednesday: {
+    enabled: true,
+    open: '10:00',
+    close: '19:00',
+    breaks: [{ start: '13:00', end: '14:00' }],
+  },
+  thursday: {
+    enabled: true,
+    open: '10:00',
+    close: '19:00',
+    breaks: [{ start: '13:00', end: '14:00' }],
+  },
+  friday: {
+    enabled: true,
+    open: '10:00',
+    close: '20:00',
+    breaks: [{ start: '13:00', end: '14:00' }],
+  },
   saturday: { enabled: true, open: '11:00', close: '20:00', breaks: [] },
-  sunday: { enabled: false, open: '10:00', close: '19:00', breaks: [] }
+  sunday: { enabled: false, open: '10:00', close: '19:00', breaks: [] },
 };
 
 export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ studioId, onSave }) => {
+  const toast = useToast();
   const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
 
   const [bookingSettings, setBookingSettings] = useState({
-    slotDuration: 60,       // durée créneau en minutes
-    bufferTime: 15,         // pause entre 2 clients en minutes
-    overrunMargin: 0,       // marge de sécurité pour pièces complexes
-    advanceBooking: 7,      // délai min de réservation en jours
+    slotDuration: 60, // durée créneau en minutes
+    bufferTime: 15, // pause entre 2 clients en minutes
+    overrunMargin: 0, // marge de sécurité pour pièces complexes
+    advanceBooking: 7, // délai min de réservation en jours
     maxDailyBookings: 8,
     requireDeposit: true,
     depositPercentage: 30,
@@ -56,7 +83,11 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
   const [newSlot, setNewSlot] = useState('');
 
   // Périodes bloquées (ex : agenda déjà rempli jusqu'en mai)
-  interface BlockedRange { start: string; end: string; label: string }
+  interface BlockedRange {
+    start: string;
+    end: string;
+    label: string;
+  }
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
   const [newRange, setNewRange] = useState<BlockedRange>({ start: '', end: '', label: '' });
 
@@ -67,36 +98,36 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
     { key: 'thursday', label: 'Jeudi' },
     { key: 'friday', label: 'Vendredi' },
     { key: 'saturday', label: 'Samedi' },
-    { key: 'sunday', label: 'Dimanche' }
+    { key: 'sunday', label: 'Dimanche' },
   ];
 
   const updateDay = (day: string, field: string, value: unknown) => {
-    setSchedule(prev => ({
+    setSchedule((prev) => ({
       ...prev,
       [day]: {
         ...prev[day as keyof typeof prev],
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const addBreak = (day: string) => {
-    setSchedule(prev => ({
+    setSchedule((prev) => ({
       ...prev,
       [day]: {
         ...prev[day as keyof typeof prev],
-        breaks: [...prev[day as keyof typeof prev].breaks, { start: '13:00', end: '14:00' }]
-      }
+        breaks: [...prev[day as keyof typeof prev].breaks, { start: '13:00', end: '14:00' }],
+      },
     }));
   };
 
   const removeBreak = (day: string, index: number) => {
-    setSchedule(prev => ({
+    setSchedule((prev) => ({
       ...prev,
       [day]: {
         ...prev[day as keyof typeof prev],
-        breaks: prev[day as keyof typeof prev].breaks.filter((_, i) => i !== index)
-      }
+        breaks: prev[day as keyof typeof prev].breaks.filter((_, i) => i !== index),
+      },
     }));
   };
 
@@ -108,7 +139,7 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
   };
 
   const removeClosedDate = (date: string) => {
-    setClosedDates(closedDates.filter(d => d !== date));
+    setClosedDates(closedDates.filter((d) => d !== date));
   };
 
   const addBlockedRange = () => {
@@ -144,7 +175,7 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
       setIsLoading(false);
       return;
     }
-    
+
     const loadSettings = async () => {
       try {
         const { data } = await supabase
@@ -152,17 +183,17 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
           .select('availability_settings')
           .eq('id', studioId)
           .single();
-        
+
         if (data?.availability_settings) {
           const settings = data.availability_settings as Record<string, unknown>;
-          
+
           // Restaurer weeklySchedule
           if (settings.weeklySchedule && typeof settings.weeklySchedule === 'object') {
             setSchedule({ ...DEFAULT_SCHEDULE, ...(settings.weeklySchedule as WeeklySchedule) });
           }
-          
+
           // Restaurer les paramètres de réservation
-          setBookingSettings(prev => ({
+          setBookingSettings((prev) => ({
             ...prev,
             slotDuration: (settings.slotDuration as number) ?? prev.slotDuration,
             bufferTime: (settings.bufferTime as number) ?? prev.bufferTime,
@@ -171,16 +202,25 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
             maxDailyBookings: (settings.maxDailyBookings as number) ?? prev.maxDailyBookings,
             depositPercentage: (settings.depositPercentage as number) ?? prev.depositPercentage,
             bookingWindowDays: (settings.bookingWindowDays as number) ?? prev.bookingWindowDays,
+            requireDeposit:
+              typeof settings.requireDeposit === 'boolean'
+                ? settings.requireDeposit
+                : prev.requireDeposit,
           }));
-          
+
           // Restaurer les créneaux personnalisés
           if (Array.isArray(settings.customSlots)) {
             setCustomSlots(settings.customSlots as string[]);
           }
-          
+
           // Restaurer les périodes bloquées
           if (Array.isArray(settings.blockedRanges)) {
             setBlockedRanges(settings.blockedRanges as BlockedRange[]);
+          }
+
+          // Restaurer les dates fermées
+          if (Array.isArray(settings.closedDates)) {
+            setClosedDates(settings.closedDates as string[]);
           }
         }
       } catch (err) {
@@ -189,14 +229,16 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         setIsLoading(false);
       }
     };
-    
+
     loadSettings();
   }, [studioId]);
 
   const handleSave = async () => {
+    if (!studioId) {
+      toast.error('Studio introuvable. Rechargez la page ou reconnectez-vous.');
+      return;
+    }
     const settings = { schedule, bookingSettings, closedDates, customSlots, blockedRanges };
-    onSave?.(settings);
-    if (!studioId) return;
     setSaveStatus('saving');
     try {
       // Structure complète des paramètres de disponibilité
@@ -204,36 +246,49 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         // Créneaux et périodes
         customSlots,
         blockedRanges,
-        
+        closedDates,
+
         // Paramètres de base
         bookingWindowDays: bookingSettings.bookingWindowDays,
         depositPercentage: bookingSettings.depositPercentage,
-        
+        requireDeposit: bookingSettings.requireDeposit,
+
         // Jours fermés (calculés depuis schedule)
         offDays: Object.entries(schedule)
-          .filter(([, v]) => !v.enabled)
-          .map(([k]) => ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].indexOf(k))
+          .filter(([, v]) => !(v as { enabled?: boolean }).enabled)
+          .map(([k]) =>
+            ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(
+              k
+            )
+          )
           .filter((i) => i >= 0),
-        
-        // NOUVEAUX: Paramètres avancés de temps
+
+        // Paramètres avancés de temps
         slotDuration: bookingSettings.slotDuration,
         bufferTime: bookingSettings.bufferTime,
         overrunMargin: bookingSettings.overrunMargin,
         maxDailyBookings: bookingSettings.maxDailyBookings,
         advanceBookingDays: bookingSettings.advanceBooking,
-        
+
         // Planning hebdomadaire complet avec pauses
         weeklySchedule: schedule,
       };
-      
+
       const { error } = await supabase
         .from('inkflow_studios')
         .update({ availability_settings: availabilitySettings })
         .eq('id', studioId);
       if (error) throw error;
+      onSave?.(settings);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch {
+    } catch (e) {
+      console.error('availability_settings save:', e);
+      toast.error(
+        e && typeof e === 'object' && 'message' in e && typeof (e as Error).message === 'string'
+          ? (e as Error).message
+          : 'Impossible d’enregistrer les disponibilités.'
+      );
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 4000);
     }
@@ -251,20 +306,30 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Disponibilités</h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">Configurez vos horaires de travail et vos pauses</p>
+          <h2 className="type-heading">Disponibilités</h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Configurez vos horaires de travail et vos pauses
+          </p>
         </div>
         <button
           onClick={handleSave}
           disabled={saveStatus === 'saving'}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-            saveStatus === 'saved' ? 'bg-emerald-600 text-white' :
-            saveStatus === 'error' ? 'bg-red-600 text-white' :
-            'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'
+            saveStatus === 'saved'
+              ? 'bg-emerald-600 text-white'
+              : saveStatus === 'error'
+                ? 'bg-red-600 text-white'
+                : 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'
           }`}
         >
           <Save className="w-5 h-5" />
-          {saveStatus === 'saving' ? 'Enregistrement…' : saveStatus === 'saved' ? 'Enregistré ✓' : saveStatus === 'error' ? 'Erreur' : 'Enregistrer'}
+          {saveStatus === 'saving'
+            ? 'Enregistrement…'
+            : saveStatus === 'saved'
+              ? 'Enregistré ✓'
+              : saveStatus === 'error'
+                ? 'Erreur'
+                : 'Enregistrer'}
         </button>
       </div>
 
@@ -273,24 +338,34 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         <div className="flex gap-3">
           <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Gestion intelligente des créneaux</h4>
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+              Gestion intelligente des créneaux
+            </h4>
             <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
-              Configurez la <strong>durée de vos séances</strong>, le <strong>temps de pause entre clients</strong> (buffer) 
-              et une <strong>marge de sécurité</strong> pour les pièces complexes. Ces paramètres s'appliquent automatiquement 
-              au calendrier de réservation pour éviter les chevauchements.
+              Configurez la <strong>durée de vos séances</strong>, le{' '}
+              <strong>temps de pause entre clients</strong> (buffer) et une{' '}
+              <strong>marge de sécurité</strong> pour les pièces complexes. Ces paramètres
+              s'appliquent automatiquement au calendrier de réservation pour éviter les
+              chevauchements.
             </p>
           </div>
         </div>
       </div>
 
       <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
-        <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">Paramètres de réservation</h3>
+        <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">
+          Paramètres de réservation
+        </h3>
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Durée des créneaux</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+              Durée des créneaux
+            </label>
             <select
               value={bookingSettings.slotDuration}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, slotDuration: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setBookingSettings({ ...bookingSettings, slotDuration: parseInt(e.target.value) })
+              }
               className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value={30}>30 minutes</option>
@@ -302,11 +377,15 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
           <div>
             <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
               Temps de pause entre RDV
-              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">(buffer)</span>
+              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">
+                (buffer)
+              </span>
             </label>
             <select
               value={bookingSettings.bufferTime}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, bufferTime: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setBookingSettings({ ...bookingSettings, bufferTime: parseInt(e.target.value) })
+              }
               className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value={0}>Aucun</option>
@@ -322,11 +401,15 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
           <div>
             <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
               Marge de sécurité
-              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">(overrun)</span>
+              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">
+                (overrun)
+              </span>
             </label>
             <select
               value={bookingSettings.overrunMargin}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, overrunMargin: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setBookingSettings({ ...bookingSettings, overrunMargin: parseInt(e.target.value) })
+              }
               className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value={0}>Aucune</option>
@@ -340,11 +423,18 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
             </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Délai min de réservation (jours)</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+              Délai min de réservation (jours)
+            </label>
             <input
               type="number"
               value={bookingSettings.advanceBooking}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, advanceBooking: parseInt(e.target.value) || 1 })}
+              onChange={(e) =>
+                setBookingSettings({
+                  ...bookingSettings,
+                  advanceBooking: parseInt(e.target.value) || 1,
+                })
+              }
               className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               min={0}
               max={30}
@@ -354,29 +444,45 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
             </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">RDV max par jour</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+              RDV max par jour
+            </label>
             <input
               type="number"
               value={bookingSettings.maxDailyBookings}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, maxDailyBookings: parseInt(e.target.value) || 1 })}
+              onChange={(e) =>
+                setBookingSettings({
+                  ...bookingSettings,
+                  maxDailyBookings: parseInt(e.target.value) || 1,
+                })
+              }
               className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               min={1}
               max={20}
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Ouverture du planning (jours)</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+              Ouverture du planning (jours)
+            </label>
             <div className="relative">
               <input
                 type="number"
                 value={bookingSettings.bookingWindowDays}
-                onChange={(e) => setBookingSettings({ ...bookingSettings, bookingWindowDays: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setBookingSettings({
+                    ...bookingSettings,
+                    bookingWindowDays: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-ink-accent/50"
                 min={0}
                 max={365}
                 placeholder="60"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--text-tertiary)]">jours (0 = illimité)</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--text-tertiary)]">
+                jours (0 = illimité)
+              </span>
             </div>
             <p className="text-xs text-[var(--text-secondary)] mt-1">
               Ex : 90 = les clients voient les créneaux jusqu'à 90 jours à l'avance
@@ -392,7 +498,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                 <input
                   type="checkbox"
                   checked={bookingSettings.requireDeposit}
-                  onChange={(e) => setBookingSettings({ ...bookingSettings, requireDeposit: e.target.checked })}
+                  onChange={(e) =>
+                    setBookingSettings({ ...bookingSettings, requireDeposit: e.target.checked })
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-[var(--border)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--border)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
@@ -401,17 +509,26 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
           </div>
           {bookingSettings.requireDeposit && (
             <div>
-              <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Pourcentage d'acompte</label>
+              <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+                Pourcentage d'acompte
+              </label>
               <div className="relative">
                 <input
                   type="number"
                   value={bookingSettings.depositPercentage}
-                  onChange={(e) => setBookingSettings({ ...bookingSettings, depositPercentage: parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setBookingSettings({
+                      ...bookingSettings,
+                      depositPercentage: parseInt(e.target.value),
+                    })
+                  }
                   className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   min={10}
                   max={100}
                 />
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[var(--text-tertiary)]">%</span>
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[var(--text-tertiary)]">
+                  %
+                </span>
               </div>
             </div>
           )}
@@ -419,7 +536,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
       </div>
 
       <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
-        <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">Horaires hebdomadaires</h3>
+        <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">
+          Horaires hebdomadaires
+        </h3>
         <div className="space-y-4">
           {daysOfWeek.map(({ key, label }) => {
             const day = schedule[key as keyof typeof schedule];
@@ -439,7 +558,10 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                     <span className="font-semibold text-[var(--text-primary)]">{label}</span>
                   </div>
                   {day.enabled && (
-                    <button onClick={() => addBreak(key)} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1">
+                    <button
+                      onClick={() => addBreak(key)}
+                      className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1"
+                    >
                       <Plus className="w-4 h-4" />
                       Ajouter une pause
                     </button>
@@ -449,7 +571,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Ouverture</label>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                          Ouverture
+                        </label>
                         <input
                           type="time"
                           value={day.open}
@@ -458,7 +582,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Fermeture</label>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                          Fermeture
+                        </label>
                         <input
                           type="time"
                           value={day.close}
@@ -472,7 +598,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                         {day.breaks.map((breakTime, idx) => (
                           <div key={idx} className="grid grid-cols-2 gap-3 items-end">
                             <div>
-                              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Début pause</label>
+                              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                                Début pause
+                              </label>
                               <input
                                 type="time"
                                 value={breakTime.start}
@@ -486,7 +614,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                             </div>
                             <div className="flex gap-2">
                               <div className="flex-1">
-                                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Fin pause</label>
+                                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                                  Fin pause
+                                </label>
                                 <input
                                   type="time"
                                   value={breakTime.end}
@@ -498,7 +628,10 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                                   className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 />
                               </div>
-                              <button onClick={() => removeBreak(key, idx)} className="p-2 h-fit self-end text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors">
+                              <button
+                                onClick={() => removeBreak(key, idx)}
+                                className="p-2 h-fit self-end text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -521,7 +654,8 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
           <h3 className="text-lg font-bold text-[var(--text-primary)]">Créneaux horaires fixes</h3>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
-          Définissez vos heures de départ exactes (ex : 10h30, 14h00, 15h30). Vos clients ne verront que ces horaires.
+          Définissez vos heures de départ exactes (ex : 10h30, 14h00, 15h30). Vos clients ne verront
+          que ces horaires.
         </p>
         <div className="flex gap-3 mb-4">
           <input
@@ -546,7 +680,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
                 className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-card-secondary)] border border-[var(--border)] rounded-full"
               >
                 <Clock className="w-4 h-4 text-ink-accent" />
-                <span className="font-mono font-semibold text-[var(--text-primary)] text-sm">{slot}</span>
+                <span className="font-mono font-semibold text-[var(--text-primary)] text-sm">
+                  {slot}
+                </span>
                 <button
                   onClick={() => removeSlot(slot)}
                   className="ml-1 text-[var(--text-secondary)] hover:text-red-400 transition-colors"
@@ -559,7 +695,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         ) : (
           <div className="text-center py-6 text-[var(--text-tertiary)]">
             <Timer className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Aucun créneau — les horaires par défaut s'appliquent (10h, 12h, 14h, 16h, 18h)</p>
+            <p className="text-sm">
+              Aucun créneau — les horaires par défaut s'appliquent (10h, 12h, 14h, 16h, 18h)
+            </p>
           </div>
         )}
       </div>
@@ -571,12 +709,15 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
           <h3 className="text-lg font-bold text-[var(--text-primary)]">Périodes bloquées</h3>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
-          Bloquez une plage entière (ex : agenda déjà complet jusqu'en mai). Les créneaux seront invisibles pour vos clients.
+          Bloquez une plage entière (ex : agenda déjà complet jusqu'en mai). Les créneaux seront
+          invisibles pour vos clients.
         </p>
         <div className="space-y-3 mb-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Du</label>
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                Du
+              </label>
               <input
                 type="date"
                 value={newRange.start}
@@ -585,7 +726,9 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Au</label>
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                Au
+              </label>
               <input
                 type="date"
                 value={newRange.end}
@@ -616,12 +759,22 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         {blockedRanges.length > 0 ? (
           <div className="space-y-2">
             {blockedRanges.map((range, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <div
+                key={idx}
+                className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl"
+              >
                 <div>
                   <span className="font-semibold text-[var(--text-primary)] text-sm">
-                    {new Date(range.start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    {new Date(range.start).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
                     {' → '}
-                    {new Date(range.end).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {new Date(range.end).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
                   </span>
                   {range.label && (
                     <p className="text-xs text-[var(--text-secondary)] mt-0.5">{range.label}</p>
@@ -654,7 +807,10 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
             onChange={(e) => setNewClosedDate(e.target.value)}
             className="flex-1 px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
-          <button onClick={addClosedDate} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors flex items-center gap-2">
+          <button
+            onClick={addClosedDate}
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors flex items-center gap-2"
+          >
             <Plus className="w-5 h-5" />
             Ajouter
           </button>
@@ -662,14 +818,25 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         {closedDates.length > 0 ? (
           <div className="space-y-2">
             {closedDates.map((date, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-[var(--bg-card-secondary)] rounded-lg">
+              <div
+                key={idx}
+                className="flex items-center justify-between p-3 bg-[var(--bg-card-secondary)] rounded-lg"
+              >
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-[var(--text-tertiary)]" />
                   <span className="font-medium text-[var(--text-primary)]">
-                    {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    {new Date(date).toLocaleDateString('fr-FR', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                   </span>
                 </div>
-                <button onClick={() => removeClosedDate(date)} className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors">
+                <button
+                  onClick={() => removeClosedDate(date)}
+                  className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

@@ -1,32 +1,78 @@
 /**
  * LoginForm — contraste correct clair / sombre (fond blanc login : CTA foncé, Google lisible)
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
+import { AppleSignInButton } from '../AppleSignInButton';
 import { loginSchema } from '../../lib/authValidation';
+import { resolvePostLoginPath } from '../../lib/postLoginRedirect';
+import { getPostSignupDashboardPath } from '../../lib/urls';
+import { verifyTurnstileTokenOrThrow } from '../../lib/verifyTurnstileToken';
+import { AuthTurnstile } from './AuthTurnstile';
 
 /** Mappe les erreurs Supabase Auth vers messages utilisateur */
 function getAuthErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
   if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect';
-  if (msg.includes('Email not confirmed')) return 'Vérifiez votre boîte mail pour confirmer votre compte';
-  if (msg.includes('réseau') || msg.includes('network') || msg.includes('fetch')) return 'Erreur réseau. Vérifiez votre connexion.';
-  if (msg.includes('expirée') || msg.includes('timeout')) return msg;
-  if (msg.length > 0 && msg.length < 120) return msg;
+  if (msg.includes('Email not confirmed'))
+    return 'Vérifiez votre boîte mail pour confirmer votre compte';
+  /* Timeout / lent — avant toute règle qui matche « réseau » dans la même phrase */
+  if (msg.includes('expirée') || lower.includes('timeout') || msg.includes('auth_timeout')) {
+    return 'Connexion trop lente (délai dépassé). Réessaie sur un autre réseau ou vérifie que le projet Supabase est actif.';
+  }
+  if (
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('load failed') ||
+    msg.includes('TypeError')
+  ) {
+    return 'Impossible de joindre Supabase (réseau ou configuration). Vérifie ta connexion. En production : Vercel → Settings → Environment Variables → VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY, puis redéploiement.';
+  }
+  if (lower.includes('réseau') || lower.includes('network') || lower.includes('fetch')) {
+    return 'Erreur réseau. Vérifiez votre connexion.';
+  }
+  if (msg.includes('Redirect URLs') || msg.includes('URL de retour')) return msg;
+  if (msg.length > 0 && msg.length < 600) return msg;
   return 'Une erreur est survenue. Réessayez.';
 }
 
-export const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
+export interface LoginFormProps {
+  /** Préremplissage (ex. e-mail après inscription + nettoyage de l’URL). */
+  prefillEmail?: string;
+  /** Pour « renvoyer l’e-mail de confirmation » depuis la page login. */
+  onEmailChange?: (email: string) => void;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChange }) => {
+  const [email, setEmail] = useState(() => prefillEmail?.trim() ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [success, setSuccess]           = useState(false);
-  const { login, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const { login, loginWithGoogle, loginWithApple, isGoogleAuthEnabled, isAppleAuthEnabled } =
+    useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get('email')?.trim();
+    if (emailParam && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam)) {
+      setEmail(emailParam);
+      onEmailChange?.(emailParam);
+      return;
+    }
+    const pre = prefillEmail?.trim();
+    if (pre && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pre)) {
+      setEmail(pre);
+      onEmailChange?.(pre);
+    }
+  }, [prefillEmail, onEmailChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +84,19 @@ export const LoginForm: React.FC = () => {
     }
     setLoading(true);
     try {
+      await verifyTurnstileTokenOrThrow(turnstileToken);
       await login(parsed.data.email, parsed.data.password);
       setSuccess(true);
-      const redirectUrl =
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
+      const rawFallback =
+        (typeof sessionStorage !== 'undefined' &&
+          sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
         '/dashboard';
-      try { sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY); } catch { /* ignore */ }
+      try {
+        sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+      } catch {
+        /* ignore */
+      }
+      const redirectUrl = await resolvePostLoginPath(rawFallback);
       window.history.pushState({}, '', redirectUrl);
       window.dispatchEvent(new Event('inkflow-navigate'));
     } catch (err) {
@@ -55,7 +108,6 @@ export const LoginForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-
       {/* ── Error ── */}
       {error && (
         <div
@@ -73,7 +125,9 @@ export const LoginForm: React.FC = () => {
           <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
             <Check className="w-3 h-3 text-white" />
           </div>
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Connexion réussie !</p>
+          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+            Connexion réussie !
+          </p>
         </div>
       )}
 
@@ -89,7 +143,11 @@ export const LoginForm: React.FC = () => {
           id="login-email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setEmail(v);
+            onEmailChange?.(v);
+          }}
           className="
             w-full px-4 py-3.5 min-h-[50px] text-[15px]
             bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
@@ -149,22 +207,24 @@ export const LoginForm: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Remember / Forgot ── */}
-      <div className="flex items-center justify-between pt-0.5">
-        <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+      {/* ── Remember / Forgot (colonne sur très petit écran pour éviter coupure Safari) ── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-0.5">
+        <label className="flex items-center gap-2 cursor-pointer min-h-[44px] shrink-0">
           <input
             type="checkbox"
-            className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 accent-white"
+            className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 accent-white shrink-0"
           />
           <span className="text-xs text-zinc-500">Se souvenir de moi</span>
         </label>
         <a
           href="/reset-password"
-          className="text-xs text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors min-h-[44px] flex items-center"
+          className="text-xs text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors min-h-[44px] flex items-center sm:justify-end py-1 sm:py-0"
         >
           Mot de passe oublié ?
         </a>
       </div>
+
+      <AuthTurnstile onToken={setTurnstileToken} />
 
       {/* ── CTA — visible sur fond blanc (mode clair) ── */}
       <button
@@ -193,8 +253,8 @@ export const LoginForm: React.FC = () => {
         )}
       </button>
 
-      {/* ── Google ── */}
-      {isGoogleAuthEnabled && (
+      {/* ── Google / Apple ── */}
+      {(isGoogleAuthEnabled || isAppleAuthEnabled) && (
         <>
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
@@ -206,23 +266,60 @@ export const LoginForm: React.FC = () => {
               </span>
             </div>
           </div>
-
-          <GoogleSignInButton
-            className="min-h-[50px] text-[15px]"
-            onClick={async () => {
-              setError('');
-              setGoogleLoading(true);
-              try {
-                await loginWithGoogle();
-              } catch (err) {
-                setError(getAuthErrorMessage(err));
-              } finally {
-                setGoogleLoading(false);
-              }
-            }}
-            disabled={loading || googleLoading}
-            label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
-          />
+          <div className="flex flex-col gap-2">
+            {isGoogleAuthEnabled && (
+              <GoogleSignInButton
+                className="min-h-[50px] text-[15px]"
+                onClick={async () => {
+                  setError('');
+                  setGoogleLoading(true);
+                  try {
+                    try {
+                      sessionStorage.setItem(
+                        REDIRECT_AFTER_LOGIN_KEY,
+                        getPostSignupDashboardPath(window.location.search)
+                      );
+                    } catch {
+                      /* ignore */
+                    }
+                    await loginWithGoogle();
+                  } catch (err) {
+                    setError(getAuthErrorMessage(err));
+                  } finally {
+                    setGoogleLoading(false);
+                  }
+                }}
+                disabled={loading || googleLoading || appleLoading}
+                label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
+              />
+            )}
+            {isAppleAuthEnabled && (
+              <AppleSignInButton
+                className="min-h-[50px] text-[15px]"
+                onClick={async () => {
+                  setError('');
+                  setAppleLoading(true);
+                  try {
+                    try {
+                      sessionStorage.setItem(
+                        REDIRECT_AFTER_LOGIN_KEY,
+                        getPostSignupDashboardPath(window.location.search)
+                      );
+                    } catch {
+                      /* ignore */
+                    }
+                    await loginWithApple();
+                  } catch (err) {
+                    setError(getAuthErrorMessage(err));
+                  } finally {
+                    setAppleLoading(false);
+                  }
+                }}
+                disabled={loading || googleLoading || appleLoading}
+                label={appleLoading ? 'Redirection…' : 'Se connecter avec Apple'}
+              />
+            )}
+          </div>
         </>
       )}
     </form>

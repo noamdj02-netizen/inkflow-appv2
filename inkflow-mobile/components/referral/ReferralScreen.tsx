@@ -30,7 +30,7 @@ export default function ReferralScreen() {
   const [monthsEarned, setMonthsEarned] = useState(0);
 
   const fetchReferralData = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !supabase) {
       setReferralCode('ABC123'); // Mock pour démo
       setFriendsInvited(0);
       setMonthsEarned(0);

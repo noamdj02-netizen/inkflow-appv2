@@ -1,4 +1,3 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -6,9 +5,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { AppState, type AppStateStatus, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
 import { setupNotificationHandler } from '@/lib/notifications';
 
 export {
@@ -17,8 +16,7 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -48,8 +46,6 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   // Configuration du handler global (badge activé) — natif uniquement (pas web)
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -81,25 +77,13 @@ function RootLayoutNav() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="referral"
-            options={{
-              title: 'Programme Partenaire',
-              headerShown: true,
-              headerBackTitle: 'Retour',
-              headerStyle: { backgroundColor: '#FFFFFF' },
-              headerTitleStyle: { fontSize: 17, fontWeight: '600', color: '#000000' },
-              headerShadowVisible: false,
-              headerTintColor: '#2563EB',
-            }}
-          />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="tap-to-pay" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

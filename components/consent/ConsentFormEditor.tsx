@@ -1,7 +1,22 @@
 import React, { useState } from 'react';
-import { FileText, Plus, Save, Trash2, Eye, Loader2, Sparkles, Copy, Check, Clock, Shield, Scale, Heart, ChevronRight } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Save,
+  Trash2,
+  Eye,
+  Loader2,
+  Sparkles,
+  Copy,
+  Check,
+  Shield,
+  Scale,
+  Heart,
+  ChevronRight,
+} from 'lucide-react';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { useToast } from '../../contexts/ToastContext';
+import { CONSENT_FORM_PRESETS } from '../../lib/consentFormPresets';
 
 interface ConsentTemplate {
   id: string;
@@ -10,252 +25,6 @@ interface ConsentTemplate {
   icon?: string;
   color?: string;
 }
-
-const PRESET_TEMPLATES: Omit<ConsentTemplate, 'id'>[] = [
-  {
-    title: 'Consentement standard tatouage',
-    icon: 'standard',
-    color: 'blue',
-    content: `═══════════════════════════════════════════
-        FORMULAIRE DE CONSENTEMENT - TATOUAGE
-═══════════════════════════════════════════
-
-Je soussigné(e) ________________________________, 
-né(e) le ____/____/________, 
-
-déclare avoir été informé(e) des points suivants :
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. NATURE DE LA PROCÉDURE
-
-Le tatouage consiste en l'introduction de pigments colorés dans le derme au moyen d'aiguilles stériles à usage unique. Cette procédure est définitive et irréversible.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-2. RISQUES POTENTIELS
-
-J'ai été informé(e) que le tatouage comporte des risques, notamment :
-• Réactions allergiques aux pigments
-• Infections bactériennes
-• Cicatrisation difficile ou chéloïdes
-• Saignements
-• Modifications de l'apparence avec le temps
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-3. HYGIÈNE ET SÉCURITÉ
-
-Le studio s'engage à utiliser :
-• Du matériel stérile à usage unique
-• Des encres conformes à la réglementation européenne (REACH)
-• Des protocoles d'hygiène stricts
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-4. CONTRE-INDICATIONS
-
-J'affirme ne présenter aucune des contre-indications suivantes :
-☐ Grossesse ou allaitement
-☐ Diabète non stabilisé
-☐ Maladies de peau (eczéma, psoriasis sur la zone)
-☐ Traitement anticoagulant
-☐ Troubles de la coagulation
-☐ Maladies cardiaques
-☐ Système immunitaire affaibli
-☐ Allergie connue aux pigments de tatouage
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-5. ENGAGEMENT DU CLIENT
-
-Je m'engage à :
-• Suivre les consignes de soins post-tatouage
-• Informer l'artiste de tout problème de santé
-• Ne pas être sous l'influence d'alcool ou de drogues
-• Être majeur(e) ou accompagné(e) d'un représentant légal
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-6. DESCRIPTION DU TATOUAGE
-
-Motif : ________________________________________
-Emplacement : _________________________________
-Taille approximative : __________________________
-Artiste : ______________________________________
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-7. CONSENTEMENT
-
-En signant ce formulaire, je déclare :
-• Avoir lu et compris les informations ci-dessus
-• Avoir pu poser toutes mes questions
-• Consentir librement à la réalisation du tatouage
-
-Date : ____/____/________
-
-Signature du client : _____________________________
-
-Signature de l'artiste : ___________________________
-
-═══════════════════════════════════════════`
-  },
-  {
-    title: 'Consentement mineur',
-    icon: 'minor',
-    color: 'purple',
-    content: `═══════════════════════════════════════════
-    AUTORISATION PARENTALE - TATOUAGE MINEUR
-═══════════════════════════════════════════
-
-INFORMATIONS SUR LE MINEUR
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Nom et prénom : ________________________________
-Date de naissance : ____/____/________
-Âge : _____ ans
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-INFORMATIONS SUR LE REPRÉSENTANT LÉGAL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Je soussigné(e) ________________________________,
-agissant en qualité de : ☐ Père  ☐ Mère  ☐ Tuteur légal
-Adresse : ______________________________________
-Téléphone : ____________________________________
-Pièce d'identité n° : ____________________________
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-AUTORISATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-J'autorise expressément mon enfant mineur à se faire 
-tatouer selon les modalités suivantes :
-
-Description du tatouage : _________________________
-Emplacement : _________________________________
-Taille : ________________________________________
-
-Je déclare :
-☐ Avoir pris connaissance des risques liés au tatouage
-☐ Avoir compris que le tatouage est permanent
-☐ M'engager à accompagner mon enfant le jour du RDV
-☐ Présenter ma pièce d'identité et celle de mon enfant
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ IMPORTANT
-
-Cette autorisation n'est valable QUE si le représentant 
-légal est présent lors de la séance avec une pièce 
-d'identité valide et le livret de famille.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Date : ____/____/________
-
-Signature du représentant légal : __________________
-
-Signature du mineur : ___________________________
-
-Signature de l'artiste : __________________________
-
-═══════════════════════════════════════════`
-  },
-  {
-    title: 'Consentement piercing',
-    icon: 'piercing',
-    color: 'green',
-    content: `═══════════════════════════════════════════
-        FORMULAIRE DE CONSENTEMENT - PIERCING
-═══════════════════════════════════════════
-
-Je soussigné(e) ________________________________, 
-né(e) le ____/____/________, 
-
-déclare avoir été informé(e) des points suivants :
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. PROCÉDURE
-
-Le piercing consiste en la perforation de la peau ou du 
-cartilage pour y insérer un bijou. La cicatrisation varie 
-selon la zone (1 mois à 1 an).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-2. RISQUES
-
-• Infections
-• Réactions allergiques au bijou
-• Chéloïdes
-• Rejet du bijou
-• Migration du piercing
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-3. CONTRE-INDICATIONS
-
-☐ Hémophilie ou troubles de coagulation
-☐ Allergies aux métaux
-☐ Grossesse (pour certains piercings)
-☐ Maladies auto-immunes
-☐ Traitement immunosuppresseur
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-4. DESCRIPTION DU PIERCING
-
-Zone : _________________________________________
-Type de bijou : _________________________________
-Matière : ☐ Titane  ☐ Acier chirurgical  ☐ Or
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Date : ____/____/________
-
-Signature client : _______________________________
-
-Signature pierceur : _____________________________
-
-═══════════════════════════════════════════`
-  },
-  {
-    title: 'Consentement simplifié',
-    icon: 'simple',
-    color: 'orange',
-    content: `CONSENTEMENT AU TATOUAGE
-
-Je soussigné(e) ________________________________
-Né(e) le ____/____/________
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Je déclare :
-
-✓ Être majeur(e) et en pleine possession de mes moyens
-✓ Avoir été informé(e) des risques (infection, allergie, 
-  cicatrisation)
-✓ Ne présenter aucune contre-indication médicale
-✓ Ne pas être sous l'influence de substances
-✓ Consentir librement à ce tatouage
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Tatouage : ____________________________________
-Emplacement : _________________________________
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Date : ____/____/________
-
-Signature : ____________________________________`
-  }
-];
 
 interface ConsentFormEditorProps {
   templates: ConsentTemplate[];
@@ -276,10 +45,10 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const selected = items.find(t => t.id === selectedId);
+  const selected = items.find((t) => t.id === selectedId);
 
   const selectTemplate = (id: string) => {
-    const t = items.find(x => x.id === id);
+    const t = items.find((x) => x.id === id);
     if (t) {
       setSelectedId(id);
       setDraftTitle(t.title);
@@ -336,7 +105,7 @@ Signature : ____________________________________`,
       return;
     }
     setSaving(true);
-    const updated = items.map(t =>
+    const updated = items.map((t) =>
       t.id === selectedId ? { ...t, title: draftTitle.trim(), content: draftContent.trim() } : t
     );
     setItems(updated);
@@ -348,7 +117,7 @@ Signature : ____________________________________`,
   const deleteTemplate = (id: string) => {
     if (deletingId) return;
     setDeletingId(id);
-    const updated = items.filter(t => t.id !== id);
+    const updated = items.filter((t) => t.id !== id);
     setItems(updated);
     if (selectedId === id && updated.length > 0) selectTemplate(updated[0].id);
     onSave(updated);
@@ -366,21 +135,31 @@ Signature : ____________________________________`,
 
   const getPresetIcon = (icon?: string) => {
     switch (icon) {
-      case 'standard': return <Shield className="w-5 h-5" />;
-      case 'minor': return <Heart className="w-5 h-5" />;
-      case 'piercing': return <Scale className="w-5 h-5" />;
-      case 'simple': return <FileText className="w-5 h-5" />;
-      default: return <FileText className="w-5 h-5" />;
+      case 'standard':
+        return <Shield className="w-5 h-5" />;
+      case 'minor':
+        return <Heart className="w-5 h-5" />;
+      case 'piercing':
+        return <Scale className="w-5 h-5" />;
+      case 'simple':
+        return <FileText className="w-5 h-5" />;
+      default:
+        return <FileText className="w-5 h-5" />;
     }
   };
 
   const getPresetColor = (color?: string) => {
     switch (color) {
-      case 'blue': return 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20';
-      case 'purple': return 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
-      case 'green': return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
-      case 'orange': return 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-500/20';
-      default: return 'bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700';
+      case 'blue':
+        return 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20';
+      case 'purple':
+        return 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
+      case 'green':
+        return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
+      case 'orange':
+        return 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-500/20';
+      default:
+        return 'bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700';
     }
   };
 
@@ -389,19 +168,19 @@ Signature : ____________________________________`,
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Formulaires de consentement</h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">Documents légaux à faire signer avant chaque séance</p>
+          <h2 className="type-heading-sm">Formulaires de consentement</h2>
+          <p className="type-subtitle mt-1">Documents légaux à faire signer avant chaque séance</p>
         </div>
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setShowPresets(!showPresets)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
             Templates légaux
           </button>
-          <button 
-            onClick={addTemplate} 
+          <button
+            onClick={addTemplate}
             disabled={creating}
             className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
           >
@@ -416,10 +195,12 @@ Signature : ____________________________________`,
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-2xl p-5 border border-blue-100 dark:border-blue-500/10">
           <div className="flex items-center gap-2 mb-4">
             <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h3 className="font-semibold text-zinc-900 dark:text-white">Formulaires légaux prêts à l'emploi</h3>
+            <h3 className="font-semibold text-zinc-900 dark:text-white">
+              Formulaires légaux prêts à l'emploi
+            </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {PRESET_TEMPLATES.map((preset, idx) => (
+            {CONSENT_FORM_PRESETS.map((preset, idx) => (
               <button
                 key={idx}
                 onClick={() => createFromPreset(preset)}
@@ -430,8 +211,12 @@ Signature : ____________________________________`,
                   {getPresetIcon(preset.icon)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-zinc-900 dark:text-white truncate">{preset.title}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Cliquez pour ajouter</p>
+                  <p className="font-medium text-zinc-900 dark:text-white truncate">
+                    {preset.title}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Cliquez pour ajouter
+                  </p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-400" />
               </button>
@@ -447,15 +232,15 @@ Signature : ____________________________________`,
             <FileText className="w-8 h-8 text-zinc-400" />
           </div>
           <p className="font-semibold text-zinc-900 dark:text-white mb-2">Aucun formulaire</p>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">Créez ou importez un formulaire de consentement</p>
+          <p className="type-subtitle mb-6">Créez ou importez un formulaire de consentement</p>
           <div className="flex items-center justify-center gap-3">
-            <button 
+            <button
               onClick={() => setShowPresets(true)}
               className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
             >
               Voir les templates
             </button>
-            <button 
+            <button
               onClick={addTemplate}
               disabled={creating}
               className="px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
@@ -464,127 +249,153 @@ Signature : ____________________________________`,
             </button>
           </div>
         </div>
-      ) : items.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Templates List */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Mes formulaires ({items.length})</h3>
+      ) : (
+        items.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Templates List */}
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
+                <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">
+                  Mes formulaires ({items.length})
+                </h3>
+              </div>
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-[500px] overflow-y-auto">
+                {items.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => selectTemplate(t.id)}
+                    className={`w-full text-left px-4 py-3.5 transition-colors ${
+                      selectedId === t.id
+                        ? 'bg-zinc-50 dark:bg-zinc-800 border-l-2 border-zinc-900 dark:border-white'
+                        : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <p
+                      className={`font-medium truncate ${selectedId === t.id ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}
+                    >
+                      {t.title}
+                    </p>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-[500px] overflow-y-auto">
-              {items.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => selectTemplate(t.id)}
-                  className={`w-full text-left px-4 py-3.5 transition-colors ${
-                    selectedId === t.id 
-                      ? 'bg-zinc-50 dark:bg-zinc-800 border-l-2 border-zinc-900 dark:border-white' 
-                      : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                  }`}
-                >
-                  <p className={`font-medium truncate ${selectedId === t.id ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                    {t.title}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Editor */}
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-            {selected ? (
-              <>
-                {/* Toolbar */}
-                <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+            {/* Editor */}
+            <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              {selected ? (
+                <>
+                  {/* Toolbar */}
+                  <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPreviewMode(false)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          !previewMode
+                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                            : 'text-zinc-500 hover:text-zinc-700'
+                        }`}
+                      >
+                        Éditer
+                      </button>
+                      <button
+                        onClick={() => setPreviewMode(true)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                          previewMode
+                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                            : 'text-zinc-500 hover:text-zinc-700'
+                        }`}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Aperçu
+                      </button>
+                    </div>
                     <button
-                      onClick={() => setPreviewMode(false)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        !previewMode ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'
-                      }`}
+                      onClick={copyContent}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                     >
-                      Éditer
-                    </button>
-                    <button
-                      onClick={() => setPreviewMode(true)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                        previewMode ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'
-                      }`}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      Aperçu
+                      {copied ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      {copied ? 'Copié !' : 'Copier'}
                     </button>
                   </div>
-                  <button
-                    onClick={copyContent}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'Copié !' : 'Copier'}
-                  </button>
-                </div>
 
-                {/* Content */}
-                <div className="p-5">
-                  {previewMode ? (
-                    <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-6 min-h-[400px]">
-                      <div className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 text-sm font-mono leading-relaxed">
-                        {draftContent}
+                  {/* Content */}
+                  <div className="p-5">
+                    {previewMode ? (
+                      <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-6 min-h-[400px]">
+                        <div className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 text-sm font-mono leading-relaxed">
+                          {draftContent}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Titre du formulaire</label>
-                        <input 
-                          type="text" 
-                          value={draftTitle} 
-                          onChange={(e) => setDraftTitle(e.target.value)}
-                          className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white focus:border-transparent"
-                          placeholder="Ex: Consentement tatouage"
-                        />
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            Titre du formulaire
+                          </label>
+                          <input
+                            type="text"
+                            value={draftTitle}
+                            onChange={(e) => setDraftTitle(e.target.value)}
+                            className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white focus:border-transparent"
+                            placeholder="Ex: Consentement tatouage"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            Contenu du formulaire
+                          </label>
+                          <textarea
+                            rows={16}
+                            value={draftContent}
+                            onChange={(e) => setDraftContent(e.target.value)}
+                            className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white resize-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white focus:border-transparent font-mono text-sm"
+                            placeholder="Rédigez votre formulaire de consentement..."
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Contenu du formulaire</label>
-                        <textarea 
-                          rows={16} 
-                          value={draftContent} 
-                          onChange={(e) => setDraftContent(e.target.value)}
-                          className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white resize-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white focus:border-transparent font-mono text-sm"
-                          placeholder="Rédigez votre formulaire de consentement..."
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Actions */}
-                <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                  <button 
-                    onClick={() => setDeleteConfirmId(selected.id)}
-                    disabled={!!deletingId}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-sm font-medium disabled:opacity-50"
-                  >
-                    {deletingId === selected.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    Supprimer
-                  </button>
-                  <button 
-                    onClick={saveTemplate} 
-                    disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {saving ? 'Sauvegarde...' : 'Enregistrer'}
-                  </button>
+                  {/* Actions */}
+                  <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                    <button
+                      onClick={() => setDeleteConfirmId(selected.id)}
+                      disabled={!!deletingId}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-sm font-medium disabled:opacity-50"
+                    >
+                      {deletingId === selected.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      Supprimer
+                    </button>
+                    <button
+                      onClick={saveTemplate}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {saving ? 'Sauvegarde...' : 'Enregistrer'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-[400px] text-zinc-400">
+                  Sélectionnez un formulaire
                 </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-[400px] text-zinc-400">
-                Sélectionnez un formulaire
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )
       )}
 
       <ConfirmModal

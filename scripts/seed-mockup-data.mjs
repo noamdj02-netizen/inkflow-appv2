@@ -1,5 +1,6 @@
 /**
- * Seed des données factices pour le compte noamdj02@gmail.com (mockups marketing).
+ * Seed des données factices pour le compte studio.noamdj02@gmail.com (mockups marketing).
+ * Vitrine multi-artistes + flashs réalistes : voir npm run seed:vitrine-demo
  * Utilise SUPABASE_SERVICE_ROLE_KEY pour bypasser RLS.
  *
  * Usage:
@@ -38,7 +39,7 @@ if (!url || !serviceKey) {
 
 const supabase = createClient(url, serviceKey);
 
-const EMAIL = 'noamdj02@gmail.com';
+const EMAIL = 'studio.noamdj02@gmail.com';
 const STUDIO_NAME = 'InkFlow Studio';
 const STUDIO_SLUG = STUDIO_NAME.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 const DEFAULT_STUDIO_ID = `${EMAIL}::${STUDIO_SLUG}`;
@@ -154,12 +155,12 @@ async function main() {
   }
   console.log('✓', appointments.length, 'rendez-vous');
 
-  // 4. Flash designs
+  // 4. Flash designs (images Unsplash — aperçu vitrine)
   const flashDesigns = [
-    { id: 'flash_mock_1', title: 'Lune', description: 'Flash lune stylisée', image_url: null, price: 150, deposit_amount: 50, available: true, reserved: false, category: 'minimaliste', size: 'small', placement: [], estimated_duration: 90, tags: ['lune', 'minimaliste'] },
-    { id: 'flash_mock_2', title: 'Fleur de cerisier', description: 'Sakura japonais', image_url: null, price: 80, deposit_amount: 30, available: true, reserved: false, category: 'japonais', size: 'small', placement: [], estimated_duration: 60, tags: ['fleur', 'japonais'] },
-    { id: 'flash_mock_3', title: 'Dragon', description: 'Dragon asiatique', image_url: null, price: 250, deposit_amount: 80, available: true, reserved: false, category: 'traditionnel', size: 'medium', placement: [], estimated_duration: 120, tags: ['dragon', 'traditionnel'] },
-    { id: 'flash_mock_4', title: 'Ancre marine', description: 'Ancre classique', image_url: null, price: 120, deposit_amount: 40, available: true, reserved: false, category: 'classique', size: 'small', placement: [], estimated_duration: 75, tags: ['ancre', 'marine'] },
+    { id: 'flash_mock_1', title: 'Lune', description: 'Flash lune stylisée', image_url: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=800&h=800&fit=crop&q=80', price: 150, deposit_amount: 50, available: true, reserved: false, category: 'minimaliste', size: 'small', placement: [], estimated_duration: 90, tags: ['lune', 'minimaliste'] },
+    { id: 'flash_mock_2', title: 'Fleur de cerisier', description: 'Sakura japonais', image_url: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=800&h=800&fit=crop&q=80', price: 80, deposit_amount: 30, available: true, reserved: false, category: 'japonais', size: 'small', placement: [], estimated_duration: 60, tags: ['fleur', 'japonais'] },
+    { id: 'flash_mock_3', title: 'Dragon', description: 'Dragon asiatique', image_url: 'https://images.unsplash.com/photo-1590246814883-57c511e76917?w=800&h=800&fit=crop&q=80', price: 250, deposit_amount: 80, available: true, reserved: false, category: 'traditionnel', size: 'medium', placement: [], estimated_duration: 120, tags: ['dragon', 'traditionnel'] },
+    { id: 'flash_mock_4', title: 'Ancre marine', description: 'Ancre classique', image_url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&h=800&fit=crop&q=80', price: 120, deposit_amount: 40, available: true, reserved: false, category: 'classique', size: 'small', placement: [], estimated_duration: 75, tags: ['ancre', 'marine'] },
   ];
 
   for (const f of flashDesigns) {
@@ -262,7 +263,7 @@ async function main() {
   }
   console.log('✓', notifications.length, 'notifications');
 
-  console.log('\n✅ Seed terminé. Connecte-toi avec noamdj02@gmail.com pour voir les mockups.');
+  console.log('\n✅ Seed terminé. Connecte-toi avec studio.noamdj02@gmail.com pour voir les mockups.');
 }
 
 main().catch(console.error);

@@ -1,6 +1,19 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Star, Calendar, Heart, ArrowLeft, Share2, Instagram, ExternalLink } from 'lucide-react';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
+import {
+  MapPin,
+  Star,
+  Calendar,
+  Heart,
+  ArrowLeft,
+  Share2,
+  Instagram,
+  ExternalLink,
+  MessageCircle,
+  Bell,
+  Check,
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
 
@@ -15,6 +28,8 @@ interface Artist {
   rating: number;
   tattoos_count: number;
   studio_id: string;
+  available_now: boolean;
+  instagram_url: string | null;
   studio_name?: string;
   studio_slug?: string;
 }
@@ -33,12 +48,20 @@ interface ArtistPageProps {
 }
 
 export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
+  const { tap, tapSoft } = useClientFramerGestures();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [following, setFollowing] = useState(false);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [waitlisted, setWaitlisted] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [artistSlug]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -53,10 +76,13 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
       const { data: artistData, error: artistErr } = await supabase
         .from('inkflow_artists')
-        .select(`
+        .select(
+          `
           id, name, slug, bio, avatar_url, styles, years_exp, rating, tattoos_count, studio_id,
+          available_now, instagram_url,
           inkflow_studios(studio_name, slug)
-        `)
+        `
+        )
         .eq('slug', artistSlug)
         .eq('is_active', true)
         .maybeSingle();
@@ -67,9 +93,14 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         return;
       }
 
-      const studioInfo = artistData.inkflow_studios as { studio_name?: string; slug?: string } | null;
+      const studioInfo = artistData.inkflow_studios as {
+        studio_name?: string;
+        slug?: string;
+      } | null;
       setArtist({
         ...artistData,
+        available_now: Boolean(artistData.available_now),
+        instagram_url: (artistData.instagram_url as string | null) ?? null,
         studio_name: studioInfo?.studio_name,
         studio_slug: studioInfo?.slug,
       });
@@ -116,6 +147,36 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
     }
   };
 
+  const joinWaitlist = async () => {
+    if (!sessionEmail || !artist) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('inkflow_waitlist').upsert(
+      {
+        client_email: sessionEmail,
+        artist_id: artist.id,
+        studio_id: artist.studio_id,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: 'client_email,artist_id' }
+    );
+    setWaitlisted(true);
+    setWaitlistDone(true);
+    setTimeout(() => setWaitlistDone(false), 4000);
+  };
+
+  const openChat = () => {
+    if (!sessionEmail || !artist) {
+      window.location.href = '/discover/login';
+      return;
+    }
+    // Thread ID déterministe : client+artiste
+    let h = 5381;
+    const seed = `${sessionEmail}-${artist.id}`;
+    for (let i = 0; i < seed.length; i++) h = (h << 5) + h + seed.charCodeAt(i);
+    const threadId = `a-${Math.abs(h).toString(36)}`;
+    window.location.href = `/c/${threadId}`;
+  };
+
   const share = async () => {
     if (navigator.share) {
       try {
@@ -131,18 +192,29 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: CX.bg }}>
-        <div className="w-10 h-10 rounded-full border-2 animate-spin" style={{ borderColor: CX.border, borderTopColor: CX.accent }} />
+        <div
+          className="w-10 h-10 rounded-full border-2 animate-spin"
+          style={{ borderColor: CX.border, borderTopColor: CX.accent }}
+        />
       </div>
     );
   }
 
   if (error || !artist) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: CX.bg, color: CX.text }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ background: CX.bg, color: CX.text }}
+      >
         <p className="text-lg font-semibold mb-4">{error ?? 'Artiste introuvable'}</p>
-        <a href="/client/dashboard" className="text-sm underline" style={{ color: CX.accent }}>
+        <motion.a
+          href="/explorer"
+          whileTap={tap}
+          className="text-sm underline"
+          style={{ color: CX.accent }}
+        >
           Retour à l'exploration
-        </a>
+        </motion.a>
       </div>
     );
   }
@@ -150,40 +222,67 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
   return (
     <div className="min-h-screen pb-24" style={{ background: CX.bg, color: CX.text }}>
       {/* Header cover */}
-      <div className="relative h-56" style={{ background: `linear-gradient(135deg, #1a1510 0%, #2d2418 100%)` }}>
-        <button
+      <div
+        className="relative h-56"
+        style={{ background: `linear-gradient(135deg, #1a1510 0%, #2d2418 100%)` }}
+      >
+        <motion.button
           type="button"
           onClick={() => window.history.back()}
-          className="absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border z-10"
+          aria-label="Retour"
+          whileTap={tap}
+          className="absolute top-4 left-4 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10"
           style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
         >
           <ArrowLeft className="w-5 h-5" style={{ color: CX.text }} />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           type="button"
           onClick={share}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border z-10"
+          aria-label="Partager"
+          whileTap={tap}
+          className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10"
           style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
         >
           <Share2 className="w-5 h-5" style={{ color: CX.text }} />
-        </button>
+        </motion.button>
       </div>
 
       {/* Avatar + Name */}
       <div className="px-4 -mt-14 relative z-10">
         <div className="flex items-end gap-4">
           <div
-            className="w-28 h-28 rounded-3xl border-4 flex items-center justify-center text-3xl font-black shrink-0"
+            className="w-28 h-28 rounded-3xl border-4 flex items-center justify-center text-3xl font-black shrink-0 overflow-hidden relative"
             style={{
               borderColor: CX.bg,
-              background: artist.avatar_url ? `url(${artist.avatar_url}) center/cover` : CX.surface,
+              background: CX.surface,
               color: CX.accent,
             }}
           >
-            {!artist.avatar_url && artist.name.slice(0, 1)}
+            {artist.avatar_url && !avatarBroken ? (
+              <img
+                src={artist.avatar_url}
+                alt=""
+                decoding="async"
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={() => setAvatarBroken(true)}
+              />
+            ) : (
+              <span className="relative z-10">{artist.name.slice(0, 1)}</span>
+            )}
           </div>
           <div className="flex-1 pb-2">
-            <h1 className="text-2xl font-bold tracking-tight">{artist.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">{artist.name}</h1>
+              {artist.available_now && (
+                <span
+                  className="text-[10px] font-bold px-2 py-1 rounded-full"
+                  style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}
+                >
+                  Disponible maintenant
+                </span>
+              )}
+            </div>
             {artist.studio_name && (
               <a
                 href={artist.studio_slug ? `/studio/${artist.studio_slug}` : '#'}
@@ -233,35 +332,114 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
           </p>
         )}
 
-        {/* Action buttons */}
-        <div className="flex gap-3 mt-6">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={toggleFollow}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
-            style={{
-              background: following ? CX.accent : CX.surface,
-              borderColor: following ? CX.accent : CX.border,
-              color: following ? '#000' : CX.text,
-            }}
-          >
-            <Heart className="w-4 h-4" style={{ fill: following ? '#000' : 'none' }} />
-            {following ? 'Suivi' : 'Suivre'}
-          </motion.button>
+        {artist.instagram_url && (
           <a
-            href={artist.studio_slug ? `/book/${artist.studio_slug}` : '#'}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
-            style={{ background: CX.accent, color: '#000' }}
+            href={
+              artist.instagram_url.startsWith('http')
+                ? artist.instagram_url
+                : `https://${artist.instagram_url}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-4 text-sm font-medium transition-opacity hover:opacity-90"
+            style={{ color: CX.accent }}
           >
-            <Calendar className="w-4 h-4" />
-            Réserver
+            <Instagram className="w-4 h-4" />
+            Instagram
+            <ExternalLink className="w-3.5 h-3.5 opacity-60" />
           </a>
+        )}
+
+        {/* Action buttons */}
+        <div className="space-y-3 mt-6">
+          <div className="flex gap-3">
+            <motion.button
+              whileTap={tapSoft}
+              onClick={toggleFollow}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
+              style={{
+                background: following ? CX.accent : CX.surface,
+                borderColor: following ? CX.accent : CX.border,
+                color: following ? '#000' : CX.text,
+              }}
+            >
+              <Heart className="w-4 h-4" style={{ fill: following ? '#000' : 'none' }} />
+              {following ? 'Suivi' : 'Suivre'}
+            </motion.button>
+
+            <motion.button
+              whileTap={tapSoft}
+              onClick={openChat}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
+              style={{ background: CX.surface, borderColor: CX.border, color: CX.text }}
+            >
+              <MessageCircle className="w-4 h-4" style={{ color: CX.accent }} />
+              Contacter
+            </motion.button>
+          </div>
+
+          {artist.available_now ? (
+            <motion.a
+              href={
+                artist.studio_slug
+                  ? `/book/${artist.studio_slug}?artist=${encodeURIComponent(artist.slug)}`
+                  : '#'
+              }
+              whileTap={tap}
+              className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
+              style={{ background: CX.accent, color: '#000' }}
+            >
+              <Calendar className="w-4 h-4" />
+              Réserver
+            </motion.a>
+          ) : (
+            <motion.button
+              whileTap={tapSoft}
+              onClick={!waitlisted ? joinWaitlist : undefined}
+              className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold border transition-all"
+              style={{
+                background: waitlisted ? 'rgba(34,197,94,0.1)' : CX.surface,
+                borderColor: waitlisted ? 'rgba(34,197,94,0.5)' : CX.border,
+                color: waitlisted ? '#4ade80' : CX.muted,
+              }}
+            >
+              <AnimatePresence mode="wait">
+                {waitlistDone ? (
+                  <motion.span
+                    key="ok"
+                    initial={{ scale: 0.92, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.92, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                    className="flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" /> Sur liste d'attente !
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="w"
+                    initial={{ scale: 0.92, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.92, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                    className="flex items-center gap-2"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {waitlisted ? "Liste d'attente ✓" : "Rejoindre la liste d'attente"}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          )}
         </div>
       </div>
 
       {/* Portfolio */}
       <section className="px-4 mt-8">
-        <h2 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: CX.muted }}>
+        <h2
+          className="text-sm font-bold uppercase tracking-widest mb-4"
+          style={{ color: CX.muted }}
+        >
           Flashs disponibles
         </h2>
         {flashes.length === 0 ? (
@@ -274,18 +452,29 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
               <motion.a
                 key={f.id}
                 href={f.slug ? `/flash/${f.slug}` : '#'}
-                whileTap={{ scale: 0.98 }}
+                whileTap={tap}
                 className="rounded-2xl overflow-hidden border"
                 style={{ borderColor: CX.border, background: CX.surface }}
               >
                 <div
-                  className="aspect-square"
+                  className="aspect-square relative overflow-hidden"
                   style={{
-                    background: f.image_url
-                      ? `url(${f.image_url}) center/cover`
-                      : 'linear-gradient(135deg, #1a1a1a, #2a1810)',
+                    background: 'linear-gradient(135deg, #1a1a1a, #2a1810)',
                   }}
-                />
+                >
+                  {f.image_url ? (
+                    <img
+                      src={f.image_url}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                </div>
                 <div className="p-3">
                   <p className="text-xs font-semibold truncate" style={{ color: CX.text }}>
                     {f.title}

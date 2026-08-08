@@ -87,9 +87,11 @@ CREATE INDEX IF NOT EXISTS idx_follows_artist ON inkflow_client_artist_follows(a
 -- Artists : lecture publique (vitrine), écriture par studio owner
 ALTER TABLE inkflow_artists ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "artists_public_read" ON inkflow_artists;
 CREATE POLICY "artists_public_read" ON inkflow_artists
   FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "artists_studio_write" ON inkflow_artists;
 CREATE POLICY "artists_studio_write" ON inkflow_artists
   FOR ALL USING (
     EXISTS (
@@ -99,6 +101,7 @@ CREATE POLICY "artists_studio_write" ON inkflow_artists
     )
   );
 
+DROP POLICY IF EXISTS "artists_svc" ON inkflow_artists;
 CREATE POLICY "artists_svc" ON inkflow_artists
   FOR ALL USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
@@ -106,15 +109,19 @@ CREATE POLICY "artists_svc" ON inkflow_artists
 -- Client Favorites
 ALTER TABLE inkflow_client_favorites ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "favorites_client_read" ON inkflow_client_favorites;
 CREATE POLICY "favorites_client_read" ON inkflow_client_favorites
   FOR SELECT USING (client_email = auth.email());
 
+DROP POLICY IF EXISTS "favorites_client_insert" ON inkflow_client_favorites;
 CREATE POLICY "favorites_client_insert" ON inkflow_client_favorites
   FOR INSERT WITH CHECK (client_email = auth.email());
 
+DROP POLICY IF EXISTS "favorites_client_delete" ON inkflow_client_favorites;
 CREATE POLICY "favorites_client_delete" ON inkflow_client_favorites
   FOR DELETE USING (client_email = auth.email());
 
+DROP POLICY IF EXISTS "favorites_svc" ON inkflow_client_favorites;
 CREATE POLICY "favorites_svc" ON inkflow_client_favorites
   FOR ALL USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
@@ -122,15 +129,19 @@ CREATE POLICY "favorites_svc" ON inkflow_client_favorites
 -- Client Artist Follows
 ALTER TABLE inkflow_client_artist_follows ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "follows_client_read" ON inkflow_client_artist_follows;
 CREATE POLICY "follows_client_read" ON inkflow_client_artist_follows
   FOR SELECT USING (client_email = auth.email());
 
+DROP POLICY IF EXISTS "follows_client_insert" ON inkflow_client_artist_follows;
 CREATE POLICY "follows_client_insert" ON inkflow_client_artist_follows
   FOR INSERT WITH CHECK (client_email = auth.email());
 
+DROP POLICY IF EXISTS "follows_client_delete" ON inkflow_client_artist_follows;
 CREATE POLICY "follows_client_delete" ON inkflow_client_artist_follows
   FOR DELETE USING (client_email = auth.email());
 
+DROP POLICY IF EXISTS "follows_svc" ON inkflow_client_artist_follows;
 CREATE POLICY "follows_svc" ON inkflow_client_artist_follows
   FOR ALL USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');

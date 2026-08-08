@@ -1,80 +1,88 @@
 /**
  * CORS headers pour les Edge Functions Supabase.
- * En production : ink-flow.me, inkflow.me et Vercel.
- * En développement local, localhost est également autorisé.
+ * Liste stricte + origines optionnelles (INKFLOW_CORS_EXTRA_ORIGINS, séparées par des virgules).
  */
 
 const ALLOWED_ORIGINS = [
-  'https://ink-flow.me',
-  'https://www.ink-flow.me',
-  'https://app.ink-flow.me',
-  'https://inkflow.me',
-  'https://www.inkflow.me',
-  'https://app.inkflow.me',
-  'https://inkdlow.vercel.app',
+  "https://ink-flow.me",
+  "https://www.ink-flow.me",
+  "https://app.ink-flow.me",
+  "https://inkflow.me",
+  "https://www.inkflow.me",
+  "https://app.inkflow.me",
+  "https://inkdlow.vercel.app",
 ];
 
-const DEV_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:3000',
-];
+/**
+ * Dev local : HTTP sur localhost / 127.0.0.1 avec n’importe quel port.
+ * Sinon une origine non listée retombe sur ink-flow.me → préflight CORS échoue (« Failed to fetch »).
+ */
+function isHttpLocalhostAnyPort(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "http:") return false;
+    const h = u.hostname;
+    return h === "localhost" || h === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function extraAllowedOrigins(): string[] {
+  const raw = (Deno.env.get("INKFLOW_CORS_EXTRA_ORIGINS") || "").trim();
+  if (!raw) return [];
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
 
 export function getCorsHeaders(origin?: string | null): Record<string, string> {
   const allowedOrigin = getAllowedOrigin(origin);
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, stripe-signature, x-cron-secret",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   };
 }
 
 function getAllowedOrigin(origin?: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  
-  // Production origins
+
+  const extras = extraAllowedOrigins();
+  if (extras.includes(origin)) {
+    return origin;
+  }
+
   if (ALLOWED_ORIGINS.includes(origin)) {
     return origin;
   }
-  
-  // Vercel previews (*.vercel.app)
-  if (origin.endsWith('.vercel.app')) {
-    return origin;
-  }
-  
-  // Development origins (Supabase local ou localhost)
-  if (DEV_ORIGINS.includes(origin)) {
-    return origin;
-  }
-  
-  // Supabase Studio preview (pour les tests)
-  if (origin.includes('supabase.co') || origin.includes('supabase.in')) {
+
+  if (origin.endsWith(".vercel.app")) {
     return origin;
   }
 
-  // Netlify previews / prod
-  if (origin.endsWith('.netlify.app')) {
+  if (isHttpLocalhostAnyPort(origin)) {
     return origin;
   }
 
-  // Tout domaine HTTPS valide (domaine Vercel custom, sous-domaine client, etc.)
-  // Sinon le navigateur bloque supabase.functions.invoke → "Failed to send request to Edge Function"
+  /** Vite / dev HTTPS (cert local) — même logique que HTTP localhost */
   try {
     const u = new URL(origin);
-    if (
-      u.protocol === 'https:' &&
-      u.hostname.length > 0 &&
-      !u.hostname.includes('..') &&
-      u.hostname !== 'localhost'
-    ) {
-      return origin;
+    if (u.protocol === "https:") {
+      const h = u.hostname;
+      if (h === "localhost" || h === "127.0.0.1") return origin;
     }
   } catch {
     /* ignore */
   }
 
-  // Default to primary production origin
+  if (origin.includes("supabase.co") || origin.includes("supabase.in")) {
+    return origin;
+  }
+
+  if (origin.endsWith(".netlify.app")) {
+    return origin;
+  }
+
   return ALLOWED_ORIGINS[0];
 }
 

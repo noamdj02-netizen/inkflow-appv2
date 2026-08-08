@@ -1,9 +1,21 @@
 import React, { useEffect, useState, useOptimistic, useTransition } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Heart, Calendar, Share2, MapPin, Star, Clock, Ruler } from 'lucide-react';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
+import {
+  ArrowLeft,
+  Heart,
+  Calendar,
+  Share2,
+  MapPin,
+  Clock,
+  Ruler,
+  Instagram,
+  ExternalLink,
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
 import { useToast } from '../../contexts/ToastContext';
+import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 
 interface FlashData {
   id: string;
@@ -21,6 +33,8 @@ interface FlashData {
   studio_id: string;
   artist_name?: string;
   artist_slug?: string;
+  artist_available_now?: boolean;
+  artist_instagram_url?: string | null;
   studio_name?: string;
   studio_slug?: string;
 }
@@ -30,6 +44,7 @@ interface FlashPageProps {
 }
 
 export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
+  const { tap, tapSoft } = useClientFramerGestures();
   const toast = useToast();
   const [flash, setFlash] = useState<FlashData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +53,30 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [optimisticFav, setOptimisticFav] = useOptimistic(isFavorited);
   const [isPending, startTransition] = useTransition();
+  const [imageBroken, setImageBroken] = useState(false);
+  const [portalGate, setPortalGate] = useState<'unknown' | 'ok' | 'need_onboarding'>('unknown');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        if (!cancelled) setPortalGate('ok');
+        return;
+      }
+      const ready = await isClientPortalFullyReady(session.user);
+      if (!cancelled) setPortalGate(ready ? 'ok' : 'need_onboarding');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setImageBroken(false);
+  }, [flashSlug]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -52,12 +91,14 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
 
       const { data: flashData, error: flashErr } = await supabase
         .from('inkflow_flash_designs')
-        .select(`
+        .select(
+          `
           id, slug, title, description, image_url, price, deposit_amount, size, 
           estimated_duration, category, available, artist_id, studio_id,
-          inkflow_artists(name, slug),
+          inkflow_artists(name, slug, available_now, instagram_url),
           inkflow_studios(studio_name, slug)
-        `)
+        `
+        )
         .eq('slug', flashSlug)
         .maybeSingle();
 
@@ -67,13 +108,23 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
         return;
       }
 
-      const artistInfo = flashData.inkflow_artists as { name?: string; slug?: string } | null;
-      const studioInfo = flashData.inkflow_studios as { studio_name?: string; slug?: string } | null;
+      const artistInfo = flashData.inkflow_artists as {
+        name?: string;
+        slug?: string;
+        available_now?: boolean;
+        instagram_url?: string | null;
+      } | null;
+      const studioInfo = flashData.inkflow_studios as {
+        studio_name?: string;
+        slug?: string;
+      } | null;
 
       setFlash({
         ...flashData,
         artist_name: artistInfo?.name,
         artist_slug: artistInfo?.slug,
+        artist_available_now: Boolean(artistInfo?.available_now),
+        artist_instagram_url: artistInfo?.instagram_url ?? null,
         studio_name: studioInfo?.studio_name,
         studio_slug: studioInfo?.slug,
       });
@@ -95,6 +146,11 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
   const toggleFavorite = async () => {
     if (!sessionEmail || !flash) {
       toast.error('Connecte-toi pour ajouter aux favoris');
+      return;
+    }
+    if (portalGate === 'need_onboarding') {
+      toast.info('Poursuis ta réservation depuis la vitrine ou la page réservation du studio.');
+      window.location.href = '/discover';
       return;
     }
 
@@ -145,16 +201,22 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: CX.bg }}>
-        <div className="w-10 h-10 rounded-full border-2 animate-spin" style={{ borderColor: CX.border, borderTopColor: CX.accent }} />
+        <div
+          className="w-10 h-10 rounded-full border-2 animate-spin"
+          style={{ borderColor: CX.border, borderTopColor: CX.accent }}
+        />
       </div>
     );
   }
 
   if (error || !flash) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: CX.bg, color: CX.text }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ background: CX.bg, color: CX.text }}
+      >
         <p className="text-lg font-semibold mb-4">{error ?? 'Flash introuvable'}</p>
-        <a href="/client/dashboard" className="text-sm underline" style={{ color: CX.accent }}>
+        <a href="/explorer" className="text-sm underline" style={{ color: CX.accent }}>
           Retour à l'exploration
         </a>
       </div>
@@ -163,16 +225,28 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
 
   return (
     <div className="min-h-screen pb-32" style={{ background: CX.bg, color: CX.text }}>
-      {/* Image */}
-      <div className="relative aspect-square">
+      {/* Image — pinch-to-zoom natif */}
+      <div
+        className="relative aspect-square"
+        style={{ touchAction: 'pinch-zoom', overflow: 'hidden' }}
+      >
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 select-none"
           style={{
-            background: flash.image_url
-              ? `url(${flash.image_url}) center/cover`
-              : 'linear-gradient(135deg, #1a1a1a, #2a1810)',
+            background: 'linear-gradient(135deg, #1a1a1a, #2a1810)',
+            touchAction: 'pinch-zoom',
           }}
         />
+        {flash.image_url && !imageBroken ? (
+          <img
+            src={flash.image_url}
+            alt={flash.title}
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover select-none"
+            style={{ touchAction: 'pinch-zoom' }}
+            onError={() => setImageBroken(true)}
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
         <button
           type="button"
@@ -187,7 +261,8 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
             type="button"
             onClick={toggleFavorite}
             disabled={isPending}
-            className="w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border z-10 transition-all active:scale-95"
+            aria-label={optimisticFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            className="min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10 transition-all active:scale-95"
             style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
           >
             <Heart
@@ -226,16 +301,46 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
         {/* Artist & Studio */}
         <div className="flex items-center gap-3 py-3 border-y" style={{ borderColor: CX.border }}>
           {flash.artist_name && (
-            <a
-              href={flash.artist_slug ? `/artist/${flash.artist_slug}` : '#'}
-              className="flex items-center gap-2 text-sm font-medium"
-              style={{ color: CX.text }}
-            >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: CX.surface, color: CX.accent }}>
-                {flash.artist_name.slice(0, 1)}
-              </div>
-              {flash.artist_name}
-            </a>
+            <div className="flex flex-col gap-1 min-w-0">
+              <a
+                href={flash.artist_slug ? `/artist/${flash.artist_slug}` : '#'}
+                className="flex items-center gap-2 text-sm font-medium min-w-0"
+                style={{ color: CX.text }}
+              >
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                  style={{ background: CX.surface, color: CX.accent }}
+                >
+                  {flash.artist_name.slice(0, 1)}
+                </div>
+                <span className="truncate">{flash.artist_name}</span>
+                {flash.artist_available_now && (
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                    style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}
+                  >
+                    Dispo
+                  </span>
+                )}
+              </a>
+              {flash.artist_instagram_url && (
+                <a
+                  href={
+                    flash.artist_instagram_url.startsWith('http')
+                      ? flash.artist_instagram_url
+                      : `https://${flash.artist_instagram_url}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs pl-10"
+                  style={{ color: CX.muted }}
+                >
+                  <Instagram className="w-3.5 h-3.5" style={{ color: CX.accent }} />
+                  Instagram
+                  <ExternalLink className="w-3 h-3 opacity-50" />
+                </a>
+              )}
+            </div>
           )}
           {flash.studio_name && (
             <a
@@ -251,21 +356,34 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
 
         {/* Details */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl p-4 border" style={{ borderColor: CX.border, background: CX.surface }}>
+          <div
+            className="rounded-2xl p-4 border"
+            style={{ borderColor: CX.border, background: CX.surface }}
+          >
             <Ruler className="w-5 h-5 mb-2" style={{ color: CX.accent }} />
-            <p className="text-xs" style={{ color: CX.muted }}>Taille</p>
+            <p className="text-xs" style={{ color: CX.muted }}>
+              Taille
+            </p>
             <p className="text-sm font-semibold">{sizeLabels[flash.size] ?? flash.size}</p>
           </div>
-          <div className="rounded-2xl p-4 border" style={{ borderColor: CX.border, background: CX.surface }}>
+          <div
+            className="rounded-2xl p-4 border"
+            style={{ borderColor: CX.border, background: CX.surface }}
+          >
             <Clock className="w-5 h-5 mb-2" style={{ color: CX.accent }} />
-            <p className="text-xs" style={{ color: CX.muted }}>Durée estimée</p>
+            <p className="text-xs" style={{ color: CX.muted }}>
+              Durée estimée
+            </p>
             <p className="text-sm font-semibold">{flash.estimated_duration} min</p>
           </div>
         </div>
 
         {flash.description && (
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: CX.muted }}>
+            <h2
+              className="text-sm font-bold uppercase tracking-widest mb-2"
+              style={{ color: CX.muted }}
+            >
               Description
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: CX.text }}>
@@ -284,11 +402,15 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
       {/* Fixed CTA */}
       <div
         className="fixed bottom-0 left-0 right-0 p-4 border-t backdrop-blur-xl z-20"
-        style={{ background: 'rgba(0,0,0,0.92)', borderColor: CX.border, paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        style={{
+          background: 'rgba(0,0,0,0.92)',
+          borderColor: CX.border,
+          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+        }}
       >
         <div className="flex gap-3 max-w-lg mx-auto">
           <motion.button
-            whileTap={{ scale: 0.97 }}
+            whileTap={tapSoft}
             onClick={toggleFavorite}
             disabled={isPending}
             className="w-14 h-14 rounded-2xl border flex items-center justify-center transition-all"
@@ -305,14 +427,22 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
               }}
             />
           </motion.button>
-          <a
+          <motion.a
             href={flash.studio_slug ? `/book/${flash.studio_slug}?flash=${flash.id}` : '#'}
-            className="flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold transition-all active:scale-[0.98]"
+            onClick={(e) => {
+              if (portalGate === 'need_onboarding') {
+                e.preventDefault();
+                toast.info('Réserve depuis la page du studio ou contacte-le directement.');
+                window.location.href = '/discover';
+              }
+            }}
+            whileTap={flash.available ? tap : undefined}
+            className="flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold transition-all"
             style={{ background: flash.available ? CX.accent : CX.muted, color: '#000' }}
           >
             <Calendar className="w-5 h-5" />
             {flash.available ? 'Réserver ce flash' : 'Indisponible'}
-          </a>
+          </motion.a>
         </div>
       </div>
     </div>

@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertCronAuthorized } from "../_shared/cronGate.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -9,13 +11,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 function buildReminderHtml(apt: Record<string, unknown>, studioName: string, reminderType: string): string {
-  const timeLabel = reminderType === "2h" ? "dans 2 heures" : reminderType === "48h" ? "dans 2 jours" : "demain";
+  const timeLabel = reminderType === "2h"
+    ? "dans 2 heures"
+    : reminderType === "48h"
+    ? "dans 2 jours"
+    : "demain (J-1)";
   const safeStudio = escapeHtml(String(studioName));
   const safeName = escapeHtml(String(apt.client_name ?? ""));
   const infoContent = `<p style="margin:0 0 8px;color:#171717;font-size:14px;"><strong>Service :</strong> ${escapeHtml(String(apt.service ?? ""))}</p>
@@ -25,16 +26,35 @@ function buildReminderHtml(apt: Record<string, unknown>, studioName: string, rem
       <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 16px;">Rappel : ton rendez-vous chez <strong>${safeStudio}</strong> est prévu <strong>${escapeHtml(timeLabel)}</strong>.</p>
       ${emailInfoBox(infoContent)}
       <p style="color:#737373;font-size:13px;margin:0;text-align:center;">En cas d'empêchement, contacte le studio au plus vite.</p>`;
-  return wrapEmailLayout({ tag: "RAPPEL RDV", title: `Rappel RDV ${timeLabel}`, bodyHtml });
+  return wrapEmailLayout({
+    preheader: `Rappel : ta séance chez ${String(studioName)} — ${timeLabel}`,
+    tag: "RAPPEL RDV",
+    title: `Rappel RDV ${timeLabel}`,
+    bodyHtml,
+  });
 }
 
 function getReminderSubject(reminderType: string, studioName: string): string {
   if (reminderType === "2h") return `Rappel RDV dans 2h - ${studioName}`;
   if (reminderType === "48h") return `Rappel RDV J-2 - ${studioName}`;
-  return `Rappel RDV demain - ${studioName}`;
+  return `Rappel RDV J-1 - ${studioName}`;
 }
 
-Deno.serve(async (_req: Request) => {
+Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+  const cronDeny = assertCronAuthorized(req, origin);
+  if (cronDeny) return cronDeny;
+
   try {
     if (!RESEND_API_KEY) {
       console.error("[send-appointment-reminders] RESEND_API_KEY is not configured");

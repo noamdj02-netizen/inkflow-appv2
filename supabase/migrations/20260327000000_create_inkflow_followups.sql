@@ -15,6 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_followups_studio
 
 ALTER TABLE inkflow_followups ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Studio owner reads own followups" ON inkflow_followups;
 CREATE POLICY "Studio owner reads own followups"
   ON inkflow_followups FOR SELECT
   USING (
@@ -23,6 +24,7 @@ CREATE POLICY "Studio owner reads own followups"
     )
   );
 
+DROP POLICY IF EXISTS "Service role full access followups" ON inkflow_followups;
 CREATE POLICY "Service role full access followups"
   ON inkflow_followups FOR ALL
   USING (auth.role() = 'service_role')

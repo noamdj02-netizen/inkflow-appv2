@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" style="--font-geist: 'Geist Variable', Inter, system-ui, sans-serif; --font-geist-mono: 'Geist Mono Variable', ui-monospace, monospace;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
@@ -7,12 +7,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <style>
+      /* Anti flash — fond html avant paint React (Vercel shadcn) */
+      html { background-color: #000; color-scheme: dark; }
+      html[data-theme='light'] { background-color: #fcfcfc; color-scheme: light; }
+      html[data-theme='dark'] { background-color: #000; color-scheme: dark; }
+    </style>
     <script>
-      /* Auto-clear stale SW on localhost — évite le splash bloqué en dev */
+      /* Auto-clear stale SW en dev (localhost, 127.0.0.1, ou port Vite 3000) */
       (function(){
-        if('serviceWorker' in navigator && (location.hostname==='localhost'||location.hostname==='127.0.0.1')) {
+        var isDevHost = location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.port==='3000';
+        if('serviceWorker' in navigator && isDevHost) {
           navigator.serviceWorker.getRegistrations().then(function(regs){
             if(regs.length===0) return;
             var cleared = sessionStorage.getItem('_sw_clear');
@@ -28,15 +35,32 @@
     </script>
     <script>document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');</script>
     <script>
-      (function(){var p=window.location.pathname;if(p==='/'||p===''||p.startsWith('/studio/')||p.startsWith('/demo')){document.documentElement.setAttribute('data-theme','light');return;}var t=localStorage.getItem('inkflow-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}else if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','dark');}})();
+      (function () {
+        var root = document.documentElement;
+        var p = window.location.pathname;
+        var forceLight =
+          p === '/' || p === '' || p.startsWith('/studio/') || p.startsWith('/demo');
+        var stored = localStorage.getItem('inkflow-theme');
+        var resolved = 'dark';
+        if (forceLight) {
+          resolved = 'light';
+        } else if (stored === 'light' || stored === 'dark') {
+          resolved = stored;
+        } else if (stored === 'system' || !stored) {
+          resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        root.setAttribute('data-theme', resolved);
+        root.style.backgroundColor = resolved === 'light' ? '#fcfcfc' : '#000';
+        root.style.colorScheme = resolved;
+      })();
     </script>
-    <meta name="description" content="InkFlow — logiciel de gestion pour tatoueurs : réservations en ligne, agenda, acomptes Stripe, CRM et vitrine studio. Essayez gratuitement." />
-    <meta name="keywords" content="logiciel tatoueur, agenda tatouage, réservation tatoueur, SaaS tatouage, CRM studio tattoo, gestion rendez-vous tatouage" />
+    <meta name="description" content="InkFlow — logiciel de gestion pour tatoueurs et studios en France : réservations en ligne, agenda, acomptes Stripe (EUR), CRM et vitrine. Essai gratuit 1 mois sans carte bancaire." />
+    <meta name="keywords" content="logiciel tatoueur France, agenda tatouage, réservation tatouage en ligne, SaaS tatouage, CRM studio tattoo, gestion salon tatouage, application tatoueur professionnel, vitrine tatoueur" />
     <meta name="author" content="InkFlow" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="InkFlow | Logiciel de gestion et réservation pour tatoueurs" />
-    <meta property="og:description" content="Réservations en ligne, paiements Stripe, CRM et vitrine pour votre studio de tatouage. Gagnez du temps avec InkFlow." />
+    <meta property="og:title" content="InkFlow | Logiciel tatoueur France — agenda et réservations" />
+    <meta property="og:description" content="Réservations en ligne, paiements Stripe (EUR), CRM et vitrine pour votre studio de tatouage en France. Essai gratuit 1 mois." />
     <meta property="og:url" content="https://ink-flow.me" />
     <meta property="og:site_name" content="InkFlow" />
     <meta property="og:locale" content="fr_FR" />
@@ -45,8 +69,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="InkFlow — logiciel de gestion pour tatoueurs" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="InkFlow | Logiciel de gestion et réservation pour tatoueurs" />
-    <meta name="twitter:description" content="Réservations en ligne, paiements Stripe, CRM et vitrine pour votre studio de tatouage." />
+    <meta name="twitter:title" content="InkFlow | Logiciel tatoueur France — agenda et réservations" />
+    <meta name="twitter:description" content="Réservations en ligne, paiements Stripe, CRM et vitrine pour studios de tatouage en France." />
     <meta name="twitter:image" content="https://ink-flow.me/og-image.png" />
     <meta name="twitter:image:alt" content="InkFlow — logiciel de gestion pour tatoueurs" />
     <meta name="apple-mobile-web-app-title" content="InkFlow" />
@@ -54,7 +78,7 @@
     <meta name="msapplication-TileColor" content="#000000" />
     <meta name="msapplication-tap-highlight" content="no" />
     <link rel="canonical" href="https://ink-flow.me" />
-    <title>InkFlow | Logiciel de gestion et réservation pour tatoueurs</title>
+    <title>InkFlow | Logiciel tatoueur France — agenda et réservations en ligne</title>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -65,7 +89,7 @@
           "name": "InkFlow",
           "url": "https://ink-flow.me",
           "logo": { "@type": "ImageObject", "url": "https://ink-flow.me/og-image.png" },
-          "description": "Logiciel SaaS pour tatoueurs et studios de tatouage"
+          "description": "Logiciel SaaS pour tatoueurs et studios de tatouage en France (réservations, CRM, Stripe EUR)"
         },
         {
           "@type": "WebSite",
@@ -85,7 +109,7 @@
           "browserRequirements": "Requires JavaScript",
           "offers": {
             "@type": "AggregateOffer",
-            "lowPrice": "24",
+            "lowPrice": "29",
             "highPrice": "99",
             "priceCurrency": "EUR",
             "offerCount": "3",
@@ -273,14 +297,28 @@
       </div>
     </div>
     <div id="root"></div>
+    <!-- Figma MCP — html-to-design (generate_figma_design). Retirer hors sessions de capture. -->
+    <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
     <!-- Fallback pour crawlers sans JS (SEO) -->
     <noscript>
       <div style="max-width:800px;margin:2rem auto;padding:2rem;font-family:system-ui,sans-serif;">
-        <h1>InkFlow — Logiciel de gestion pour tatoueurs</h1>
-        <p>Gérez vos rendez-vous, clients et portfolio de tatouage en un seul endroit. Agenda, acomptes Stripe, galerie flash et CRM.</p>
+        <h1>InkFlow — Logiciel de gestion pour tatoueurs en France</h1>
+        <p>Gérez rendez-vous, clients et vitrine depuis une application en français. Agenda partagé, acomptes Stripe en euros, galerie flash et CRM pour salons de tatouage.</p>
         <p><a href="https://ink-flow.me">Accéder au site</a> (JavaScript requis)</p>
       </div>
     </noscript>
   <script type="module" src="/index.tsx"></script>
+  <script>
+    /* Si le bundle JS ne charge pas, masque quand même le splash (sinon écran noir infini) */
+    (function(){
+      window.setTimeout(function(){
+        var s = document.getElementById('splash');
+        if (s && !s.classList.contains('hidden')) {
+          s.classList.add('hidden');
+          setTimeout(function(){ try { s.remove(); } catch (e) {} }, 400);
+        }
+      }, 10000);
+    })();
+  </script>
 </body>
 </html>

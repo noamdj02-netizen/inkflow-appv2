@@ -63,16 +63,14 @@ export const OnboardingStudioStep: React.FC<OnboardingStudioStepProps> = ({
   };
 
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex min-h-screen bg-white dark:bg-black"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+    <div
+      className="fixed inset-0 z-[200] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-zinc-950"
       role="dialog"
       aria-labelledby="studio-title"
+      aria-modal="true"
     >
       {/* Left — Formulaire */}
-      <div className="flex-1 flex flex-col min-h-screen min-h-[100dvh] overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios bg-white dark:bg-zinc-950">
         {/* Hero compact mobile */}
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
           <img
@@ -93,15 +91,16 @@ export const OnboardingStudioStep: React.FC<OnboardingStudioStepProps> = ({
           >
             <div className="inline-flex items-center gap-2 mb-5 sm:mb-6">
               <Logo className="dark:invert" />
-              <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+              <span className="type-heading-sm">InkFlow</span>
             </div>
 
-            <h1 id="studio-title" className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1 sm:mb-1.5">
+            <h1
+              id="studio-title"
+              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1 sm:mb-1.5"
+            >
               Configurez votre studio
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4 sm:mb-6">
-              Quelques infos pour personnaliser InkFlow
-            </p>
+            <p className="type-subtitle mb-4 sm:mb-6">Quelques infos pour personnaliser InkFlow</p>
 
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {error && (
@@ -111,7 +110,10 @@ export const OnboardingStudioStep: React.FC<OnboardingStudioStepProps> = ({
               )}
 
               <div>
-                <label htmlFor="studio-name" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
+                <label
+                  htmlFor="studio-name"
+                  className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+                >
                   Nom du studio
                 </label>
                 <div className="relative">
@@ -132,7 +134,8 @@ export const OnboardingStudioStep: React.FC<OnboardingStudioStepProps> = ({
               <div>
                 <label className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
                   <Palette className="inline w-4 h-4 mr-2 -mt-0.5" />
-                  Styles de tatouage <span className="font-normal text-zinc-500 dark:text-zinc-400">(optionnel)</span>
+                  Styles de tatouage{' '}
+                  <span className="font-normal text-zinc-500 dark:text-zinc-400">(optionnel)</span>
                 </label>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {TATTOO_STYLES.map((style) => (
@@ -189,9 +192,11 @@ export const OnboardingStudioStep: React.FC<OnboardingStudioStepProps> = ({
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Gérez votre studio.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Libérez votre art.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Libérez votre art.
+          </p>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };

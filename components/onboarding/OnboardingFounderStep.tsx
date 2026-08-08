@@ -2,9 +2,9 @@
  * Onboarding Étape 1 — Note du fondateur
  * Style épuré aligné sur la page login
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import { Logo } from '../Logo';
 
 const FOUNDER_NOTE = `Bienvenue dans InkFlow.
@@ -13,23 +13,35 @@ J'ai créé cette app parce que, comme toi, j'ai passé des heures à gérer mes
 
 InkFlow, c'est l'outil que j'aurais voulu avoir dès mon premier jour en tant que tatoueur.`;
 
+/** Délai minimum avant de pouvoir continuer (lecture). */
+const FOUNDER_CONTINUE_DELAY_SEC = 6;
+
 export interface OnboardingFounderStepProps {
   onNext: () => void;
 }
 
 export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ onNext }) => {
+  const [secondsLeft, setSecondsLeft] = useState(FOUNDER_CONTINUE_DELAY_SEC);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const canContinue = secondsLeft <= 0;
+
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex min-h-screen bg-white dark:bg-black"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+    <div
+      className="fixed inset-0 z-[200] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-zinc-950"
       role="dialog"
       aria-labelledby="founder-title"
       aria-describedby="founder-note"
+      aria-modal="true"
     >
       {/* Left — Contenu */}
-      <div className="flex-1 flex flex-col min-h-screen min-h-[100dvh] overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios bg-white dark:bg-zinc-950">
         {/* Hero compact mobile */}
         <div className="lg:hidden flex-shrink-0 h-32 sm:h-40 relative overflow-hidden safe-top">
           <img
@@ -50,10 +62,13 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
           >
             <div className="inline-flex items-center gap-2 mb-6 sm:mb-8">
               <Logo className="dark:invert" />
-              <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+              <span className="type-heading-sm">InkFlow</span>
             </div>
 
-            <h1 id="founder-title" className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3 sm:mb-4">
+            <h1
+              id="founder-title"
+              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3 sm:mb-4"
+            >
               Une note du fondateur
             </h1>
 
@@ -67,10 +82,20 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
             <button
               type="button"
               onClick={onNext}
-              className="w-full min-h-[48px] py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] touch-manipulation"
+              disabled={!canContinue}
+              className="w-full min-h-[48px] py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 dark:disabled:text-zinc-400 disabled:cursor-not-allowed text-white font-semibold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] touch-manipulation"
             >
-              C&apos;est parti
-              <ChevronRight className="w-5 h-5" />
+              {!canContinue ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin opacity-80" />
+                  Lecture… {secondsLeft}s
+                </>
+              ) : (
+                <>
+                  C&apos;est parti
+                  <ChevronRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </motion.div>
         </div>
@@ -93,9 +118,11 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Gérez votre studio.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Libérez votre art.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Libérez votre art.
+          </p>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };

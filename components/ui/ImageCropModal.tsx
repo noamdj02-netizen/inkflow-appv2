@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Cropper from 'react-easy-crop';
-import type { Area } from 'react-easy-crop';
+import CropperBase from 'react-easy-crop';
+import type { Area, MediaSize } from 'react-easy-crop';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Cropper = CropperBase as any;
 import 'react-easy-crop/react-easy-crop.css';
 import { Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { getCroppedImgDataUrl } from '../../lib/cropImage';
 import { resizeDataUrl } from '../../lib/imageResize';
 import { useToast } from '../../contexts/ToastContext';
+
+/** Zoom mini : valeur inférieure à 1 = dézoom (flash vertical dans un cadre large). */
+const MIN_ZOOM = 0.08;
+const MAX_ZOOM = 6;
 
 export interface ImageCropModalProps {
   isOpen: boolean;
@@ -17,6 +23,11 @@ export interface ImageCropModalProps {
   title?: string;
   onClose: () => void;
   onConfirm: (dataUrl: string) => void | Promise<void>;
+  /**
+   * `contain` (défaut si cadre peu allongé) ou `cover` (bannières / flashs larges).
+   * Si omis : cover automatique lorsque aspect ≥ 1.35 (meilleur rendu des images verticales).
+   */
+  objectFit?: 'contain' | 'cover' | 'horizontal-cover' | 'vertical-cover';
 }
 
 export const ImageCropModal: React.FC<ImageCropModalProps> = ({
@@ -27,12 +38,17 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   title = 'Ajuster le cadrage',
   onClose,
   onConfirm,
+  objectFit: objectFitProp,
 }) => {
   const toast = useToast();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const pixelsRef = useRef<Area | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const mediaFitDoneRef = useRef<string | null>(null);
+
+  const effectiveObjectFit =
+    objectFitProp ?? (aspect >= 1.35 ? 'cover' : 'contain');
 
   useEffect(() => {
     if (isOpen) {
@@ -40,12 +56,39 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       setZoom(1);
       pixelsRef.current = null;
       setSubmitting(false);
+      mediaFitDoneRef.current = null;
     }
   }, [isOpen, imageSrc]);
 
   const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
     pixelsRef.current = areaPixels;
   }, []);
+
+  /** Ajuste le zoom initial quand l’image est plus « haute » que le cadre de cadrage (flash vertical, bannière 3:1, etc.). */
+  const onMediaLoaded = useCallback(
+    (ms: MediaSize) => {
+      const key = `${imageSrc}:${ms.naturalWidth}x${ms.naturalHeight}`;
+      if (mediaFitDoneRef.current === key) return;
+      mediaFitDoneRef.current = key;
+
+      const iw = ms.naturalWidth;
+      const ih = ms.naturalHeight;
+      if (!iw || !ih) return;
+
+      const imgAspect = iw / ih;
+      const cropAspect = aspect;
+
+      if (imgAspect < cropAspect - 0.0001) {
+        const raw = (imgAspect / cropAspect) * 0.94;
+        const z = Math.max(MIN_ZOOM, Math.min(1, raw));
+        setZoom(z);
+      } else {
+        setZoom(1);
+      }
+      setCrop({ x: 0, y: 0 });
+    },
+    [aspect, imageSrc],
+  );
 
   const handleConfirm = async () => {
     const pixels = pixelsRef.current;
@@ -67,38 +110,43 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
       <div className="space-y-4">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Déplacez l’image et utilisez le zoom pour cadrer comme souhaité.
+          Déplacez l’image sous le cadre. Curseur à gauche = éloigner (tout voir sur un grand flash
+          vertical) ; à droite = rapprocher.
         </p>
-        <div className="relative w-full h-[min(52vh,300px)] sm:h-[340px] rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800">
+        <div
+          className="relative w-full min-h-[240px] h-[min(56vh,420px)] sm:min-h-[280px] sm:h-[400px] rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800"
+        >
           {imageSrc ? (
-          <Cropper
-            image={imageSrc}
-            crop={crop}
-            zoom={zoom}
-            aspect={aspect}
-            cropShape={cropShape}
-            rotation={0}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-            minZoom={1}
-            maxZoom={4}
-            zoomSpeed={0.65}
-            restrictPosition
-            showGrid={false}
-            style={{
-              containerStyle: {
-                width: '100%',
-                height: '100%',
-                position: 'relative',
-              },
-            }}
-            classes={{}}
-            mediaProps={{}}
-            cropperProps={{}}
-            zoomWithScroll={false}
-            keyboardStep={4}
-          />
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={aspect}
+              cropShape={cropShape}
+              rotation={0}
+              objectFit={effectiveObjectFit}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+              onMediaLoaded={onMediaLoaded}
+              minZoom={MIN_ZOOM}
+              maxZoom={MAX_ZOOM}
+              zoomSpeed={0.55}
+              restrictPosition
+              showGrid={false}
+              style={{
+                containerStyle: {
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                },
+              }}
+              classes={{}}
+              mediaProps={{}}
+              cropperProps={{}}
+              zoomWithScroll={false}
+              keyboardStep={2}
+            />
           ) : (
             <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-zinc-400">
               Chargement de l’image…
@@ -106,14 +154,16 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           )}
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" htmlFor="crop-zoom">
-            Zoom
-          </label>
+          <div className="flex justify-between text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+            <span>Éloigner</span>
+            <span className="text-zinc-600 dark:text-zinc-300">Zoom</span>
+            <span>Rapprocher</span>
+          </div>
           <input
             id="crop-zoom"
             type="range"
-            min={1}
-            max={4}
+            min={MIN_ZOOM}
+            max={MAX_ZOOM}
             step={0.02}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}

@@ -1,8 +1,17 @@
+import { compressImageFileToWebP } from './imageResize';
 import { supabase } from './supabase';
+import { safeExternalHttpUrl } from './urls';
 import type { Booking, BookingStatus, VitrineBookingFormData } from '../types';
+import { notifyArtistPushFromDashboard } from './artistPushNotification';
+import { isFlashBookingDescription } from './vitrineBookingFlash';
 
 export function mapBookingFromDb(row: Record<string, unknown>): Booking {
   const refImages = row.reference_images;
+  const rawAvatar = row.client_avatar_url as string | undefined;
+  const clientAvatarUrl =
+    typeof rawAvatar === 'string' && rawAvatar.trim()
+      ? (safeExternalHttpUrl(rawAvatar.trim()) ?? rawAvatar.trim())
+      : undefined;
   return {
     id: row.id as string,
     studioId: row.studio_id as string,
@@ -13,14 +22,23 @@ export function mapBookingFromDb(row: Record<string, unknown>): Booking {
     requestedTime: (row.requested_time as string) ?? null,
     status: (row.status as BookingStatus) || 'pending',
     referenceImages: Array.isArray(refImages) ? (refImages as string[]) : undefined,
+    clientAvatarUrl,
     placement: row.placement as string | undefined,
     size: row.size as string | undefined,
+    clientPhone:
+      typeof row.client_phone === 'string' && row.client_phone.trim()
+        ? row.client_phone.trim()
+        : undefined,
+    smsConfirmationOptIn: row.sms_confirmation_opt_in === true,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
 }
 
 const DEFAULT_LIST_LIMIT = 500;
+
+const LIST_SELECT_BOOKINGS =
+  'id,studio_id,client_name,client_email,client_phone,description,requested_date,requested_time,status,reference_images,client_avatar_url,created_at,updated_at,sms_confirmation_opt_in';
 
 function normalizeTime(t: string | null): string | null {
   if (!t) return null;
@@ -70,10 +88,75 @@ export async function isSlotAvailableForBooking(
   return true;
 }
 
+/** Créneaux testés pour un RDV « placeholder » (projet sans date client) — évite le doublon sur (studio, date, heure). */
+const PLACEHOLDER_SLOT_TIMES = [
+  '09:00',
+  '09:30',
+  '10:00',
+  '10:30',
+  '11:00',
+  '11:30',
+  '12:00',
+  '12:30',
+  '13:00',
+  '13:30',
+  '14:00',
+  '14:30',
+  '15:00',
+  '15:30',
+  '16:00',
+  '16:30',
+  '17:00',
+  '17:30',
+  '18:00',
+  '18:30',
+  '19:00',
+];
+
+/**
+ * Trouve le premier créneau où l’on peut insérer un RDV sans violer l’unicité agenda
+ * ni chevaucher une réservation vitrine confirmée.
+ * Utilisé pour les demandes projet (acompte Stripe) : le client n’a pas encore choisi de date.
+ */
+export async function findNextAvailableSlotForStudio(
+  studioId: string
+): Promise<{ date: string; time: string }> {
+  const start = new Date();
+  const endLimit = new Date(start);
+  endLimit.setDate(endLimit.getDate() + 120);
+  const from = start.toISOString().split('T')[0];
+  const to = endLimit.toISOString().split('T')[0];
+
+  const { data: occupiedRows, error: occErr } = await supabase
+    .from('inkflow_appointments')
+    .select('date, time')
+    .eq('studio_id', studioId)
+    .gte('date', from)
+    .lte('date', to);
+  if (occErr) throw occErr;
+
+  const occupied = new Set((occupiedRows || []).map((r) => `${String(r.date)}|${String(r.time)}`));
+
+  for (let dayOffset = 0; dayOffset < 120; dayOffset++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + dayOffset);
+    const dateStr = d.toISOString().split('T')[0];
+    for (const time of PLACEHOLDER_SLOT_TIMES) {
+      if (occupied.has(`${dateStr}|${time}`)) continue;
+      const ok = await isSlotAvailableForBooking(studioId, dateStr, time, undefined);
+      if (ok) return { date: dateStr, time };
+    }
+  }
+
+  throw new Error(
+    "Aucun créneau libre trouvé dans les prochains mois. Libérez un horaire dans l'agenda ou déplacez un RDV existant."
+  );
+}
+
 export async function getBookingsFromSupabase(studioId: string): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('inkflow_bookings')
-    .select('*')
+    .select(LIST_SELECT_BOOKINGS)
     .eq('studio_id', studioId)
     .order('requested_date', { ascending: true })
     .order('created_at', { ascending: false })
@@ -96,25 +179,37 @@ export async function uploadBookingReferenceImages(
   files: File[]
 ): Promise<string[]> {
   if (files.length === 0) return [];
-  
+
   // Validation de la taille des fichiers (max 5 Mo)
   for (const file of files) {
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       throw new Error(`L'image "${file.name}" dépasse la taille maximale autorisée (5 Mo)`);
     }
   }
-  
-  const prefix = `${studioId}_${Date.now()}`;
+
+  const prefix = `${studioId}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const urls: string[] = [];
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
-    const path = `${FOLDER_BOOKING_REFS}/${prefix}_${i}.${safeExt}`;
-    const { data, error } = await supabase.storage
-      .from(BUCKET_BOOKING_REFS)
-      .upload(path, file, { upsert: false });
-    if (error) throw error;
+    const blob = await compressImageFileToWebP(file);
+    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${FOLDER_BOOKING_REFS}/${prefix}_${i}.${ext}`;
+    const { data, error } = await supabase.storage.from(BUCKET_BOOKING_REFS).upload(path, blob, {
+      upsert: false,
+      contentType: blob.type || 'image/jpeg',
+    });
+    if (error) {
+      const raw = error.message || '';
+      if (/new row violates row-level security|rls|403|denied/i.test(raw)) {
+        throw new Error(
+          "Envoi de l'image refusé (droits). Déconnectez-vous du compte client puis réessayez, ou contactez le studio."
+        );
+      }
+      if (/mime|type|not allowed|invalid/i.test(raw)) {
+        throw new Error("Format d'image non accepté par le serveur. Utilisez JPG ou PNG.");
+      }
+      throw new Error(raw || "Impossible d'enregistrer l'image. Réessayez.");
+    }
     const { data: urlData } = supabase.storage.from(BUCKET_BOOKING_REFS).getPublicUrl(data.path);
     urls.push(urlData.publicUrl);
   }
@@ -125,23 +220,33 @@ export async function uploadBookingReferenceImages(
  * Crée une demande de RDV depuis la vitrine (INSERT public autorisé par RLS).
  * La prévention des doublons (créneau déjà confirmé) est gérée côté dashboard à la confirmation.
  */
-export async function createBooking(data: VitrineBookingFormData, studioId: string): Promise<string> {
+export async function createBooking(
+  data: VitrineBookingFormData,
+  studioId: string
+): Promise<string> {
   const id = `bk_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
   const ig = data.clientInstagram?.trim();
   const descriptionBody = data.description.trim();
-  const description =
-    ig ? `${descriptionBody}\n\nInstagram : ${ig}` : descriptionBody;
+  const description = ig ? `${descriptionBody}\n\nInstagram : ${ig}` : descriptionBody;
+  const avatarStored = data.clientAvatarUrl?.trim()
+    ? safeExternalHttpUrl(data.clientAvatarUrl.trim())
+    : null;
+
+  const phoneTrim = data.clientPhone?.trim() || null;
   const row = {
     id,
     studio_id: studioId,
     client_name: data.clientName.trim(),
     client_email: data.clientEmail.trim(),
+    client_phone: phoneTrim,
+    sms_confirmation_opt_in: data.smsConfirmationOptIn === true,
     description,
     requested_date: data.requestedDate,
     requested_time: data.requestedTime?.trim() || null,
     status: 'pending',
     reference_images: data.referenceImages ?? [],
+    client_avatar_url: avatarStored,
     created_at: now,
     updated_at: now,
   };
@@ -153,7 +258,10 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
   const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-booking`;
   fetch(fnUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '' },
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    },
     body: JSON.stringify({
       bookingId: id,
       studioId,
@@ -202,4 +310,37 @@ export async function updateBookingStatus(id: string, status: BookingStatus): Pr
     }
     throw error;
   }
+
+  if (status === 'confirmed' || status === 'accepted') {
+    const { data: row } = await supabase
+      .from('inkflow_bookings')
+      .select('studio_id, description, client_name')
+      .eq('id', id)
+      .maybeSingle();
+    if (row?.studio_id && row.description && isFlashBookingDescription(row.description)) {
+      void notifyArtistPushFromDashboard({
+        studioId: row.studio_id,
+        title: 'Flash confirmé',
+        body: `${row.client_name || 'Client'} — demande vitrine confirmée.`,
+        url: '/dashboard?tab=requests',
+        tag: 'inkflow-flash-confirmed',
+      });
+    }
+  }
+}
+
+/** Associe la demande vitrine au RDV agenda et au jeton page `/rdv/merci/:token` (après confirmation). */
+export async function updateBookingRecapFields(
+  bookingId: string,
+  patch: { clientRecapToken: string; recapAppointmentId: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_bookings')
+    .update({
+      client_recap_token: patch.clientRecapToken,
+      recap_appointment_id: patch.recapAppointmentId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', bookingId);
+  if (error) throw error;
 }

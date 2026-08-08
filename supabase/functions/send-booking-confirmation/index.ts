@@ -3,8 +3,12 @@
  * Design premium InkFlow : minimaliste, anthracite, CTA noir/bleu, sans vert.
  */
 
-import { escapeHtml } from "../_shared/emailLayout.ts";
+import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
+import { normalizePhoneToE164Fr } from "../_shared/phoneE164.ts";
+import { sendTwilioTransactionalSms } from "../_shared/twilioSms.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { rateLimitByIp, verifyTattooerOwnsStudio } from "../_shared/edgeInvokeAuth.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -19,12 +23,15 @@ function ensureAbsoluteUrl(url: string | undefined, base: string): string {
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
   return base + (u.startsWith("/") ? u : "/" + u);
 }
-// Logo InkFlow — Colle ton URL ici ou définis le secret LOGO_URL dans Supabase (Edge Functions → Secrets)
-const LOGO_URL = Deno.env.get("LOGO_URL") || "https://ink-flow.me/icon.svg";
 const SUPPORT_PHONE = Deno.env.get("SUPPORT_PHONE") || "06 33 43 89 26";
 const SUPPORT_ADDRESS = Deno.env.get("SUPPORT_ADDRESS") || "Paris, France";
+const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") || "").trim();
+const SUPABASE_ANON_KEY = (Deno.env.get("SUPABASE_ANON_KEY") || "").trim();
+const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
 
 interface Payload {
+  /** Contrôle d’accès tatoueur (JWT) côté dashboard. */
+  studioId: string;
   clientEmail: string;
   clientName: string;
   studioName: string;
@@ -33,14 +40,19 @@ interface Payload {
   description: string;
   conversationLink?: string;
   paymentLink?: string;
+  /** Page récap + acompte — prioritaire sur conversationLink pour le CTA principal. */
+  clientConfirmationUrl?: string;
+  /** Lien web « récit complet » (messagerie / vitrine). Utilisé en secours SMS + mail. */
+  recapUrl?: string;
+  /** Téléphone client (formulaire vitrine ou fiche RDV). */
+  clientPhone?: string;
+  /** Si true et Twilio configuré + numéro valide → SMS transactionnel avec le même lien principal que le mail. */
+  smsConfirmationOptIn?: boolean;
   /** Adresse du studio pour le .ics (optionnel) */
   studioAddress?: string;
+  /** Lien absolu hub client (questionnaire, profil) — secondaire dans l’e-mail uniquement. */
+  clientPortalUrl?: string;
 }
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 function formatTimeLabel(t: string | null): string {
   if (!t) return "";
@@ -63,7 +75,13 @@ function timeToHHMM(t: string | null): { hour: number; min: number } {
 function buildIcsContent(payload: Payload): string {
   const { requestedDate, requestedTime } = payload;
   const { hour, min } = timeToHHMM(requestedTime);
-  const [y, m, d] = requestedDate.split("-").map(Number);
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test((requestedDate || "").trim());
+  const [y, m, d] = dateOk
+    ? requestedDate.split("-").map(Number)
+    : (() => {
+        const t = new Date();
+        return [t.getFullYear(), t.getMonth() + 1, t.getDate()] as const;
+      })();
   const start = new Date(y, m - 1, d, hour, min, 0);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   const fmtLocal = (d: Date) =>
@@ -74,7 +92,7 @@ function buildIcsContent(payload: Payload): string {
   const desc = payload.description?.replace(/\r?\n/g, "\\n").slice(0, 500) || "Rendez-vous tatouage";
   const loc = payload.studioAddress?.replace(/\r?\n/g, " ") || "";
   const fmtUtc = (d: Date) =>
-    d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    d.toISOString().replaceAll("-", "").replaceAll(":", "").replace(/\.\d{3}/, "");
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -94,6 +112,64 @@ function buildIcsContent(payload: Payload): string {
   ].join("\r\n");
 }
 
+function primaryActionUrl(payload: Payload): string {
+  const raw =
+    payload.paymentLink?.trim() ||
+    payload.clientConfirmationUrl?.trim() ||
+    payload.conversationLink?.trim() ||
+    payload.recapUrl?.trim() ||
+    `${APP_URL}/discover`;
+  return ensureAbsoluteUrl(raw, APP_URL);
+}
+
+/** Date courte pour SMS (sans accents longs pour limiter UCS-2). */
+function smsDateSnippet(requestedDate: string, requestedTime: string | null): string {
+  try {
+    const dateStr = requestedDate
+      ? new Date(requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        })
+      : "";
+    const timeStr = formatTimeLabel(requestedTime);
+    return timeStr ? `${dateStr} ${timeStr}` : dateStr;
+  } catch {
+    return "";
+  }
+}
+
+async function maybeSendBookingConfirmationSms(payload: Payload): Promise<{
+  sent: boolean;
+  skippedReason?: string;
+}> {
+  if (!payload.smsConfirmationOptIn) {
+    return { sent: false, skippedReason: "opt_out" };
+  }
+  const to = normalizePhoneToE164Fr(payload.clientPhone);
+  if (!to) {
+    return { sent: false, skippedReason: "invalid_phone" };
+  }
+
+  const link = primaryActionUrl(payload);
+  const hasPayment = !!payload.paymentLink?.trim();
+  const hasRecapLanding = !!payload.clientConfirmationUrl?.trim();
+  const when = smsDateSnippet(payload.requestedDate, payload.requestedTime);
+  /** Texte SMS court ; détail dans la page lien. */
+  const body = hasPayment
+    ? `InkFlow — ${payload.studioName}: finalise ton resa (acompte). ${link}`
+    : hasRecapLanding
+      ? `InkFlow — ${payload.studioName}: recap + acompte. ${link}`
+      : `InkFlow — RDV confirme chez ${payload.studioName}${when ? ` (${when})` : ""}. Details: ${link}`;
+
+  const r = await sendTwilioTransactionalSms({ toE164: to, body });
+  if (r.ok) return { sent: true };
+  if (r.error === "twilio_not_configured") {
+    return { sent: false, skippedReason: "twilio_not_configured" };
+  }
+  return { sent: false, skippedReason: `send_failed:${r.error}` };
+}
+
 function formatDateDisplay(requestedDate: string, requestedTime: string | null): string {
   const dateStr = requestedDate
     ? new Date(requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
@@ -108,124 +184,127 @@ function formatDateDisplay(requestedDate: string, requestedTime: string | null):
 }
 
 function buildRdvConfirmeHtml(payload: Payload): string {
+  const descriptionRaw = typeof payload.description === "string" ? payload.description : "";
   const dateDisplay = formatDateDisplay(payload.requestedDate, payload.requestedTime);
   const hasPaymentLink = !!payload.paymentLink?.trim?.();
-  const rawCta = payload.paymentLink || payload.conversationLink || APP_URL;
-  const ctaUrl = ensureAbsoluteUrl(rawCta, APP_URL);
-  const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
+  const hasRecapLanding = !!payload.clientConfirmationUrl?.trim?.();
+  const ctaUrl = primaryActionUrl(payload);
+  const ctaLabel = hasPaymentLink
+    ? "Régler mon acompte"
+    : hasRecapLanding
+      ? "Voir le récapitulatif et payer l'acompte"
+      : "Confirmer mon rendez-vous";
+  const clientDashboardUrl = `${APP_URL}/discover`;
+  const messagesUrlRaw = payload.conversationLink?.trim() || "";
+  const secondaryButton =
+    hasPaymentLink || !messagesUrlRaw
+      ? { text: "Découvrir les studios", url: clientDashboardUrl }
+      : {
+          text: "Messagerie avec le studio",
+          url: ensureAbsoluteUrl(messagesUrlRaw, APP_URL),
+        };
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);
-  const safePaymentUrl = hasPaymentLink ? escapeHtml(payload.paymentLink!) : "";
-  const safeDescription = escapeHtml(payload.description.length > 120 ? payload.description.slice(0, 117) + "..." : payload.description);
+  const rawPaymentUrl = hasPaymentLink ? payload.paymentLink!.trim() : "";
+  const safeDescription = escapeHtml(
+    descriptionRaw.length > 120 ? descriptionRaw.slice(0, 117) + "..." : descriptionRaw,
+  );
 
   const intro = hasPaymentLink
-    ? `Bonjour ${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
-    : `Bonjour ${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
+    ? `${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
+    : hasRecapLanding
+      ? `${safeClientName}, votre créneau chez ${safeStudioName} est réservé. Ouvrez la page ci-dessous pour voir le récapitulatif et régler votre acompte sécurisé — c'est ce qui bloque définitivement la date.`
+      : `${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
 
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#FAFAFA;">
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA" style="background-color:#FAFAFA;">
-    <tr><td style="padding:32px 16px;">
-      <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;margin:0 auto;background-color:#FFFFFF;overflow:hidden;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-        <!-- En-tête : logo InkFlow centré -->
-        <tr>
-          <td align="center" style="padding:32px 40px 24px;">
-            <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;">
-              <tr>
-                <td align="center" style="padding:0 0 24px;">
-                  <img src="${escapeHtml(LOGO_URL)}" alt="InkFlow" width="150" style="max-width:150px;width:150px;height:auto;display:block;margin:0 auto;border:0;" />
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <!-- Header minimaliste -->
-        <tr><td style="padding:0 40px 24px;border-bottom:1px solid #F4F4F5;">
-          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="color:#171717;font-size:22px;font-weight:700;font-style:italic;letter-spacing:-0.5px;">IF.</td>
-              <td style="color:#71717a;font-size:12px;letter-spacing:1.5px;text-align:right;text-transform:uppercase;">InkFlow</td>
-            </tr>
-          </table>
-        </td></tr>
-        <!-- Contenu principal -->
-        <tr><td style="padding:40px;">
-          <h1 style="margin:0 0 24px;font-size:24px;font-weight:700;color:#171717;line-height:1.3;letter-spacing:-0.3px;">
-            Bonne nouvelle, votre projet est accepté.
-          </h1>
-          <p style="margin:0 0 28px;font-size:16px;color:#171717;line-height:1.6;">
-            ${intro}
-          </p>
-          <!-- Encart récapitulatif -->
-          <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 28px;background-color:#F4F4F5;border:1px solid #E4E4E7;border-radius:8px;">
-            <tr><td style="padding:20px 24px;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                <tr><td style="padding:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Date</td></tr>
-                <tr><td style="padding:0 0 16px;font-size:16px;color:#171717;font-weight:500;">${escapeHtml(dateDisplay)}</td></tr>
-                <tr><td style="padding:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Projet</td></tr>
-                <tr><td style="padding:0;font-size:16px;color:#171717;line-height:1.5;">${safeDescription}</td></tr>
-              </table>
-            </td></tr>
-          </table>
-          <!-- Bouton CTA -->
-          <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
-            <tr><td>
-              <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background-color:#0A0A0A;color:#FFFFFF;text-decoration:none;padding:16px 24px;border-radius:8px;font-size:16px;font-weight:700;">${escapeHtml(ctaLabel)}</a>
-            </td></tr>
-          </table>
-          ${hasPaymentLink ? `
-          <p style="margin:0;font-size:13px;color:#71717a;line-height:1.5;">
-            Si le bouton ne s'affiche pas, copiez ce lien dans votre navigateur :<br>
-            <a href="${safePaymentUrl}" style="color:#2563eb;word-break:break-all;">${safePaymentUrl}</a>
-          </p>
-          ` : ""}
-        </td></tr>
-        <!-- Clôture -->
-        <tr><td style="padding:0 40px 40px;">
-          <p style="margin:0;font-size:16px;color:#171717;line-height:1.6;">
-            À très vite,<br>
-            <strong>L'équipe ${safeStudioName}</strong>
-          </p>
-        </td></tr>
-        <!-- Footer discret -->
-        <tr><td style="padding:24px 40px;background-color:#FAFAFA;border-top:1px solid #F4F4F5;">
-          <p style="margin:0 0 8px;font-size:13px;color:#71717a;line-height:1.5;">
-            Besoin d'aide ? <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#171717;font-weight:600;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>
-          </p>
-          <p style="margin:0;font-size:12px;color:#a1a1aa;">
-            <a href="${escapeHtml(SITE_URL)}/parametres" style="color:#71717a;text-decoration:underline;">Se désabonner</a> · ${escapeHtml(SUPPORT_ADDRESS)}
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  const recap = emailInfoBox(`
+    <p style="${EMAIL_STYLES.label}">Date</p>
+    <p style="margin:0 0 16px;font-size:16px;color:#1A202C;font-weight:600;">${escapeHtml(dateDisplay)}</p>
+    <p style="${EMAIL_STYLES.label}">Projet</p>
+    <p style="margin:0;font-size:16px;color:#1A202C;line-height:1.5;">${safeDescription}</p>
+  `);
+
+  const portalUrlAbs = payload.clientPortalUrl?.trim()
+    ? ensureAbsoluteUrl(payload.clientPortalUrl!.trim(), APP_URL)
+    : "";
+  const postButtonHtml =
+    portalUrlAbs
+      ? `<p style="margin:20px 0 0;${EMAIL_STYLES.small}">
+           <a href="${escapeHtml(portalUrlAbs)}" style="color:#0b5394;font-weight:600;text-decoration:underline;">
+             Gérer mon compte client (questionnaire santé, consentements)
+           </a>
+         </p>`
+      : undefined;
+
+  const bodyHtml = `
+    <p style="${EMAIL_STYLES.text}">Bonjour <strong>${safeClientName}</strong>, ${intro}</p>
+    ${recap}
+    <p style="${EMAIL_STYLES.text}">À très vite,<br/><strong>L'équipe ${safeStudioName}</strong></p>
+    <p style="${EMAIL_STYLES.small}">
+      Besoin d'aide ? <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#4299E1;font-weight:600;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>
+      · <a href="${escapeHtml(APP_URL)}/parametres" style="color:#718096;text-decoration:underline;">Préférences e-mail</a>
+      · ${escapeHtml(SUPPORT_ADDRESS)}
+    </p>
+  `;
+
+  return wrapEmailLayout({
+    preheader: hasPaymentLink
+      ? `Un clic pour finaliser l’acompte chez ${payload.studioName} — le créneau t’attend 12h`
+      : hasRecapLanding
+        ? `Récap + acompte chez ${payload.studioName} — un clic pour finaliser`
+        : `RDV enregistré chez ${payload.studioName} — reçu et prochaine étape`,
+    tag: hasPaymentLink ? "PAIEMENT" : hasRecapLanding ? "ACOMPTE" : "CONFIRMATION DE RDV",
+    title: hasPaymentLink
+      ? "Finalisez votre réservation"
+      : hasRecapLanding
+        ? "Finalisez avec l’acompte"
+        : "Votre rendez-vous est confirmé",
+    subtitle: hasPaymentLink
+      ? "Réglez votre acompte pour bloquer définitivement le créneau."
+      : hasRecapLanding
+        ? "Récapitulatif et paiement sécurisé sur une seule page."
+        : "Récapitulatif de votre demande.",
+    bodyHtml,
+    button: { text: ctaLabel, url: ctaUrl },
+    secondaryButton,
+    ...(postButtonHtml ? { postButtonHtml } : {}),
+    buttonSubtext: "Retrouve tes rendez-vous et messages dans l’app InkFlow.",
+    linkHint: hasPaymentLink
+      ? { label: "Si le bouton ne s'affiche pas, copiez ce lien :", url: rawPaymentUrl }
+      : undefined,
+  });
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
+    if (!rateLimitByIp(req, "send-booking-confirmation", 40)) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
     const payload: Payload = await req.json();
+
+    const allowed = await verifyTattooerOwnsStudio(
+      req,
+      payload.studioId,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY,
+    );
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const missing: string[] = [];
+    if (!payload?.studioId?.trim?.()) missing.push("studioId");
     if (!payload?.clientEmail?.trim?.()) missing.push("clientEmail");
     if (!payload?.clientName?.trim?.()) missing.push("clientName");
     if (!payload?.studioName?.trim?.()) missing.push("studioName");
@@ -248,9 +327,12 @@ Deno.serve(async (req: Request) => {
 
     const html = buildRdvConfirmeHtml(payload);
     const hasPaymentLink = !!payload.paymentLink?.trim?.();
+    const hasRecapLanding = !!payload.clientConfirmationUrl?.trim?.();
     const subject = hasPaymentLink
       ? `Action requise : finalisez votre réservation — ${payload.studioName}`
-      : `Votre rendez-vous avec ${payload.studioName} est validé`;
+      : hasRecapLanding
+        ? `Récapitulatif et acompte — ${payload.studioName}`
+        : `Votre rendez-vous avec ${payload.studioName} est validé`;
 
     const icsContent = buildIcsContent(payload);
     const icsBytes = new TextEncoder().encode(icsContent);
@@ -287,14 +369,35 @@ Deno.serve(async (req: Request) => {
     }
 
     const result = await resendRes.json();
+
+    let smsOutcome: Awaited<ReturnType<typeof maybeSendBookingConfirmationSms>>;
+    try {
+      smsOutcome = await maybeSendBookingConfirmationSms(payload);
+    } catch (smsErr) {
+      const mes = smsErr instanceof Error ? smsErr.message : String(smsErr);
+      console.warn("[send-booking-confirmation] SMS error (non-blocking):", mes.slice(0, 200));
+      smsOutcome = { sent: false, skippedReason: "send_failed:sms_throw" };
+    }
+
     return new Response(
-      JSON.stringify({ success: true, emailId: result.id }),
+      JSON.stringify({
+        success: true,
+        emailId: result.id,
+        sms: {
+          sent: smsOutcome.sent,
+          skippedReason: smsOutcome.skippedReason,
+        },
+      }),
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     console.error("Edge function error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({
+        error: "Internal server error",
+        details: detail.slice(0, 400),
+      }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

@@ -4,24 +4,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -58,20 +48,23 @@ Deno.serve(async (req: Request) => {
     const amount = typeof amountEuros === "number" ? amountEuros : 0;
     const firstName = (clientName || "Bonjour").split(/\s+/)[0];
 
-    const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #18181b; max-width: 560px; margin: 0 auto; padding: 24px;">
-  <h1 style="font-size: 22px;">Félicitations ${escapeHtml(firstName)} !</h1>
-  <p>Vous avez débloqué <strong>${amount}€</strong> sur votre prochain projet chez <strong>${escapeHtml(studioLabel)}</strong>.</p>
-  <p style="font-size: 18px; font-weight: 700; letter-spacing: 0.05em; padding: 16px; background: #f4f4f5; border-radius: 12px; text-align: center;">
-    Code promo : <span style="color: #18181b;">${escapeHtml(promoCode)}</span>
-  </p>
-  <p style="color: #71717a; font-size: 14px;">Présentez ce code lors de votre prochaine réservation ou en séance. Une utilisation selon les conditions du studio.</p>
-  <p style="margin-top: 24px; font-size: 13px; color: #a1a1aa;">— InkFlow</p>
-</body>
-</html>`;
+    const promoBox = `
+      <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.06em;">Code promo</p>
+      <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.08em;color:#1A202C;text-align:center;">${escapeHtml(promoCode)}</p>
+    `;
+
+    const html = wrapEmailLayout({
+      tag: "CARTE À TAMPONS",
+      titleBlue: `${amount}€`,
+      titleBlack: "débloqués",
+      subtitle: studioLabel,
+      greetingName: firstName,
+      introLine: `Vous avez débloqué une réduction sur votre prochain projet chez ${studioLabel}.`,
+      bodyHtml: `
+        ${emailInfoBox(promoBox)}
+        <p style="${EMAIL_STYLES.textMuted}">Présentez ce code lors de votre prochaine réservation ou en séance. Une utilisation selon les conditions du studio.</p>
+      `,
+    });
 
     const text = `Félicitations ! Vous avez débloqué ${amount}€ sur votre prochain projet chez ${studioLabel}. Code promo : ${promoCode}`;
 

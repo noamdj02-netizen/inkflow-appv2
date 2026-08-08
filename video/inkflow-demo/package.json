@@ -1,0 +1,26 @@
+{
+  "name": "inkflow-remotion-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vidéo de présentation Inkflow — export MP4 pour Framer / landing",
+  "scripts": {
+    "start": "remotion preview src/index.ts",
+    "upgrade": "remotion upgrade",
+    "render": "remotion render src/index.ts InkflowDemo out/inkflow-demo.mp4",
+    "render:logo": "remotion render src/index.ts LogoReveal out/inkflow-logo-reveal.mp4",
+    "render:still": "remotion still src/index.ts InkflowDemo out/poster.png --frame=90",
+    "render:logo:still": "remotion still src/index.ts LogoReveal out/logo-reveal-poster.png --frame=72",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.272"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.272",
+    "@types/react": "^18.3.12",
+    "@types/web": "^0.0.140",
+    "typescript": "^5.8.2"
+  }
+}

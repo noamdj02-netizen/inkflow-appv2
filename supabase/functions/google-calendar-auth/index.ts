@@ -1,32 +1,49 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { resolveAppBaseUrl } from "../_shared/siteUrl.ts";
+import { requireStudioAccessFromRequest } from "../_shared/requireStudioJwt.ts";
 
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID") || "";
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
 const GOOGLE_REDIRECT_URI = Deno.env.get("GOOGLE_REDIRECT_URI") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const APP_URL = resolveAppBaseUrl();
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
-    const { action, code, studioId } = await req.json();
+    const body = await req.json();
+    const { action, code, studioId } = body as {
+      action?: string;
+      code?: string;
+      studioId?: string;
+    };
+
+    const access = await requireStudioAccessFromRequest(
+      req,
+      corsHeaders,
+      studioId,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY,
+    );
+    if (access instanceof Response) return access;
+    const authorizedStudioId = access.studio.id;
 
     // ─── ACTION: initiate — generate Google OAuth URL ───
     if (action === "initiate") {
       if (!GOOGLE_CLIENT_ID) {
         return new Response(
           JSON.stringify({ error: "Google Calendar non configuré" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
@@ -34,27 +51,27 @@ Deno.serve(async (req: Request) => {
         client_id: GOOGLE_CLIENT_ID,
         redirect_uri: GOOGLE_REDIRECT_URI,
         response_type: "code",
-        scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events",
+        scope:
+          "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events",
         access_type: "offline",
         prompt: "consent",
-        state: studioId,
+        state: authorizedStudioId,
       });
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-      return new Response(
-        JSON.stringify({ authUrl }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ authUrl }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // ─── ACTION: callback — exchange code for tokens ───
     if (action === "callback") {
-      if (!code || !studioId) {
-        return new Response(
-          JSON.stringify({ error: "Code et studioId requis" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!code) {
+        return new Response(JSON.stringify({ error: "Code requis" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -73,65 +90,54 @@ Deno.serve(async (req: Request) => {
         const err = await tokenResponse.text();
         return new Response(
           JSON.stringify({ error: "Échec de l'échange OAuth", details: err }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      const tokens = await tokenResponse.json();
+      const tokens = (await tokenResponse.json()) as {
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+      };
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      const expiryMs = tokens.expiry_date || (Date.now() + (tokens.expires_in || 3600) * 1000);
-      const parts = String(studioId).split("::");
-      const email = parts[0] || studioId;
-      const slug = parts[1] || "studio";
-      const studioName = slug.replace(/-/g, " ");
-      const displayName = email.split("@")[0] || "Artiste";
+      const expiryMs = Date.now() + (tokens.expires_in || 3600) * 1000;
+
+      const patch: Record<string, unknown> = {
+        google_access_token: tokens.access_token,
+        google_token_expiry: expiryMs,
+        updated_at: new Date().toISOString(),
+      };
+      if (tokens.refresh_token) {
+        patch.google_refresh_token = tokens.refresh_token;
+      }
 
       const { error: dbError } = await supabase
         .from("inkflow_studios")
-        .upsert(
-          {
-            id: studioId,
-            email,
-            name: displayName,
-            studio_name: studioName,
-            slug,
-            google_access_token: tokens.access_token,
-            google_refresh_token: tokens.refresh_token,
-            google_token_expiry: expiryMs,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "id" }
-        );
+        .update(patch)
+        .eq("id", authorizedStudioId);
 
       if (dbError) {
         return new Response(
           JSON.stringify({ error: "Erreur sauvegarde tokens", details: dbError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
       return new Response(
-        JSON.stringify({ success: true, redirectUrl: `${SITE_URL}/dashboard?connected=google` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, redirectUrl: `${APP_URL}/dashboard?connected=google` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     // ─── ACTION: disconnect — remove tokens ───
     if (action === "disconnect") {
-      if (!studioId) {
-        return new Response(
-          JSON.stringify({ error: "studioId requis pour la déconnexion" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       const { data: studio } = await supabase
         .from("inkflow_studios")
         .select("google_access_token")
-        .eq("id", studioId)
+        .eq("id", authorizedStudioId)
         .single();
 
       if (studio?.google_access_token) {
@@ -149,12 +155,11 @@ Deno.serve(async (req: Request) => {
           google_calendar_id: null,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", studioId);
+        .eq("id", authorizedStudioId);
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // ─── ACTION: status — check if connected ───
@@ -164,34 +169,36 @@ Deno.serve(async (req: Request) => {
       const { data } = await supabase
         .from("inkflow_studios")
         .select("google_refresh_token, google_calendar_id, updated_at")
-        .eq("id", studioId)
+        .eq("id", authorizedStudioId)
         .single();
 
-      const connected = !!(data?.google_refresh_token);
+      const connected = !!data?.google_refresh_token;
 
       return new Response(
         JSON.stringify({
           connected,
-          integration: connected ? {
-            provider: "google",
-            google_calendar_id: data?.google_calendar_id,
-            last_synced_at: data?.updated_at,
-          } : null,
+          integration: connected
+            ? {
+                provider: "google",
+                google_calendar_id: data?.google_calendar_id,
+                last_synced_at: data?.updated_at,
+              }
+            : null,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: "Action inconnue" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Action inconnue" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[google-calendar-auth] Erreur:", message);
-    return new Response(
-      JSON.stringify({ error: message || "Erreur interne" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: message || "Erreur interne" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

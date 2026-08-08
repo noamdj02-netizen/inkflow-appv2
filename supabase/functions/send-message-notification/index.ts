@@ -7,16 +7,72 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  rateLimitByIp,
+  internalFunctionSecretOk,
+  verifyMessageNotificationPayload,
+} from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 /** URL absolue de l'app. En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
 const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+function truncateText(s: string, max: number): string {
+  const t = (s || "").trim();
+  return t.length <= max ? t : t.slice(0, max) + "…";
+}
+
+/** Notification in-app + Web Push (abonnements studio), après email côté pro */
+async function notifyStudioInAppAndPush(
+  supabase: ReturnType<typeof createClient>,
+  studioId: string,
+  senderName: string,
+  messagePreview: string,
+  threadId: string
+): Promise<void> {
+  const msgShort = truncateText(messagePreview, 500);
+  const title = `Message de ${truncateText(senderName, 120)}`;
+  const id = crypto.randomUUID();
+  const { error: insErr } = await supabase.from("inkflow_notifications").insert({
+    id,
+    studio_id: studioId,
+    type: "message",
+    title,
+    message: msgShort,
+    read: false,
+    action_url: "/messaging",
+    created_at: new Date().toISOString(),
+  });
+  if (insErr) {
+    console.error("inkflow_notifications insert (message):", insErr);
+  }
+
+  const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
+  try {
+    const res = await fetch(pushUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        studioId,
+        title: "Nouveau message",
+        body: `${truncateText(senderName, 40)} : ${truncateText(msgShort, 100)}`,
+        url: `${APP_URL}/dashboard?open=messaging`,
+        tag: `inkflow-chat-${threadId}`,
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("send-push-notification:", res.status, t);
+    }
+  } catch (e) {
+    console.error("send-push-notification fetch:", e);
+  }
+}
 
 function buildToClientHtml(recipientName: string, studioName: string, senderName: string, messagePreview: string, conversationUrl: string): string {
   const safeName = escapeHtml(recipientName);
@@ -66,11 +122,19 @@ interface ToStudioPayload {
 type Payload = ToClientPayload | ToStudioPayload;
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
+    if (!rateLimitByIp(req, "send-message-notification", 45)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests" }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     const payload: Payload = await req.json();
 
     if (!payload.type || !payload.messagePreview || !payload.threadId) {
@@ -78,6 +142,22 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "type, messagePreview and threadId are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    if (
+      !internalFunctionSecretOk(req) &&
+      !(await verifyMessageNotificationPayload(supabase, {
+        type: payload.type,
+        threadId: payload.threadId,
+        messagePreview: payload.messagePreview,
+        studioId: payload.type === "to_studio" ? payload.studioId : undefined,
+      }))
+    ) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const conversationUrl = `${APP_URL}/dashboard`;
@@ -113,7 +193,6 @@ Deno.serve(async (req: Request) => {
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: studio } = await supabase
         .from("inkflow_studios")
         .select("email, studio_name")
@@ -135,6 +214,15 @@ Deno.serve(async (req: Request) => {
         subject: `Nouveau message de ${payload.senderName} — InkFlow`,
         html,
       });
+      if (sent) {
+        await notifyStudioInAppAndPush(
+          supabase,
+          payload.studioId,
+          payload.senderName,
+          payload.messagePreview,
+          payload.threadId
+        );
+      }
       return new Response(
         JSON.stringify(sent ? { success: true } : { success: false, error: "Email send failed" }),
         { headers: { "Content-Type": "application/json", ...corsHeaders } }

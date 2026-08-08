@@ -6,6 +6,7 @@ import { SEO } from '../SEO';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import type { VitrineData } from '../../types/vitrine';
 import type { GoogleReviewsPayload } from '../../types/googlePlaces';
+import { safeExternalHttpUrl } from '../../lib/urls';
 
 /**
  * Thèmes structurels = famille « Focus & conversion » (page courte). Les thèmes Full Studio
@@ -28,6 +29,15 @@ function isStructuralTheme(themeId: string | undefined): themeId is (typeof STRU
   return themeId != null && STRUCTURAL_THEME_IDS.includes(themeId as (typeof STRUCTURAL_THEME_IDS)[number]);
 }
 
+/** Même logique que PublicStudioPagePro : fiche Google si renseignée, sinon recherche Maps sur l’adresse */
+function resolvePublicGoogleMapsUrl(data: VitrineData): string | null {
+  const custom = safeExternalHttpUrl(data.googleBusinessUrl ?? '');
+  if (custom) return custom;
+  const addr = (data.address ?? '').trim();
+  if (!addr) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
+}
+
 function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioThemeProps {
   const bookingUrl = `${baseUrl}/book/${data.slug}`;
   const city = data.address?.split(',').pop()?.trim() ?? null;
@@ -40,7 +50,7 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
 
   return {
     studio: {
-      name: data.name,
+      name: data.name?.trim() || data.slug.replace(/-/g, ' '),
       slug: data.slug,
       bio: trimOrNull(data.description) ?? trimOrNull(data.tagline),
       avatarUrl: data.avatar || null,
@@ -51,6 +61,7 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
       website: trimOrNull(data.website),
       instagramHandle,
       bookingUrl,
+      googleBusinessUrl: resolvePublicGoogleMapsUrl(data),
       themeName: data.theme ?? 'classic',
     },
     flashItems: data.flashDesigns.map((f) => ({
@@ -59,6 +70,8 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
       title: f.title,
       price: f.price,
       isAvailable: f.available,
+      duration: f.duration,
+      style: f.style,
     })),
     portfolioItems: data.portfolio.map((p, i) => ({
       id: `p-${i}`,
@@ -89,15 +102,23 @@ export const StudioThemeRouter: React.FC<StudioThemeRouterProps> = ({ data, fall
   const ThemeComponent = themeMap[themeId] ?? themeMap.classic;
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const props: StudioThemeProps = { ...vitrineToStudioThemeProps(data, baseUrl), googleReviews: googleReviews ?? null };
+  const displayName = data.name?.trim() || data.slug.replace(/-/g, ' ');
+  const ogImage = (data.coverImage || '').trim() || (data.avatar || '').trim();
 
   return (
-    <div className="landing-scroll">
+    <div className="landing-scroll relative">
       <SEO
-        title={`${data.name} | Tatoueur & Prise de RDV - InkFlow`}
-        description={data.description || data.tagline || `Découvrez les flashs et prenez rendez-vous avec ${data.name}.`}
+        title={`${displayName} | Tatoueur & Prise de RDV - InkFlow`}
+        description={data.description || data.tagline || `Découvrez les flashs et prenez rendez-vous avec ${displayName}.`}
         canonical={`/studio/${data.slug}`}
-        ogImage={data.avatar || data.coverImage}
+        ogImage={ogImage || undefined}
       />
+      <a
+        href="#contenu-vitrine"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-violet-600 focus:text-white focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-violet-950"
+      >
+        Aller au contenu
+      </a>
       <ThemeComponent {...props} />
     </div>
   );

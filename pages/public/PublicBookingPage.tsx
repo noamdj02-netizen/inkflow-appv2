@@ -2,26 +2,37 @@
  * Page de réservation publique — /book/:studioSlug
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle, Zap, Pencil, Send, MapPin, Instagram, FileText } from 'lucide-react';
-import { ReferenceImageUpload } from '../../components/booking/ReferenceImageUpload';
-import { HealthQuestionnaireForm, type HealthFormData } from '../../components/booking/HealthQuestionnaireForm';
-import { getStudioIdBySlug, getFlashDesignsFromSupabase } from '../../lib/supabaseDashboard';
-import type { FlashDesign } from '../../types';
-import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
-import { toLocalDateString } from '../../lib/utils';
-import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../../lib/studioAvailability';
-import { createCheckoutSession } from '../../lib/stripeClient';
-import { createBooking } from '../../lib/supabaseBookings';
-import { supabase } from '../../lib/supabase';
+import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
+import { BookChoiceCard, BookStepTransition } from '../../components/booking/BookingMotion';
+import {
+  ArrowLeft,
+  User,
+  Lock,
+  ChevronRight,
+  CreditCard,
+  Check,
+  AlertCircle,
+  Zap,
+  Pencil,
+  Users,
+  MapPin,
+  Instagram,
+  FileText,
+} from 'lucide-react';
+import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
+import { HealthQuestionnaireForm } from '../../components/booking/HealthQuestionnaireForm';
+import { BookingAppInterface480 } from '../../components/booking/BookingAppInterface480';
 import { SEO } from '../../components/SEO';
-
-type BookingMode = 'select' | 'flash' | 'project';
-
-const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
-
-const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+import { FlashCard } from '../../components/ui/FlashCard';
+import {
+  useBookingFlow,
+  replaceUrlFlashParam,
+  PLACEMENT_OTHER_VALUE,
+} from '../../hooks/useBookingFlow';
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
+import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
 
 /** Emplacements proposés si le flash n’a pas de liste côté artiste */
 const DEFAULT_BODY_PLACEMENTS = [
@@ -99,494 +110,306 @@ function replaceUrlFlashParam(flashId: string | null): void {
 }
 
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
-  // Si un flash est dans l'URL, on va directement en mode flash
-  const flashInUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
-  const [bookingMode, setBookingMode] = useState<BookingMode>(flashInUrl ? 'flash' : 'select');
-  const [selectedFlashId, setSelectedFlashId] = useState<string | null>(() => flashInUrl);
-  const [flashList, setFlashList] = useState<PublicFlash[]>([]);
-  const [flashListLoading, setFlashListLoading] = useState(true);
-  const [projectSubmitted, setProjectSubmitted] = useState(false);
-  const [projectForm, setProjectForm] = useState({ firstName: '', lastName: '', email: '', phone: '', instagram: '', description: '' });
-  const [projectImages, setProjectImages] = useState<File[]>([]);
-  const [projectSubmitting, setProjectSubmitting] = useState(false);
-  const [projectError, setProjectError] = useState<string | null>(null);
+  const { tap } = useClientFramerGestures();
+  const {
+    studioId,
+    studioInfo,
+    bookingMode,
+    setBookingMode,
+    selectedFlashId,
+    setSelectedFlashId,
+    flashListLoading,
+    artistContextLocked,
+    artistSelectionPending,
+    publicArtists,
+    needsArtistChoice,
+    selectArtist,
+    clearArtistSelection,
+    availableFlashes,
+    selectedFlash,
+    flashPlacementOptions,
+    resolvedPlacement: _resolvedPlacement,
+    depositAmount,
+    projectSubmitted,
+    projectError,
+    setProjectError,
+    handleProjectRequestSubmit,
+    availabilityLoading,
+    availabilityUnavailable,
+    availabilityError,
+    availableDates,
+    availableSlots,
+    calendarMonth,
+    setCalendarMonth,
+    form,
+    setForm,
+    isSubmitting,
+    showHealthForm,
+    setShowHealthForm,
+    healthFormCompleted,
+    handleHealthFormComplete,
+    paymentError,
+    paymentVerified,
+    paymentsOnline,
+    canPay,
+    handlePay,
+  } = useBookingFlow(studioSlug);
 
-  const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
-  const [studioInfo, setStudioInfo] = useState<{ name: string; avatar: string } | null>(null);
-  const [vitrineData, setVitrineData] = useState<{
-    /** Pourcentage d'acompte global du studio (fallback si non défini par prestation) */
-    globalDepositPercentage?: number;
-  } | null>(null);
-  const [busySlots, setBusySlots] = useState<Record<string, string[]>>({});
-  const [studioSlots, setStudioSlots] = useState<string[]>([]);
-  const [bookingWindowDays, setBookingWindowDays] = useState<number>(60);
-  const [studioOffDays, setStudioOffDays] = useState<number[] | null>(null);
-  const [availabilityLoading, setAvailabilityLoading] = useState(true);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const clientHubHref = getClientAccountHubPath({ studioSlug });
+
+  const depositAnalyticsSent = useRef(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const id = new URLSearchParams(window.location.search).get('flash');
-    setSelectedFlashId(id);
+    captureEvent(AnalyticsEvents.BOOK_PAGE_VIEWED, {
+      studio_slug: studioSlug,
+      funnel: 'client_booking',
+    });
   }, [studioSlug]);
 
   useEffect(() => {
-    setForm((f) => ({
-      ...f,
-      flashPlacementPreset: '',
-      flashPlacementCustom: '',
-      flashNotes: '',
-    }));
-  }, [selectedFlashId]);
+    if (paymentVerified !== true || depositAnalyticsSent.current) return;
+    depositAnalyticsSent.current = true;
+    const sid = studioId && studioId !== 'loading' ? studioId : undefined;
+    captureEvent(AnalyticsEvents.CLIENT_BOOKING_DEPOSIT_SUCCEEDED, {
+      studio_slug: studioSlug,
+      studio_id: sid,
+      funnel: 'client_booking',
+    });
+  }, [paymentVerified, studioId, studioSlug]);
 
-  const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    instagram: '',
-    selectedDate: '',
-    selectedTime: '',
-    flashPlacementPreset: '',
-    flashPlacementCustom: '',
-    flashNotes: '',
-  });
-
-  // État pour le questionnaire de santé (étape obligatoire avant paiement)
-  const [showHealthForm, setShowHealthForm] = useState(false);
-  const [healthFormData, setHealthFormData] = useState<HealthFormData | null>(null);
-  const [healthFormCompleted, setHealthFormCompleted] = useState(false);
-
-  useEffect(() => {
-    if (supabaseEnabled) {
-      getStudioIdBySlug(studioSlug).then((id) => setStudioId(id ?? null));
-    } else {
-      setStudioId(studioSlug || 'demo');
-    }
-  }, [studioSlug]);
-
-  useEffect(() => {
-    setFlashListLoading(true);
-    getVitrineDataBySlugAsync(studioSlug)
-      .then((data) => {
-        setStudioInfo({ name: data.name, avatar: data.avatar || '' });
-        setFlashList((data.flashDesigns ?? []).map(mapVitrineFlashToPublic));
-      })
-      .catch(() => {
-        setStudioInfo({ name: studioSlug, avatar: '' });
-        setFlashList([]);
-      })
-      .finally(() => setFlashListLoading(false));
-  }, [studioSlug]);
-
-  useEffect(() => {
-    if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
-    let cancelled = false;
-    getFlashDesignsFromSupabase(studioId)
-      .then((rows) => {
-        if (cancelled || rows.length === 0) return;
-        setFlashList(rows.map(mapDbFlashToPublic));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [studioId]);
-
-  // Charger le depositPercentage global depuis availability_settings
-  useEffect(() => {
-    if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
-    supabase
-      .from('inkflow_studios')
-      .select('availability_settings')
-      .eq('id', studioId)
-      .single()
-      .then(({ data }) => {
-        const pct = (data?.availability_settings as { depositPercentage?: number } | null)?.depositPercentage;
-        if (typeof pct === 'number') {
-          setVitrineData((prev) => ({ ...prev, globalDepositPercentage: pct }));
-        }
-      });
-  }, [studioId]);
-
-  // État pour les paramètres avancés de disponibilité
-  const [advanceBookingDays, setAdvanceBookingDays] = useState(0);
-  const [dynamicSlotsByDay, setDynamicSlotsByDay] = useState<Record<number, string[]> | null>(null);
-
-  useEffect(() => {
-    if (!studioId || studioId === 'loading') return;
-    let cancelled = false;
-    setAvailabilityLoading(true);
-    if (supabaseEnabled) {
-      fetchStudioAvailability(studioId)
-        .then((response: StudioAvailabilityResponse) => {
-          if (!cancelled) {
-            setBusySlots(response.busySlots || {});
-            setStudioSlots(response.customSlots || []);
-            if (response.bookingWindowDays && response.bookingWindowDays > 0) {
-              setBookingWindowDays(response.bookingWindowDays);
-            }
-            if (response.offDays !== null) setStudioOffDays(response.offDays);
-            // Nouveaux paramètres
-            if (response.advanceBookingDays) setAdvanceBookingDays(response.advanceBookingDays);
-            if (response.dynamicSlotsByDay) setDynamicSlotsByDay(response.dynamicSlotsByDay);
-          }
-        })
-        .catch(() => { if (!cancelled) { setBusySlots({}); setStudioSlots([]); } })
-        .finally(() => { if (!cancelled) setAvailabilityLoading(false); });
-    } else {
-      setBusySlots({});
-      setAvailabilityLoading(false);
-    }
-    return () => { cancelled = true; };
-  }, [studioId]);
-
-  const getAvailableSlotsForDate = (dateStr: string): string[] => {
-    const taken = busySlots[dateStr] || [];
-    // Date entièrement bloquée ou complète
-    if (taken.includes('__blocked__') || taken.includes('__full__')) return [];
-    
-    // Déterminer les créneaux possibles pour ce jour
-    let slots: string[];
-    if (dynamicSlotsByDay) {
-      // Utiliser les créneaux dynamiques pré-calculés par jour de la semaine
-      const date = new Date(dateStr + 'T00:00:00');
-      const dayIndex = date.getDay();
-      slots = dynamicSlotsByDay[dayIndex] || [];
-    } else if (studioSlots.length > 0) {
-      slots = studioSlots;
-    } else {
-      slots = DEFAULT_TIME_SLOTS;
-    }
-    
-    return slots.filter((t) => !taken.includes(t));
-  };
-
-  const getAvailableDates = (): string[] => {
-    const dates: string[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Appliquer le délai minimum de réservation
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() + advanceBookingDays);
-    
-    const window = bookingWindowDays > 0 ? bookingWindowDays : 365;
-    const offDays = studioOffDays ?? DEFAULT_OFF_DAYS;
-    
-    for (let i = 0; i < window; i++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
-      if (offDays.includes(d.getDay())) continue;
-      const dateStr = toLocalDateString(d);
-      if (getAvailableSlotsForDate(dateStr).length > 0) dates.push(dateStr);
-    }
-    return dates;
-  };
-
-  const availableDates = getAvailableDates();
-  const availableSlots = form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : [];
-
-  const availableFlashes = flashList.filter((f) => f.available);
-  const selectedFlash = selectedFlashId ? availableFlashes.find((f) => f.id === selectedFlashId) : undefined;
-
-  const flashPlacementOptions = useMemo(() => {
-    if (!selectedFlash) return [];
-    const base = selectedFlash.placement?.length ? selectedFlash.placement : DEFAULT_BODY_PLACEMENTS;
-    return [...new Set(base)];
-  }, [selectedFlash]);
-
-  const resolvedPlacement = useMemo(() => {
-    if (!form.flashPlacementPreset) return '';
-    if (form.flashPlacementPreset === PLACEMENT_OTHER_VALUE) return form.flashPlacementCustom.trim();
-    return form.flashPlacementPreset.trim();
-  }, [form.flashPlacementPreset, form.flashPlacementCustom]);
-
-  // Calcul de l'acompte — priorité : flash.depositAmount > flash.depositPercentage > global%
-  const globalPct = vitrineData?.globalDepositPercentage ?? 30;
-  const depositAmount: number | null = (() => {
-    if (!selectedFlash) return null;
-    if (selectedFlash.depositAmount) return selectedFlash.depositAmount;
-    const pct = selectedFlash.depositPercentage ?? globalPct;
-    return Math.max(Math.round((selectedFlash.price ?? 0) * pct / 100), 10);
-  })();
-
-  const handleProjectSubmit = async () => {
-    if (!projectForm.firstName || !projectForm.lastName || !projectForm.email || !projectForm.description) return;
-    if (!studioId || studioId === 'loading') return;
-    setProjectSubmitting(true);
-    setProjectError(null);
-    try {
-      await createBooking({
-        clientName: `${projectForm.firstName} ${projectForm.lastName}`,
-        clientEmail: projectForm.email,
-        description: projectForm.description,
-        requestedDate: new Date().toISOString().split('T')[0],
-        requestedTime: null,
-        referenceImages: [],
-        clientInstagram: projectForm.instagram.trim() || undefined,
-      }, studioId);
-      setProjectSubmitted(true);
-    } catch {
-      setProjectError('Erreur lors de l\'envoi. Veuillez réessayer.');
-    } finally {
-      setProjectSubmitting(false);
-    }
-  };
-
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
-
-  // Sauvegarde du questionnaire de santé dans Supabase
-  const saveHealthForm = async (data: HealthFormData): Promise<boolean> => {
-    if (!studioId || studioId === 'loading') return false;
-    try {
-      const healthData = {
-        allergies: data.allergies,
-        allergiesDetails: data.allergiesDetails || null,
-        grossesse: data.grossesse,
-        allaitement: data.allaitement,
-        maladiesInfectieuses: data.maladiesInfectieuses,
-        infectionsVirales: data.infectionsVirales,
-        troubleCicatriciel: data.troubleCicatriciel,
-        diabete: data.diabete,
-        antibiotiques: data.antibiotiques,
-        antiInflammatoires: data.antiInflammatoires,
-        steroides: data.steroides,
-      };
-
-      const { error } = await supabase.from('inkflow_health_forms').insert({
-        studio_id: studioId,
-        client_name: data.clientName,
-        client_email: form.email,
-        client_birthdate: data.clientBirthdate || null,
-        client_instagram: data.clientInstagram || null,
-        health_data: healthData,
-        signature_text: data.signatureText,
-        certified_accurate: data.certifiedAccurate,
-        certified_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        console.error('Erreur sauvegarde questionnaire santé:', error);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error('Erreur sauvegarde questionnaire santé:', err);
-      return false;
-    }
-  };
-
-  // Gestion de la complétion du questionnaire de santé
-  const handleHealthFormComplete = async (data: HealthFormData) => {
-    setHealthFormData(data);
-    const saved = await saveHealthForm(data);
-    if (saved) {
-      setHealthFormCompleted(true);
-      setShowHealthForm(false);
-      proceedToPayment();
-    } else {
-      setPaymentError('Erreur lors de la sauvegarde du questionnaire. Veuillez réessayer.');
-    }
-  };
-
-  // Procéder au paiement après questionnaire validé
-  const proceedToPayment = async () => {
-    if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.selectedDate || !form.selectedTime) return;
-    if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
-    if (!resolvedPlacement) return;
-    if (!studioId || studioId === 'loading') return;
-    
-    setIsSubmitting(true);
-    setPaymentError(null);
-    
-    try {
-      const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-      const clientName = `${form.firstName} ${form.lastName}`;
-      
-      const result = await createCheckoutSession({
-        studioId: studioId,
-        studioSlug: studioSlug,
-        appointmentId,
-        amount: depositAmount,
-        flashId: selectedFlashId || undefined,
-        clientName,
-        clientEmail: form.email,
-        serviceName: selectedFlash?.title || 'Réservation tatouage — Flash',
-        type: 'deposit',
-        placement: resolvedPlacement,
-        clientNotes: form.flashNotes.trim() || undefined,
-        clientInstagram: form.instagram.trim() || undefined,
-      });
-      
-      if ('error' in result) {
-        setPaymentError(result.error);
-        setIsSubmitting(false);
-        return;
-      }
-      
-      window.location.href = result.url;
-    } catch (err) {
-      setPaymentError('Erreur lors de la création du paiement. Veuillez réessayer.');
-      setIsSubmitting(false);
-    }
-  };
-
-  // Bouton payer : affiche d'abord le questionnaire si pas complété
-  const handlePay = async () => {
-    if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.selectedDate || !form.selectedTime) return;
-    if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
-    if (!resolvedPlacement) return;
-    if (!studioId || studioId === 'loading') return;
-
-    // Si questionnaire déjà complété, procéder directement au paiement
-    if (healthFormCompleted) {
-      proceedToPayment();
-      return;
-    }
-
-    // Sinon, afficher le questionnaire de santé
-    setShowHealthForm(true);
-  };
-
-  const canPay =
-    Boolean(selectedFlashId && selectedFlash && depositAmount != null) &&
-    resolvedPlacement.length > 0 &&
-    form.firstName &&
-    form.lastName &&
-    form.email &&
-    form.phone &&
-    form.selectedDate &&
-    form.selectedTime;
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
-    
-    if (!sessionId) {
-      setPaymentVerified(null);
-      return;
-    }
-    
-    const verifyPayment = async () => {
-      try {
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') || '';
-        const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-        
-        if (!baseUrl || !key) {
-          setPaymentVerified(false);
-          setPaymentError('Configuration Supabase manquante.');
-          return;
-        }
-        
-        const res = await fetch(`${baseUrl}/functions/v1/get-payment-session?session_id=${sessionId}`, {
-          headers: { Authorization: `Bearer ${key}` },
-        });
-        
-        const data = await res.json();
-        
-        if (!res.ok || data.error) {
-          setPaymentVerified(false);
-          setPaymentError(data.error || 'Le paiement n\'a pas pu être vérifié.');
-          return;
-        }
-        
-        setPaymentVerified(true);
-      } catch {
-        setPaymentVerified(false);
-        setPaymentError('Erreur de vérification du paiement.');
-      }
-    };
-    
-    verifyPayment();
-  }, []);
+  // ── Écrans de résultat paiement ──────────────────────────────────────────────
 
   if (paymentVerified === true) {
     return (
-      <div className="landing-scroll min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
           <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 mb-2">Paiement réussi</h2>
-        <p className="text-zinc-500 text-center text-sm mb-8 max-w-xs">
+        <h2 className="type-heading-sm mb-2 text-ink-text">Paiement réussi</h2>
+        <p className="text-ink-muted text-center text-sm mb-8 max-w-xs">
           Votre acompte a bien été enregistré. Le studio vous contactera pour confirmer votre rendez-vous.
         </p>
-        <a
+        <motion.a
           href={`/studio/${studioSlug}`}
-          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+          whileTap={tap}
+          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors active:scale-[0.98]"
         >
           Retour au studio
-        </a>
+        </motion.a>
+        <motion.a
+          href={clientHubHref}
+          whileTap={tap}
+          className="w-full max-w-xs h-12 mt-3 flex items-center justify-center rounded-xl border border-zinc-600 text-zinc-200 text-sm font-semibold hover:bg-white/5 transition-colors active:scale-[0.98]"
+        >
+          Mon compte — profil & santé
+        </motion.a>
       </div>
     );
   }
-  
-  if (paymentVerified === false && new URLSearchParams(window.location.search).has('session_id')) {
+
+  if (
+    paymentVerified === false &&
+    new URLSearchParams(window.location.search).has('session_id')
+  ) {
     return (
-      <div className="landing-scroll min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-amber-600" strokeWidth={2} />
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 mb-2">Vérification en cours</h2>
-        <p className="text-zinc-500 text-center text-sm mb-8 max-w-xs">
-          {paymentError || 'Nous vérifions votre paiement. Si vous avez été débité, votre réservation sera confirmée sous peu.'}
+        <h2 className="type-heading-sm mb-2 text-ink-text">Vérification en cours</h2>
+        <p className="text-ink-muted text-center text-sm mb-8 max-w-xs">
+          {paymentError ||
+            'Nous vérifions votre paiement. Si vous avez été débité, votre réservation sera confirmée sous peu.'}
         </p>
-        <a
+        <motion.a
           href={`/studio/${studioSlug}`}
-          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+          whileTap={tap}
+          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors active:scale-[0.98]"
         >
           Retour au studio
-        </a>
+        </motion.a>
+        <motion.a
+          href={clientHubHref}
+          whileTap={tap}
+          className="w-full max-w-xs h-12 mt-3 flex items-center justify-center rounded-xl border border-zinc-600 text-zinc-200 text-sm font-semibold hover:bg-white/5 transition-colors active:scale-[0.98]"
+        >
+          Mon compte — profil & santé
+        </motion.a>
       </div>
     );
   }
 
   if (studioId === 'loading') {
     return (
-      <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
       </div>
     );
   }
+
+  const supabaseEnabled = !!(
+    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+  );
+
+  const showPaymentsOfflineBanner = supabaseEnabled && paymentsOnline === false;
 
   if (supabaseEnabled && studioId === null) {
     return (
-      <div className="landing-scroll min-h-screen bg-white flex items-center justify-center p-4">
-        <p className="text-zinc-600">Studio introuvable.</p>
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
+        <SEO
+          title="Lien de réservation introuvable | InkFlow"
+          description="Ce lien de réservation n’est plus valide ou le studio n’existe pas."
+          canonical={`/book/${studioSlug}`}
+          noindex
+        />
+        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-zinc-500" strokeWidth={2} aria-hidden />
+        </div>
+        <h1 className="type-heading-sm mb-2 text-center text-ink-text">Studio introuvable</h1>
+        <p className="text-ink-muted text-center text-sm mb-8 max-w-sm">
+          Le lien que vous avez ouvert ne correspond à aucun studio InkFlow. Vérifiez l’URL ou demandez un
+          nouveau lien à votre tatoueur.
+        </p>
+        <div className="flex w-full max-w-xs flex-col gap-3">
+          <motion.a
+            href={LANDING_URL}
+            whileTap={tap}
+            className="h-14 flex items-center justify-center rounded-xl border border-ink-border bg-white text-ink-text font-semibold hover:bg-zinc-50 transition-colors"
+          >
+            Découvrir InkFlow
+          </motion.a>
+          <motion.a
+            href="/signup"
+            whileTap={tap}
+            className="h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+          >
+            Créer un compte tatoueur
+          </motion.a>
+        </div>
       </div>
     );
   }
 
-  const studio = studioInfo ?? { name: studioSlug, avatar: '' };
+  const studio = studioInfo ?? { name: studioSlug, avatar: '', coverImage: '' };
+
+  const bookStepKey = artistSelectionPending
+    ? 'artist'
+    : bookingMode === 'select'
+      ? 'select'
+      : bookingMode === 'project'
+        ? projectSubmitted
+          ? 'project-done'
+          : 'project'
+        : selectedFlashId
+          ? 'flash-detail'
+          : 'flash';
 
   return (
-    <div className="landing-scroll min-h-screen bg-zinc-50">
+    <div className="book-public-root bg-ink-bg">
       <SEO
         title={`Réserver chez ${studio.name}`}
         description={`Prenez rendez-vous en ligne chez ${studio.name}. Choisissez la date, décrivez votre projet et réglez l'acompte en toute sécurité.`}
         canonical={`/book/${studioSlug}`}
-        ogImage={studio.avatar || undefined}
+        ogImage={(studio.coverImage || studio.avatar) || undefined}
         ogImageAlt={`Réservation tatouage — ${studio.name}`}
         keywords={`réservation tatouage, ${studio.name}, RDV tattoo, acompte tatouage`}
       />
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-100 safe-top">
-        <div className="max-w-md mx-auto px-4 py-3">
-          <a
-            href={`/studio/${studioSlug}`}
-            className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 font-medium text-sm transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
-            Retour au studio
-          </a>
-        </div>
-      </header>
 
-      <main className="max-w-md mx-auto px-4 pb-32">
-        {/* 1. En-tête Tatoueur */}
-        <section className="pt-8 pb-6 text-center">
+      <a
+        href="#book-public-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-30 focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-zinc-900 focus:text-white focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ink-accent focus:ring-offset-2 focus:ring-offset-ink-bg"
+      >
+        Aller au contenu de réservation
+      </a>
+
+      <div
+        id="book-public-content"
+        tabIndex={-1}
+        role="region"
+        aria-labelledby="booking-studio-title"
+        className="book-public-scroll outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-accent/50"
+      >
+      <main id="booking-main">
+      {studio.coverImage ? (
+        <div className="relative w-full h-36 sm:h-44 overflow-hidden bg-zinc-900">
+          <img
+            src={studio.coverImage}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            decoding="async"
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black"
+            aria-hidden
+          />
+          <motion.a
+            href={`/studio/${studioSlug}`}
+            whileTap={tap}
+            className="absolute left-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] max-w-[calc(100%-8.5rem)] items-center gap-2 rounded-full bg-black/50 px-3.5 py-2 text-left text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+          >
+            <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span className="leading-tight">Retour à la vitrine</span>
+          </motion.a>
+          <motion.a
+            href={clientHubHref}
+            whileTap={tap}
+            className="absolute right-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-black/50 px-3 py-2 text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 active:scale-[0.98]"
+            aria-label="Mon compte InkFlow — profil et questionnaire santé"
+          >
+            <User className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span className="hidden sm:inline">Mon compte</span>
+          </motion.a>
+        </div>
+      ) : null}
+
+      {showPaymentsOfflineBanner && (
+        <div
+          role="status"
+          className="bg-amber-50 border-b border-amber-100/80 px-4 py-3 text-sm text-amber-950"
+        >
+          <div className="max-w-md mx-auto flex gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" strokeWidth={2} />
+            <div>
+              <p className="font-medium text-amber-950">Paiement en ligne indisponible</p>
+              <p className="text-amber-900/90 mt-1 text-[13px] leading-snug">
+                Ce studio n’a pas encore finalisé Stripe Connect. Vous pouvez envoyer une demande (projet sur mesure)
+                ou contacter le studio depuis sa vitrine pour régler l’acompte autrement.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`max-w-md mx-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-10 ${
+          !studio.coverImage ? 'pt-[max(1rem,env(safe-area-inset-top,0px))]' : ''
+        }`}
+      >
+        {!studio.coverImage && (
+          <nav className="pb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2" aria-label="Navigation réservation">
+            <motion.a
+              href={`/studio/${studioSlug}`}
+              whileTap={tap}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1 -ml-1 text-sm font-medium text-ink-muted transition-all hover:text-ink-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg active:scale-[0.98]"
+            >
+              <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+              Retour à la vitrine
+            </motion.a>
+            <motion.a
+              href={clientHubHref}
+              whileTap={tap}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-ink-text border border-zinc-700/50 bg-zinc-900/40 hover:bg-zinc-900/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 active:scale-[0.98]"
+            >
+              <User className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+              Mon compte
+            </motion.a>
+          </nav>
+        )}
+        {/* En-tête Tatoueur */}
+        <section
+          className={`${studio.coverImage ? 'pt-8' : 'pt-2'} pb-6 text-center`}
+          aria-describedby="booking-step-hint"
+        >
           <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-200 border-2 border-white shadow-lg ring-2 ring-zinc-100">
             {studio.avatar ? (
               <img src={studio.avatar} alt={studio.name} className="w-full h-full object-cover" />
@@ -596,499 +419,536 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               </div>
             )}
           </div>
-          <h1 className="text-2xl font-bold text-zinc-900 mt-4 tracking-tight">{studio.name}</h1>
-          <p className="text-zinc-500 text-sm mt-1">
-            {bookingMode === 'select' ? 'Choisissez votre type de prestation' : bookingMode === 'project' ? 'Demande de projet sur mesure' : 'Réservation & Acompte'}
+          <h1 id="booking-studio-title" className="type-heading mt-4 text-ink-text">
+            {studio.name}
+          </h1>
+          <p id="booking-step-hint" className="text-ink-muted text-sm mt-1">
+            {artistSelectionPending
+              ? 'Avec quel tatoueur souhaitez-vous réserver ?'
+              : bookingMode === 'select'
+              ? 'Choisissez votre type de prestation'
+              : bookingMode === 'project'
+              ? 'Demande de projet sur mesure'
+              : 'Réservation & Acompte'}
           </p>
-          <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-xs font-medium">
-            <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
-            Paiement sécurisé
+          <span
+            className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-medium border ${
+              showPaymentsOfflineBanner
+                ? 'bg-amber-50/90 text-amber-950 border-amber-200/80'
+                : 'bg-emerald-50/95 text-emerald-900 border-emerald-200/80'
+            }`}
+          >
+            <Lock
+              className={`w-3.5 h-3.5 shrink-0 ${showPaymentsOfflineBanner ? 'text-amber-700' : 'text-emerald-600'}`}
+              strokeWidth={1.5}
+            />
+            {showPaymentsOfflineBanner ? 'Encaissement à activer côté studio' : 'Paiement sécurisé'}
           </span>
         </section>
 
+        <BookStepTransition stepKey={bookStepKey}>
+        {/* — Étape tatoueur (studios multi-artistes) — */}
+        {artistSelectionPending && (
+          <section className="mb-8 flex flex-col gap-3" aria-label="Choix du tatoueur">
+            <div className="flex flex-col gap-3">
+              {publicArtists.map((artist) => (
+                <BookChoiceCard
+                  key={artist.id}
+                  type="button"
+                  onClick={() => selectArtist(artist)}
+                  accentClass="border-l-emerald-500/90"
+                  className="min-h-[88px] rounded-2xl border border-ink-border border-l-[4px] bg-ink-surface p-4 sm:p-5 flex items-center gap-4 hover:border-ink-accent/40 hover:shadow-md"
+                >
+                  <div className="w-14 h-14 rounded-full overflow-hidden bg-zinc-800 border border-ink-border flex-shrink-0 ring-1 ring-white/5">
+                    {artist.avatar_url ? (
+                      <img src={artist.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Users className="w-7 h-7 text-zinc-500" strokeWidth={1.5} aria-hidden />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-ink-text text-base tracking-tight">{artist.name}</span>
+                    <p className="text-ink-muted text-xs mt-1">Réserver avec ce tatoueur</p>
+                  </div>
+                  <ChevronRight
+                    className="w-5 h-5 text-zinc-400 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                    strokeWidth={1.5}
+                    aria-hidden
+                  />
+                </BookChoiceCard>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* — Écran 0 : Sélection Flash / Projet — */}
-        {bookingMode === 'select' && (
-          <section className="mb-6 space-y-4">
-            <button
+        {!artistSelectionPending && bookingMode === 'select' && (
+          <section className="mb-6 flex flex-col gap-3 sm:gap-4" aria-label="Type de prestation">
+            <BookChoiceCard
+              type="button"
               onClick={() => {
                 setBookingMode('flash');
                 setSelectedFlashId(null);
                 replaceUrlFlashParam(null);
               }}
-              className="w-full bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 text-left flex items-start gap-4 hover:border-zinc-300 transition-colors active:scale-[0.99]"
+              accentClass="border-l-amber-500"
+              className="min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] bg-ink-surface p-4 sm:p-5"
             >
-              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-6 h-6 text-amber-500" strokeWidth={1.5} />
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-amber-500/15"
+                aria-hidden
+              >
+                <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600" strokeWidth={1.5} />
               </div>
-              <div>
-                <div className="font-semibold text-zinc-900 text-base">Flash</div>
-                <div className="text-zinc-500 text-sm mt-0.5">Dessin déjà prêt — réservez un créneau et payez l'acompte maintenant.</div>
+              <div className="flex-1 min-w-0 py-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-ink-text text-base tracking-tight">Flash</span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-amber-800/90 bg-amber-100/90 px-2 py-0.5 rounded-md">
+                    Rapide
+                  </span>
+                </div>
+                <p className="text-ink-muted text-sm mt-1.5 leading-relaxed">
+                  {showPaymentsOfflineBanner
+                    ? 'Créneau et acompte : le studio doit activer Stripe pour payer en ligne.'
+                    : "Dessin déjà prêt — créneau + acompte en ligne."}
+                </p>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0" strokeWidth={1.5} />
-            </button>
-            <button
+              <ChevronRight
+                className="w-5 h-5 text-zinc-400 self-center flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+            </BookChoiceCard>
+            <BookChoiceCard
+              type="button"
               onClick={() => {
                 setBookingMode('project');
                 setSelectedFlashId(null);
                 replaceUrlFlashParam(null);
               }}
-              className="w-full bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 text-left flex items-start gap-4 hover:border-zinc-300 transition-colors active:scale-[0.99]"
+              accentClass="border-l-violet-500"
+              className="min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] bg-ink-surface p-4 sm:p-5"
             >
-              <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
-                <Pencil className="w-6 h-6 text-violet-500" strokeWidth={1.5} />
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-600/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-blue-500/15"
+                aria-hidden
+              >
+                <Pencil className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" strokeWidth={1.5} />
               </div>
-              <div>
-                <div className="font-semibold text-zinc-900 text-base">Projet sur mesure</div>
-                <div className="text-zinc-500 text-sm mt-0.5">Décrivez votre idée — l'artiste vous répond et vous ouvre ensuite le planning.</div>
+              <div className="flex-1 min-w-0 py-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-ink-text text-base tracking-tight">
+                    Projet sur mesure
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-blue-800/90 bg-violet-100/90 px-2 py-0.5 rounded-md">
+                    Sur mesure
+                  </span>
+                </div>
+                <p className="text-ink-muted text-sm mt-1.5 leading-relaxed">
+                  Décrivez votre idée — l'artiste répond puis vous propose un créneau.
+                </p>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0" strokeWidth={1.5} />
-            </button>
+              <ChevronRight
+                className="w-5 h-5 text-zinc-400 self-center flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+            </BookChoiceCard>
           </section>
         )}
 
         {/* — Écran Projet sur mesure — */}
-        {bookingMode === 'project' && (
+        {!artistSelectionPending && bookingMode === 'project' && (
           <>
             {projectSubmitted ? (
               <section className="mb-6 flex flex-col items-center text-center py-8">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
                   <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
                 </div>
-                <h2 className="text-xl font-bold text-zinc-900 mb-2">Demande envoyée !</h2>
-                <p className="text-zinc-500 text-sm max-w-xs">
-                  L'artiste va étudier votre projet et vous recontacte avec le tarif et un lien pour choisir votre créneau.
+                <h2 className="type-heading-sm mb-2 text-ink-text">Demande envoyée !</h2>
+                <p className="text-ink-muted text-sm max-w-xs">
+                  L'artiste va étudier votre projet et vous recontacte avec le tarif et un lien
+                  pour choisir votre créneau.
                 </p>
-                <a href={`/studio/${studioSlug}`} className="mt-6 inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 text-sm font-medium">
+                <a
+                  href={`/studio/${studioSlug}`}
+                  className="mt-6 inline-flex items-center gap-2 text-ink-muted hover:text-ink-text text-sm font-medium"
+                >
                   <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                   Retour au studio
                 </a>
               </section>
             ) : (
-              <section className="space-y-4 mb-6">
-                <button
-                  onClick={() => {
-                    setBookingMode('select');
-                    setSelectedFlashId(null);
-                    replaceUrlFlashParam(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm mb-2 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
-                  Changer de type
-                </button>
-                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-                  <h2 className="text-sm font-semibold text-zinc-900 mb-4">Décrivez votre projet</h2>
-                  <textarea
-                    value={projectForm.description}
-                    onChange={(e) => setProjectForm((f) => ({ ...f, description: e.target.value }))}
-                    placeholder="Style, emplacement, taille, couleurs, idées... Plus c'est précis, mieux l'artiste peut vous répondre."
-                    rows={5}
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors resize-none text-sm"
-                  />
-                  <ReferenceImageUpload
-                    value={projectImages}
-                    onChange={setProjectImages}
-                    variant="light"
-                    inputId="ref-upload-project"
-                    className="mt-3"
-                  />
-                </div>
-                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-                  <h2 className="text-sm font-semibold text-zinc-900 mb-4">Vos coordonnées</h2>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="block text-xs font-medium text-zinc-500 mb-1.5">Prénom</label>
-                      <input type="text" value={projectForm.firstName} onChange={(e) => setProjectForm((f) => ({ ...f, firstName: e.target.value }))} placeholder="Jean" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-zinc-500 mb-1.5">Nom</label>
-                      <input type="text" value={projectForm.lastName} onChange={(e) => setProjectForm((f) => ({ ...f, lastName: e.target.value }))} placeholder="Dupont" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email</label>
-                    <input type="email" value={projectForm.email} onChange={(e) => setProjectForm((f) => ({ ...f, email: e.target.value }))} placeholder="jean@exemple.com" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-xs font-medium text-zinc-500 mb-1.5">Téléphone</label>
-                    <input type="tel" value={projectForm.phone} onChange={(e) => setProjectForm((f) => ({ ...f, phone: e.target.value }))} placeholder="06 12 34 56 78" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 mb-1.5">
-                      <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      Instagram <span className="font-normal text-zinc-400">(optionnel)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={projectForm.instagram}
-                      onChange={(e) => setProjectForm((f) => ({ ...f, instagram: e.target.value }))}
-                      placeholder="@votre_pseudo"
-                      autoComplete="off"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-                    />
-                    <p className="text-[11px] text-zinc-400 mt-1.5">Pour échanger plus facilement avec l&apos;artiste en message privé.</p>
-                  </div>
-                </div>
-                {projectError && (
-                  <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>{projectError}</span>
-                  </div>
-                )}
-                <button
-                  onClick={handleProjectSubmit}
-                  disabled={!projectForm.firstName || !projectForm.lastName || !projectForm.email || !projectForm.description || projectSubmitting}
-                  className={`w-full h-14 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all ${
-                    !projectForm.firstName || !projectForm.lastName || !projectForm.email || !projectForm.description || projectSubmitting
-                      ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
-                      : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.99]'
-                  }`}
-                >
-                  {projectSubmitting ? (
-                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi en cours...</>
-                  ) : (
-                    <><Send className="w-5 h-5" strokeWidth={1.5} />Envoyer ma demande</>
+              <section className="mb-6 flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBookingMode('select');
+                      setSelectedFlashId(null);
+                      replaceUrlFlashParam(null);
+                      setProjectError(null);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                  >
+                    <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
+                    Changer de type
+                  </button>
+                  {needsArtistChoice && (
+                    <button
+                      type="button"
+                      onClick={clearArtistSelection}
+                      className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                    >
+                      <Users className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                      Changer de tatoueur
+                    </button>
                   )}
-                </button>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6 dark:border-neutral-700 dark:bg-neutral-950">
+                  {projectError && (
+                    <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-800 text-sm flex items-start gap-2 dark:bg-red-950/40 dark:border-red-900/50 dark:text-red-200">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden />
+                      <span>{projectError}</span>
+                    </div>
+                  )}
+                  <ProjectRequestForm
+                    studioId={studioId === 'loading' ? null : studioId}
+                    onSubmit={handleProjectRequestSubmit}
+                    onCancel={() => {
+                      setBookingMode('select');
+                      setSelectedFlashId(null);
+                      replaceUrlFlashParam(null);
+                      setProjectError(null);
+                    }}
+                    submitLabel="Envoyer ma demande"
+                    referenceInputId="project-ref-book"
+                  />
+                </div>
               </section>
             )}
           </>
         )}
 
         {/* — Flux Flash — */}
-        {bookingMode === 'flash' && (
+        {!artistSelectionPending && bookingMode === 'flash' && (
           <>
-            {bookingMode === 'flash' && !flashInUrl && (
-              <div className="mb-4">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {!new URLSearchParams(window.location.search).get('flash') && (
                 <button
+                  type="button"
                   onClick={() => {
                     setBookingMode('select');
                     setSelectedFlashId(null);
                     replaceUrlFlashParam(null);
                   }}
-                  className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm transition-colors"
+                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
                 >
-                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
                   Changer de type
                 </button>
-              </div>
-            )}
-        {/* 2. Choix du flash */}
-        <section className="mb-6">
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-1">Choisissez un flash</h2>
-            <p className="text-xs text-zinc-500 mb-4">
-              Prix et acompte selon le design sélectionné.
-            </p>
-            {flashListLoading ? (
-              <div className="py-12 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
-              </div>
-            ) : availableFlashes.length === 0 ? (
-              <p className="text-sm text-zinc-500 text-center py-8">
-                Aucun flash disponible pour le moment. Revenez plus tard ou contactez le studio.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {availableFlashes.map((flash) => {
-                  const isSelected = selectedFlashId === flash.id;
-                  const priceLabel =
-                    typeof flash.price === 'number' ? `${flash.price.toLocaleString('fr-FR')} €` : '—';
-                  return (
-                    <button
-                      key={flash.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedFlashId(flash.id);
-                        replaceUrlFlashParam(flash.id);
-                      }}
-                      className={`group rounded-2xl border overflow-hidden text-left transition-all active:scale-[0.99] touch-manipulation shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ${
-                        isSelected
-                          ? 'ring-2 ring-emerald-500 border-emerald-500/80 shadow-md'
-                          : 'border-zinc-200/90 hover:border-zinc-300 hover:shadow-md'
-                      }`}
-                    >
-                      {flash.imageUrl ? (
-                        <div className="relative aspect-[3/4] bg-zinc-100">
-                          <img
-                            src={flash.imageUrl}
-                            alt={flash.title || 'Flash'}
-                            className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
-                          />
-                          <div
-                            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
-                            aria-hidden
-                          />
-                          {isSelected && (
-                            <div
-                              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white/90"
-                              aria-hidden
-                            >
-                              <Check className="h-4 w-4" strokeWidth={2.5} />
-                            </div>
-                          )}
-                          <div className="absolute bottom-0 left-0 right-0 p-3 pt-10">
-                            <p className="text-[13px] font-semibold leading-snug text-white drop-shadow-md line-clamp-2">
-                              {flash.title || 'Flash'}
-                            </p>
-                            <p className="mt-1 text-base font-bold tabular-nums tracking-tight text-white drop-shadow-md">
-                              {priceLabel}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col">
-                          <div className="relative flex aspect-[3/4] items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200/80">
-                            <Zap className="h-12 w-12 text-zinc-400" strokeWidth={1.25} />
-                            {isSelected && (
-                              <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white">
-                                <Check className="h-4 w-4" strokeWidth={2.5} />
-                              </div>
-                            )}
-                          </div>
-                          <div className="border-t border-zinc-100 bg-zinc-50/80 p-3">
-                            <p className="text-[13px] font-semibold leading-snug text-zinc-900 line-clamp-2">
-                              {flash.title || 'Flash'}
-                            </p>
-                            <p className="mt-1 text-base font-bold tabular-nums text-zinc-800">{priceLabel}</p>
-                          </div>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
+              )}
+              {needsArtistChoice && (
+                <button
+                  type="button"
+                  onClick={clearArtistSelection}
+                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                >
+                  <Users className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                  Changer de tatoueur
+                </button>
+              )}
+            </div>
 
-        {selectedFlash && (
-          <section className="mb-6">
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-              <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-zinc-100">
-                  <MapPin className="h-5 w-5 text-zinc-600" strokeWidth={1.5} />
+            {/* 2. Choix du flash — flow-root + cartes pleine largeur pour éviter l’effondrement de hauteur (aspect-ratio) */}
+            <section className="mb-8 relative z-0 isolate">
+              <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
+                <h2 className="text-sm font-semibold text-ink-text mb-1">Choisissez un flash</h2>
+                <p className="text-xs text-ink-muted mb-4">
+                  Prix et acompte selon le design sélectionné.
+                </p>
+                {flashListLoading || artistContextLocked ? (
+                  <div
+                    className="py-12 flex items-center justify-center"
+                    role="status"
+                    aria-live="polite"
+                    aria-busy="true"
+                    aria-label="Chargement des flashs"
+                  >
+                    <div className="w-8 h-8 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin motion-reduce:animate-none" />
+                  </div>
+                ) : availableFlashes.length === 0 ? (
+                  <p className="text-sm text-ink-muted text-center py-8">
+                    {needsArtistChoice
+                      ? 'Aucun flash listé pour ce tatoueur pour le moment. Essayez un autre artiste ou contactez le studio.'
+                      : 'Aucun flash disponible pour le moment. Revenez plus tard ou contactez le studio.'}
+                  </p>
+                ) : (
+                  <div className="grid w-full grid-cols-2 gap-3 sm:gap-4 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] flow-root pb-1">
+                    {availableFlashes.map((flash) => {
+                      const isSelected = selectedFlashId === flash.id;
+                      return (
+                        <FlashCard
+                          key={flash.id}
+                          variant="booking"
+                          title={flash.title || 'Flash'}
+                          imageUrl={flash.imageUrl}
+                          price={flash.price}
+                          durationMinutes={flash.durationMinutes}
+                          available={flash.available}
+                          selected={isSelected}
+                          onClick={() => {
+                            setSelectedFlashId(flash.id);
+                            replaceUrlFlashParam(flash.id);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Détails du tatouage (emplacement) */}
+            {selectedFlash && (
+              <section className="mb-6">
+                <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
+                  <div className="mb-4 flex items-start gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-ink-surface">
+                      <MapPin className="h-5 w-5 text-ink-muted" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-ink-text">Détails du tatouage</h2>
+                      <p className="mt-0.5 text-xs text-ink-muted">
+                        Indiquez où vous souhaitez ce flash. Le studio validera avec vous si besoin.
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="flash-placement"
+                      className="block text-xs font-medium text-ink-muted mb-1.5"
+                    >
+                      Emplacement souhaité <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="flash-placement"
+                      value={form.flashPlacementPreset}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          flashPlacementPreset: e.target.value,
+                          flashPlacementCustom:
+                            e.target.value === PLACEMENT_OTHER_VALUE
+                              ? f.flashPlacementCustom
+                              : '',
+                        }))
+                      }
+                      className="w-full px-4 py-3 rounded-xl border border-ink-border bg-ink-surface text-ink-text text-sm focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors"
+                    >
+                      <option value="">Choisir une zone…</option>
+                      {flashPlacementOptions.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                      <option value={PLACEMENT_OTHER_VALUE}>Autre — préciser</option>
+                    </select>
+                    {form.flashPlacementPreset === PLACEMENT_OTHER_VALUE && (
+                      <input
+                        type="text"
+                        value={form.flashPlacementCustom}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, flashPlacementCustom: e.target.value }))
+                        }
+                        placeholder="Ex. : flanc droit, derrière l'oreille, haut du dos…"
+                        className="mt-2 w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
+                        autoComplete="off"
+                      />
+                    )}
+                  </div>
+                  <div className="mt-4">
+                    <label
+                      htmlFor="flash-notes"
+                      className="block text-xs font-medium text-ink-muted mb-1.5"
+                    >
+                      Précisions (optionnel)
+                    </label>
+                    <textarea
+                      id="flash-notes"
+                      value={form.flashNotes}
+                      onChange={(e) => setForm((f) => ({ ...f, flashNotes: e.target.value }))}
+                      placeholder="Côté gauche ou droit, taille souhaitée, contraintes médicales, références…"
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors resize-none text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-900">Détails du tatouage</h2>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    Indiquez où vous souhaitez ce flash. Le studio validera avec vous si besoin.
+              </section>
+            )}
+
+            {/* 3. Disponibilités */}
+            <section className="mb-6 relative z-0">
+              {availabilityLoading ? (
+                <div className="py-8 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
+                </div>
+              ) : availabilityUnavailable ? (
+                <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-5 text-amber-950 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-amber-100 p-2">
+                      <AlertCircle className="h-4 w-4 text-amber-700" aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold">Creneaux temporairement indisponibles</h3>
+                      <p className="mt-1 text-sm text-amber-900/80">
+                        {availabilityError ||
+                          'Impossible de verifier les disponibilites en direct pour le moment. Rechargez la page avant de choisir un creneau.'}
+                      </p>
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => window.location.reload()}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98]"
+                        >
+                          Recharger
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBookingMode('project')}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition-all active:scale-[0.98]"
+                        >
+                          Envoyer une demande projet
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-[22px] border border-[#e0e0e8] overflow-hidden shadow-[0px_20px_25px_rgba(0,0,0,0.1),0px_8px_10px_rgba(0,0,0,0.1)]">
+                  <BookingAppInterface480
+                    title="Réserver"
+                    subtitle={`Choisis un créneau pour ${studio.name}`}
+                    calendarMonth={calendarMonth}
+                    onPrevMonth={() =>
+                      setCalendarMonth((p) => new Date(p.getFullYear(), p.getMonth() - 1))
+                    }
+                    onNextMonth={() =>
+                      setCalendarMonth((p) => new Date(p.getFullYear(), p.getMonth() + 1))
+                    }
+                    availableDates={availableDates}
+                    selectedDate={form.selectedDate}
+                    onSelectDate={(dateStr) =>
+                      setForm((f) => ({ ...f, selectedDate: dateStr, selectedTime: '' }))
+                    }
+                    availableSlots={form.selectedDate ? availableSlots : []}
+                    selectedTime={form.selectedTime}
+                    onSelectTime={(time) => setForm((f) => ({ ...f, selectedTime: time }))}
+                    recap={{
+                      durationLabel: '2h',
+                      depositLabel: depositAmount != null ? `${depositAmount}€` : '—',
+                      totalLabel:
+                        selectedFlash && typeof selectedFlash.price === 'number'
+                          ? `${selectedFlash.price}€`
+                          : '—',
+                    }}
+                    onContinue={() => {
+                      document.getElementById('booking-contact')?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      });
+                    }}
+                    continueDisabled={!form.selectedDate || !form.selectedTime}
+                  />
+                </div>
+              )}
+            </section>
+
+            {/* 4. Vos Coordonnées */}
+            <section id="booking-contact" className="mb-6">
+              <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
+                <h2 className="text-sm font-semibold text-ink-text mb-3">Vos coordonnées</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                      Prénom
+                    </label>
+                    <input
+                      type="text"
+                      value={form.firstName}
+                      onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+                      placeholder="Jean"
+                      className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-ink-muted mb-1.5">Nom</label>
+                    <input
+                      type="text"
+                      value={form.lastName}
+                      onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+                      placeholder="Dupont"
+                      className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="jean@exemple.com"
+                    className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
+                  />
+                </div>
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                    Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="06 12 34 56 78"
+                    className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
+                  />
+                </div>
+                <div className="mt-3">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-ink-muted mb-1.5">
+                    <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Instagram{' '}
+                    <span className="font-normal text-zinc-400">(optionnel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.instagram}
+                    onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
+                    placeholder="@votre_pseudo"
+                    autoComplete="off"
+                    className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
+                  />
+                  <p className="text-[11px] text-zinc-400 mt-1.5">
+                    Pour que le studio puisse vous contacter en DM si besoin.
                   </p>
                 </div>
               </div>
-              <div>
-                <label htmlFor="flash-placement" className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Emplacement souhaité <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="flash-placement"
-                  value={form.flashPlacementPreset}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      flashPlacementPreset: e.target.value,
-                      flashPlacementCustom: e.target.value === PLACEMENT_OTHER_VALUE ? f.flashPlacementCustom : '',
-                    }))
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 text-sm focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors"
-                >
-                  <option value="">Choisir une zone…</option>
-                  {flashPlacementOptions.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                  <option value={PLACEMENT_OTHER_VALUE}>Autre — préciser</option>
-                </select>
-                {form.flashPlacementPreset === PLACEMENT_OTHER_VALUE && (
-                  <input
-                    type="text"
-                    value={form.flashPlacementCustom}
-                    onChange={(e) => setForm((f) => ({ ...f, flashPlacementCustom: e.target.value }))}
-                    placeholder="Ex. : flanc droit, derrière l’oreille, haut du dos…"
-                    className="mt-2 w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-                    autoComplete="off"
-                  />
-                )}
-              </div>
-              <div className="mt-4">
-                <label htmlFor="flash-notes" className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Précisions (optionnel)
-                </label>
-                <textarea
-                  id="flash-notes"
-                  value={form.flashNotes}
-                  onChange={(e) => setForm((f) => ({ ...f, flashNotes: e.target.value }))}
-                  placeholder="Côté gauche ou droit, taille souhaitée, contraintes médicales, références…"
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors resize-none text-sm"
-                />
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 3. Disponibilités */}
-        <section className="mb-6">
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-3">Disponibilités</h2>
-            {availabilityLoading ? (
-              <div className="py-8 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((p) => new Date(p.getFullYear(), p.getMonth() - 1))}
-                    className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-600 transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <span className="font-semibold text-zinc-900 text-sm">
-                    {MONTHS[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((p) => new Date(p.getFullYear(), p.getMonth() + 1))}
-                    className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-600 transition-colors"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {WEEKDAYS.map((d) => (
-                    <div key={d} className="text-center text-[10px] font-medium text-zinc-400">{d}</div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1 mb-4">
-                  {(() => {
-                    const first = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
-                    const last = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
-                    const startPad = first.getDay();
-                    const days: (Date | null)[] = [];
-                    for (let i = 0; i < startPad; i++) days.push(null);
-                    for (let d = 1; d <= last.getDate(); d++) days.push(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), d));
-                    return days.map((d, i) => {
-                      if (!d) return <div key={`e-${i}`} />;
-                      const dateStr = toLocalDateString(d);
-                      const isAvailable = availableDates.includes(dateStr);
-                      const selected = form.selectedDate === dateStr;
-                      return (
-                        <button
-                          key={dateStr}
-                          type="button"
-                          onClick={() => isAvailable && setForm((f) => ({ ...f, selectedDate: dateStr, selectedTime: '' }))}
-                          disabled={!isAvailable}
-                          className={`aspect-square rounded-lg text-xs font-medium transition-all ${
-                            !isAvailable ? 'text-zinc-300 cursor-not-allowed' : selected ? 'bg-zinc-900 text-white' : 'text-zinc-700 hover:bg-zinc-100'
-                          }`}
-                        >
-                          {d.getDate()}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-                {form.selectedDate && (
-                  <div>
-                    <p className="text-xs font-medium text-zinc-500 mb-2">Créneau horaire</p>
-                    <div className="flex flex-wrap gap-2">
-                      {availableSlots.map((time) => (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => setForm((f) => ({ ...f, selectedTime: time }))}
-                          className={`px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
-                            form.selectedTime === time
-                              ? 'bg-zinc-900 text-white'
-                              : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                          }`}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </section>
-
-        {/* 4. Vos Coordonnées */}
-        <section className="mb-6">
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-3">Vos coordonnées</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">Prénom</label>
-                <input
-                  type="text"
-                  value={form.firstName}
-                  onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
-                  placeholder="Jean"
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">Nom</label>
-                <input
-                  type="text"
-                  value={form.lastName}
-                  onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
-                  placeholder="Dupont"
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-                />
-              </div>
-            </div>
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="jean@exemple.com"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-              />
-            </div>
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Téléphone</label>
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="06 12 34 56 78"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-              />
-            </div>
-            <div className="mt-3">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 mb-1.5">
-                <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
-                Instagram <span className="font-normal text-zinc-400">(optionnel)</span>
-              </label>
-              <input
-                type="text"
-                value={form.instagram}
-                onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
-                placeholder="@votre_pseudo"
-                autoComplete="off"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
-              />
-              <p className="text-[11px] text-zinc-400 mt-1.5">Pour que le studio puisse vous contacter en DM si besoin.</p>
-            </div>
-          </div>
-        </section>
+            </section>
           </>
         )}
+        </BookStepTransition>
+      </div>
       </main>
+      </div>
 
       {/* Modal Questionnaire de Santé */}
       {showHealthForm && (
-        <div 
-          className="fixed inset-0 z-[60] bg-zinc-50 overflow-y-auto overscroll-contain"
-          style={{ 
+        <div
+          className="fixed inset-0 z-[60] bg-ink-bg overflow-y-auto overscroll-contain"
+          style={{
             paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
             paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
           }}
@@ -1110,66 +970,75 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </div>
       )}
 
-      {/* 5. Sticky Footer Paiement — visible uniquement en mode flash */}
+      {/* Barre d’action paiement — en flux sous le scroll (plus de fixed = plus de chevauchement) */}
       {bookingMode === 'flash' && !showHealthForm && (
-      <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] safe-bottom">
-        <div className="max-w-md mx-auto px-4 py-4">
-          {selectedFlash && typeof selectedFlash.price === 'number' && (
-            <div className="flex items-center justify-between mb-2 text-xs text-zinc-500">
-              <span>Prix du tatouage</span>
-              <span className="font-medium text-zinc-700">{selectedFlash.price}€</span>
-            </div>
-          )}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-zinc-500">Acompte requis</span>
-            <span className="text-xl font-bold text-zinc-900">
-              {depositAmount != null ? `${depositAmount}€` : '—'}
-            </span>
-          </div>
-          {paymentError && (
-            <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span>{paymentError}</span>
-            </div>
-          )}
-          {healthFormCompleted && (
-            <div className="mb-3 flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
-              <Check className="w-4 h-4" />
-              Questionnaire de santé complété
-            </div>
-          )}
-          <button
-            onClick={handlePay}
-            disabled={!canPay || isSubmitting}
-            className={`w-full h-14 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-              canPay && !isSubmitting
-                ? 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.99]'
-                : 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Redirection vers Stripe...
-              </>
-            ) : healthFormCompleted ? (
-              <>
-                <CreditCard className="w-5 h-5" strokeWidth={1.5} />
-                {depositAmount != null ? `Payer ${depositAmount}€ et Réserver` : 'Choisissez un flash'}
-              </>
-            ) : (
-              <>
-                <FileText className="w-5 h-5" strokeWidth={1.5} />
-                {depositAmount != null ? `Questionnaire santé → Payer ${depositAmount}€` : 'Choisissez un flash'}
-              </>
+        <footer className="relative z-10 shrink-0 border-t border-ink-border bg-ink-surface shadow-[0_-2px_16px_rgba(0,0,0,0.12)] safe-bottom">
+          <div className="max-w-md mx-auto px-4 py-3 sm:py-4">
+            {selectedFlash && typeof selectedFlash.price === 'number' && (
+              <div className="flex items-center justify-between mb-2 text-xs text-ink-muted">
+                <span>Prix du tatouage</span>
+                <span className="font-medium text-ink-text">{selectedFlash.price}€</span>
+              </div>
             )}
-          </button>
-          <p className="mt-2 text-center text-[10px] text-zinc-400 flex items-center justify-center gap-1">
-            <Lock className="w-3 h-3" strokeWidth={1.5} />
-            Paiement sécurisé Stripe • Apple Pay • Google Pay
-          </p>
-        </div>
-      </footer>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-ink-muted">Acompte requis</span>
+              <span className="text-xl font-bold text-ink-text">
+                {depositAmount != null ? `${depositAmount}€` : '—'}
+              </span>
+            </div>
+            {paymentError && (
+              <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{paymentError}</span>
+              </div>
+            )}
+            {healthFormCompleted && (
+              <div className="mb-3 flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                <Check className="w-4 h-4" />
+                Questionnaire de santé complété
+              </div>
+            )}
+            <motion.button
+              type="button"
+              onClick={handlePay}
+              disabled={!canPay || isSubmitting}
+              aria-busy={isSubmitting}
+              whileTap={canPay && !isSubmitting ? tap : undefined}
+              className={`w-full min-h-[56px] rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
+                canPay && !isSubmitting
+                  ? 'bg-zinc-900 text-white hover:bg-zinc-800'
+                  : 'bg-zinc-200 text-ink-muted cursor-not-allowed'
+              }`}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Redirection vers Stripe...
+                </>
+              ) : healthFormCompleted ? (
+                <>
+                  <CreditCard className="w-5 h-5" strokeWidth={1.5} />
+                  {depositAmount != null
+                    ? `Payer ${depositAmount}€ et Réserver`
+                    : 'Choisissez un flash'}
+                </>
+              ) : (
+                <>
+                  <FileText className="w-5 h-5" strokeWidth={1.5} />
+                  {depositAmount != null
+                    ? `Questionnaire santé → Payer ${depositAmount}€`
+                    : 'Choisissez un flash'}
+                </>
+              )}
+            </motion.button>
+            <p className="mt-2 text-center text-[10px] text-zinc-400 flex items-center justify-center gap-1">
+              <Lock className="w-3 h-3" strokeWidth={1.5} />
+              {paymentsOnline === false
+                ? 'Stripe Connect requis côté studio pour payer ici.'
+                : 'Paiement sécurisé Stripe • Apple Pay • Google Pay'}
+            </p>
+          </div>
+        </footer>
       )}
     </div>
   );

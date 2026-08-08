@@ -1,13 +1,41 @@
 import React, { useState } from 'react';
 import {
-  ChevronRight, ChevronLeft, User, Mail, Hash, Camera, Trash2,
-  Users, CreditCard, Bell, LogOut, Check, Building2, Shield,
+  ChevronRight,
+  ChevronLeft,
+  User,
+  Mail,
+  Hash,
+  Camera,
+  Trash2,
+  Users,
+  CreditCard,
+  Bell,
+  LogOut,
+  Check,
+  Building2,
+  AlertTriangle,
 } from 'lucide-react';
-import { ArtistManager } from './ArtistManager';
 import { BillingSettings } from './BillingSettings';
+import {
+  dashboardAvatarFrame,
+  dashboardBtnAccent,
+  dashboardBtnDanger,
+  dashboardBtnPrimary,
+  dashboardPageBg,
+  dashboardSettingsDivide,
+  dashboardSettingsGroup,
+  dashboardSettingsRowIcon,
+  dashboardSettingsRowIconAccent,
+  dashboardListRowCompact,
+  dashboardStatusBadge,
+  dashboardStickyActionBar,
+} from './ui/dashboardChrome';
+import { cn } from '@/lib/utils';
+import { useToast } from '../../contexts/ToastContext';
+import { deleteStudioAccountForOwner } from '../../lib/studioDataPortability';
 import type { ArtistAccount } from '../../types';
 
-type AccountView = 'home' | 'profil' | 'equipe' | 'facturation';
+type AccountView = 'home' | 'profil' | 'facturation';
 
 interface AccountPageProps {
   // User
@@ -28,19 +56,21 @@ interface AccountPageProps {
   avatarUploading: boolean;
   onAvatarClick: () => void;
   onAvatarRemove: () => void;
-  // Team
+  /** Pour afficher le nombre sur la ligne Collaborateurs */
   artists: ArtistAccount[];
-  onAddArtist: (a: ArtistAccount) => void;
-  onUpdateArtist: (a: ArtistAccount) => void;
-  onDeleteArtist: (id: string) => void;
-  maxArtists: number;
+  /** Ouvre l’onglet Établissement (liste, rôles, invitations) — seule entrée pour éviter le doublon avec « Mon équipe » */
+  onGoToCollaborateurs: () => void;
   // Navigation
   onGoToBilling: () => void;
   onGoToNotifications: () => void;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   // Subscription
   subscriptionStatus?: string;
   trialEndsAt?: string | null;
+  /** Recharge le statut studio (après fin d’essai, etc.) */
+  onRefreshStudioSubscription?: () => void | Promise<void>;
+  /** Faux si membre invité — la suppression n’est proposée qu’au titulaire. */
+  isStudioOwner?: boolean;
 }
 
 // ─── Row atom ─────────────────────────────────────────────────────────────────
@@ -55,32 +85,37 @@ interface RowProps {
   disabled?: boolean;
 }
 
-const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, badge, disabled }) => (
+const Row: React.FC<RowProps> = ({
+  icon,
+  label,
+  value,
+  onClick,
+  danger,
+  accent,
+  badge,
+  disabled,
+}) => (
   <button
+    type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`
-      w-full flex items-center gap-3.5 px-4 py-3.5 text-left
-      transition-colors duration-150 active:opacity-70
-      disabled:opacity-40 disabled:cursor-not-allowed
-      ${danger
-        ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
-        : accent
-        ? 'text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'
-        : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
-      }
-    `}
+    className={cn(
+      dashboardListRowCompact,
+      'text-left active:scale-[0.99]',
+      danger && 'text-red-400/80 hover:bg-zinc-900 dark:text-red-400/80 dark:hover:bg-zinc-900',
+      !danger && 'text-zinc-900 dark:text-zinc-100',
+      disabled && 'cursor-not-allowed opacity-40'
+    )}
   >
-    {/* Icon container */}
-    <span className={`
-      w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm
-      ${danger
-        ? 'bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400'
-        : accent
-        ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
-        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
-      }
-    `}>
+    <span
+      className={cn(
+        danger
+          ? 'flex size-9 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/35 dark:text-rose-400'
+          : accent
+            ? dashboardSettingsRowIconAccent
+            : dashboardSettingsRowIcon
+      )}
+    >
       {icon}
     </span>
 
@@ -88,15 +123,13 @@ const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, 
     <span className="flex-1 text-[15px] font-medium">{label}</span>
 
     {/* Badge */}
-    {badge && (
-      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
-        {badge}
-      </span>
-    )}
+    {badge && <span className={dashboardStatusBadge.new}>{badge}</span>}
 
     {/* Value */}
     {value && !badge && (
-      <span className="text-sm text-zinc-400 dark:text-zinc-500 truncate max-w-[120px]">{value}</span>
+      <span className="text-sm text-zinc-400 dark:text-zinc-500 truncate max-w-[120px]">
+        {value}
+      </span>
     )}
 
     {/* Chevron */}
@@ -114,9 +147,7 @@ const Section: React.FC<{ title?: string; children: React.ReactNode }> = ({ titl
         {title}
       </p>
     )}
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-      {children}
-    </div>
+    <div className={cn(dashboardSettingsGroup, dashboardSettingsDivide)}>{children}</div>
   </div>
 );
 
@@ -125,11 +156,11 @@ const SubPageHeader: React.FC<{ title: string; onBack: () => void }> = ({ title,
   <div className="flex items-center gap-3 mb-6">
     <button
       onClick={onBack}
-      className="w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex-shrink-0"
+      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
     >
       <ChevronLeft className="w-5 h-5" />
     </button>
-    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h2>
+    <h2 className="type-heading-sm">{title}</h2>
   </div>
 );
 
@@ -145,11 +176,24 @@ const Field: React.FC<{
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
   maxLength?: number;
   pattern?: string;
-}> = ({ icon, label, value, onChange, type = 'text', placeholder, hint, inputMode, maxLength, pattern }) => (
-  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 px-4 py-3.5">
+}> = ({
+  icon,
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  hint,
+  inputMode,
+  maxLength,
+  pattern,
+}) => (
+  <div className="px-4 py-3.5">
     <div className="flex items-center gap-3 mb-2">
-      <span className="text-zinc-400 dark:text-zinc-500">{icon}</span>
-      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{label}</label>
+      <span className="text-zinc-900 dark:text-zinc-100">{icon}</span>
+      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+        {label}
+      </label>
     </div>
     <input
       type={type}
@@ -167,36 +211,61 @@ const Field: React.FC<{
 
 // ─── Main component ────────────────────────────────────────────────────────────
 export const AccountPage: React.FC<AccountPageProps> = ({
-  user, studioId,
-  studioName, email, siret,
-  onStudioNameChange, onEmailChange, onSiretChange,
-  saving, saved, onSave,
-  avatarInputRef, avatarUploading, onAvatarClick, onAvatarRemove,
-  artists, onAddArtist, onUpdateArtist, onDeleteArtist, maxArtists,
-  onGoToBilling, onGoToNotifications, onLogout,
-  subscriptionStatus, trialEndsAt,
+  user,
+  studioId,
+  studioName,
+  email,
+  siret,
+  onStudioNameChange,
+  onEmailChange,
+  onSiretChange,
+  saving,
+  saved,
+  onSave,
+  avatarInputRef: _avatarInputRef,
+  avatarUploading,
+  onAvatarClick,
+  onAvatarRemove,
+  artists,
+  onGoToCollaborateurs,
+  onGoToBilling: _onGoToBilling,
+  onGoToNotifications,
+  onLogout,
+  subscriptionStatus,
+  trialEndsAt,
+  onRefreshStudioSubscription,
+  isStudioOwner = true,
 }) => {
+  const toast = useToast();
   const [view, setView] = useState<AccountView>('home');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const firstName = user?.name?.split(' ')[0] || user?.studioName || 'Tatoueur';
   const displayName = user?.studioName || user?.name || 'Mon Studio';
   const displayEmail = user?.email || email || '';
 
-  const planLabel = subscriptionStatus === 'active'
-    ? 'Plan Pro actif'
-    : subscriptionStatus === 'trialing'
-    ? 'Période d\'essai'
-    : 'Plan gratuit';
+  const planLabel =
+    subscriptionStatus === 'active'
+      ? 'Plan Pro actif'
+      : subscriptionStatus === 'trialing'
+        ? "Période d'essai"
+        : 'Plan gratuit';
 
   // ── HOME ──────────────────────────────────────────────────────────────────
   if (view === 'home') {
     return (
-      <div className="w-full max-w-lg mx-auto space-y-5 px-1 pb-24">
+      <div className={cn('mx-auto w-full max-w-lg space-y-5 px-1 pb-24', dashboardPageBg)}>
         {/* Profile header card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col items-center gap-3 relative">
-          {/* Edit button */}
+        <div
+          className={cn(dashboardSettingsGroup, 'relative flex flex-col items-center gap-3 p-6')}
+        >
           <button
             onClick={() => setView('profil')}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg hover:bg-amber-400 transition-colors active:scale-95"
+            className={cn(
+              dashboardBtnAccent,
+              'absolute top-4 right-4 !size-10 !min-h-0 !p-0 rounded-full'
+            )}
             aria-label="Modifier le profil"
           >
             <Camera className="w-4 h-4" />
@@ -208,13 +277,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               <img
                 src={user.avatar}
                 alt={displayName}
-                className="w-20 h-20 rounded-full object-cover ring-4 ring-white dark:ring-zinc-900 shadow"
+                className={cn(dashboardAvatarFrame, 'size-20 object-cover')}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center ring-4 ring-white dark:ring-zinc-900 shadow">
-                <span className="text-2xl font-bold text-white">
-                  {firstName.slice(0, 1).toUpperCase()}
-                </span>
+              <div className="flex size-20 items-center justify-center rounded-full bg-blue-600 ring-2 ring-zinc-100 dark:ring-zinc-800">
+                <span className="type-stat text-white">{firstName.slice(0, 1).toUpperCase()}</span>
               </div>
             )}
             {avatarUploading && (
@@ -227,19 +294,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           {/* Name + email */}
           <div className="text-center">
             <p className="text-lg font-bold text-zinc-900 dark:text-white">{displayName}</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
+            <p className="type-body text-muted-foreground mt-0.5">{displayEmail}</p>
           </div>
 
           {/* Plan badge */}
-          <span className={`
-            px-3 py-1 rounded-full text-xs font-semibold
-            ${subscriptionStatus === 'active'
-              ? 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400'
-              : subscriptionStatus === 'trialing'
-              ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+          <span
+            className={
+              subscriptionStatus === 'active'
+                ? dashboardStatusBadge.active
+                : subscriptionStatus === 'trialing'
+                  ? dashboardStatusBadge.new
+                  : dashboardStatusBadge.neutral
             }
-          `}>
+          >
             {planLabel}
           </span>
         </div>
@@ -265,9 +332,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         <Section title="Mon studio">
           <Row
             icon={<Users className="w-4 h-4" />}
-            label="Mon équipe"
-            value={`${artists.length} artiste${artists.length !== 1 ? 's' : ''}`}
-            onClick={() => setView('equipe')}
+            label="Collaborateurs"
+            value={`${artists.length} membre${artists.length !== 1 ? 's' : ''}`}
+            onClick={onGoToCollaborateurs}
           />
           <Row
             icon={<Bell className="w-4 h-4" />}
@@ -281,10 +348,96 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           <Row
             icon={<LogOut className="w-4 h-4" />}
             label="Déconnexion"
-            onClick={onLogout}
+            onClick={() => void onLogout()}
             danger
           />
         </Section>
+
+        {isStudioOwner && studioId && (
+          <div className="rounded-2xl border border-red-200 dark:border-red-900/60 bg-red-50/80 dark:bg-red-950/20 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-red-900 dark:text-red-200">
+                  Compte &amp; données
+                </p>
+                <p className="text-xs text-red-800/90 dark:text-red-300/90 mt-1 leading-relaxed">
+                  Suppression définitive : studio, clients, messages, acomptes côté app, fichiers
+                  d’illustration liés. Les obligations comptables / Stripe peuvent conserver des
+                  traces (factures, législation). Pas de simple « désactivation ».
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteOpen(true);
+                    setDeleteConfirm('');
+                  }}
+                  className={cn(dashboardBtnDanger, 'mt-3 w-full sm:w-auto min-h-[44px]')}
+                >
+                  Supprimer mon compte studio
+                </button>
+                {deleteOpen && (
+                  <div className="mt-4 space-y-2 p-3 rounded-xl bg-white/90 dark:bg-zinc-900/80 border border-red-200/80 dark:border-red-800/40">
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Tape ton email{' '}
+                      <strong className="text-zinc-900 dark:text-zinc-100">{displayEmail}</strong>{' '}
+                      pour confirmer.
+                    </p>
+                    <input
+                      type="email"
+                      value={deleteConfirm}
+                      onChange={(e) => setDeleteConfirm(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
+                      placeholder="Email du compte"
+                      autoComplete="off"
+                    />
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        disabled={deleteBusy}
+                        onClick={async () => {
+                          if (!studioId) return;
+                          setDeleteBusy(true);
+                          const r = await deleteStudioAccountForOwner({
+                            studioId,
+                            confirmEmail: deleteConfirm.trim().toLowerCase(),
+                          });
+                          setDeleteBusy(false);
+                          if ('error' in r) {
+                            toast.error(r.error);
+                            return;
+                          }
+                          toast.success(r.message);
+                          setDeleteOpen(false);
+                          try {
+                            localStorage.removeItem('inkflow_user');
+                            localStorage.removeItem('inkflow_studio_name');
+                            localStorage.removeItem('inkflow_email');
+                            localStorage.removeItem('inkflow_avatar');
+                          } catch {
+                            /* ignore */
+                          }
+                          await onLogout();
+                          window.location.href = '/';
+                        }}
+                        className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold disabled:opacity-50"
+                      >
+                        {deleteBusy ? 'Suppression…' : 'Confirmer la suppression définitive'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteOpen(false)}
+                        className="px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 text-sm"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -292,52 +445,53 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   // ── PROFIL ────────────────────────────────────────────────────────────────
   if (view === 'profil') {
     return (
-      <div className="w-full max-w-lg mx-auto pb-24 space-y-4 px-1">
+      <div className={cn('mx-auto w-full max-w-lg space-y-4 px-1 pb-28', dashboardPageBg)}>
         <SubPageHeader title="Mon profil" onBack={() => setView('home')} />
 
-        {/* Avatar section */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 flex items-center gap-4">
-          <div className="relative flex-shrink-0">
-            {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={displayName}
-                className="w-16 h-16 rounded-full object-cover ring-2 ring-zinc-200 dark:ring-zinc-700"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">{firstName.slice(0, 1).toUpperCase()}</span>
-              </div>
+        <Section>
+          <div className="flex items-center gap-4 px-4 py-4">
+            <div className="relative shrink-0">
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={displayName}
+                  className={cn(dashboardAvatarFrame, 'size-16 object-cover')}
+                />
+              ) : (
+                <div className="flex size-16 items-center justify-center rounded-full bg-blue-600">
+                  <span className="type-heading-sm text-white">
+                    {firstName.slice(0, 1).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              {avatarUploading && (
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              <button
+                onClick={onAvatarClick}
+                className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500"
+              >
+                <Camera className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                {displayName}
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
+            </div>
+            {user?.avatar && (
+              <button
+                onClick={onAvatarRemove}
+                className="p-2 text-zinc-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10"
+                title="Supprimer la photo"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
-            {avatarUploading && (
-              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            <button
-              onClick={onAvatarClick}
-              className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow hover:bg-amber-400 transition-colors"
-            >
-              <Camera className="w-3 h-3" />
-            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{displayName}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
-          </div>
-          {user?.avatar && (
-            <button
-              onClick={onAvatarRemove}
-              className="p-2 text-zinc-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10"
-              title="Supprimer la photo"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Fields */}
-        <div className="space-y-3">
           <Field
             icon={<Building2 className="w-4 h-4" />}
             label="Nom du studio"
@@ -365,63 +519,34 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             placeholder="12345678900012"
             hint="Obligatoire pour la facturation et les mentions légales."
           />
+        </Section>
+
+        <div className={dashboardStickyActionBar}>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className={cn(
+              'w-full py-3.5 text-base font-semibold',
+              saved ? cn(dashboardBtnPrimary, 'w-full') : cn(dashboardBtnAccent, 'w-full py-3.5'),
+              saving && 'opacity-50'
+            )}
+          >
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="size-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Enregistrement…
+              </span>
+            ) : saved ? (
+              <span className="flex items-center justify-center gap-2">
+                <Check className="size-5" />
+                Enregistré
+              </span>
+            ) : (
+              'Enregistrer les modifications'
+            )}
+          </button>
         </div>
-
-        {/* Save button */}
-        <button
-          onClick={onSave}
-          disabled={saving}
-          className={`
-            w-full py-4 rounded-2xl text-base font-bold transition-all active:scale-[0.98]
-            disabled:opacity-50 disabled:cursor-not-allowed
-            ${saved
-              ? 'bg-green-500 text-white'
-              : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
-            }
-          `}
-        >
-          {saving ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Enregistrement…
-            </span>
-          ) : saved ? (
-            <span className="flex items-center justify-center gap-2">
-              <Check className="w-5 h-5" />
-              Enregistré !
-            </span>
-          ) : (
-            'Enregistrer les modifications'
-          )}
-        </button>
-      </div>
-    );
-  }
-
-  // ── ÉQUIPE ────────────────────────────────────────────────────────────────
-  if (view === 'equipe') {
-    return (
-      <div className="w-full max-w-2xl mx-auto pb-24 px-1">
-        <SubPageHeader title="Mon équipe" onBack={() => setView('home')} />
-
-        {/* Info banner */}
-        <div className="mb-5 px-4 py-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-start gap-3">
-          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            Les membres de l'équipe peuvent contrôler certaines fonctionnalités selon leurs permissions.
-          </p>
-        </div>
-
-        <ArtistManager
-          artists={artists}
-          onAdd={onAddArtist}
-          onUpdate={onUpdateArtist}
-          onDelete={onDeleteArtist}
-          maxArtists={maxArtists}
-        />
       </div>
     );
   }
@@ -429,12 +554,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   // ── FACTURATION ──────────────────────────────────────────────────────────
   if (view === 'facturation') {
     return (
-      <div className="w-full max-w-3xl mx-auto pb-24 px-1">
+      <div className={cn('mx-auto w-full max-w-3xl px-1 pb-24', dashboardPageBg)}>
         <SubPageHeader title="Abonnement & Factures" onBack={() => setView('home')} />
         <BillingSettings
           studioId={studioId}
           userEmail={email}
           trialEndsAt={trialEndsAt}
+          studioSubscriptionStatus={subscriptionStatus}
+          onStudioSubscriptionRefresh={onRefreshStudioSubscription}
         />
       </div>
     );

@@ -1,9 +1,16 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+// @ts-nocheck — React 19 class component, types @types/react non bundlés dans ce projet
+import React, { Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
+
+export type ErrorBoundaryFallbackRender = (ctx: {
+  error: Error | null;
+  reset: () => void;
+}) => ReactNode;
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: ReactNode | ErrorBoundaryFallbackRender;
   /** Si défini, affiche le message « tableau de bord » (sinon message page générique) */
   errorContext?: 'dashboard';
 }
@@ -13,34 +20,50 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+class ErrorBoundaryImpl extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    try {
+      Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    } catch {
+      /* évite un second crash si Sentry est mal configuré */
+    }
   }
 
   render() {
-    const props = (this as Component<Props, State>).props;
-    const state = (this as Component<Props, State>).state;
-    const setState = (this as Component<Props, State>).setState.bind(this);
-    if (state.hasError) {
-      if (props.fallback) return props.fallback;
-      const errMsg = state.error?.message ?? '';
+    const { fallback, errorContext, children } = this.props;
+    const { hasError, error } = this.state;
+    if (hasError) {
+      if (fallback !== undefined) {
+        if (typeof fallback === 'function') {
+          return fallback({
+            error,
+            reset: () => this.setState({ hasError: false, error: null }),
+          });
+        }
+        return fallback;
+      }
+      const errMsg = error?.message ?? '';
       const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
       return (
         <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
           <div className="max-w-md w-full text-center">
             <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-2xl" aria-hidden>⚠️</span>
+              <span className="text-2xl" aria-hidden>
+                ⚠️
+              </span>
             </div>
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Une erreur s&apos;est produite</h1>
+            <h1 className="type-heading-sm mb-2">Une erreur s&apos;est produite</h1>
             <p className="text-neutral-600 dark:text-neutral-300 text-sm mb-6">
-              {props.errorContext === 'dashboard'
+              {errorContext === 'dashboard'
                 ? "Le tableau de bord n'a pas pu s'afficher. Réessayez ou déconnectez-vous."
                 : "Cette page n'a pas pu s'afficher. Réessayez ou rechargez la page."}
             </p>
@@ -52,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
-                onClick={() => setState({ hasError: false, error: null })}
+                onClick={() => this.setState({ hasError: false, error: null })}
                 className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800"
               >
                 Réessayer
@@ -68,6 +91,9 @@ export class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    return props.children;
+    return children;
   }
 }
+
+const _EB = ErrorBoundaryImpl as unknown as React.ComponentType<Props>;
+export { _EB as ErrorBoundary };

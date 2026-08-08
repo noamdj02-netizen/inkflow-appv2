@@ -48,8 +48,10 @@ export const DashboardDemo: React.FC = () => {
       {/* Content */}
       <div className="px-4 py-4">
         <p className="text-[13px] font-medium text-neutral-500 mb-1">jeu. 5 mars</p>
-        <h2 className="text-2xl font-bold text-neutral-900 mb-1">Bonjour Noam 👋</h2>
-        <p className="text-base font-medium text-neutral-500 mb-4">Comment puis-je vous aider aujourd&apos;hui ?</p>
+        <h2 className="type-heading mb-1">Bonjour Noam 👋</h2>
+        <p className="text-base font-medium text-neutral-500 mb-4">
+          Comment puis-je vous aider aujourd&apos;hui ?
+        </p>
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -58,7 +60,9 @@ export const DashboardDemo: React.FC = () => {
           </button>
           <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-sm font-medium hover:bg-neutral-50">
             <Inbox className="w-4 h-4" strokeWidth={1.5} /> Demandes
-            <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold">1</span>
+            <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold">
+              1
+            </span>
           </button>
         </div>
         <div className="flex flex-wrap gap-2 mb-4">
@@ -93,13 +97,17 @@ export const DashboardDemo: React.FC = () => {
           </div>
           <div className="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-2.5 py-1 rounded-md bg-blue-600 text-white text-[11px] font-bold">AUJOURD&apos;HUI</span>
+              <span className="px-2.5 py-1 rounded-md bg-blue-600 text-white text-[11px] font-bold">
+                AUJOURD&apos;HUI
+              </span>
               <span className="text-[13px] text-neutral-500">• 0 RDV</span>
             </div>
             <p className="text-sm text-neutral-500 mb-4">Aucun RDV aujourd&apos;hui</p>
 
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-2.5 py-1 rounded-md bg-neutral-200 text-neutral-600 text-[11px] font-bold">À VENIR</span>
+              <span className="px-2.5 py-1 rounded-md bg-neutral-200 text-neutral-600 text-[11px] font-bold">
+                À VENIR
+              </span>
               <span className="text-[13px] text-neutral-500">• 29 RDV</span>
             </div>
             <div className="space-y-2">
@@ -107,9 +115,13 @@ export const DashboardDemo: React.FC = () => {
                 <div key={i} className="flex items-center justify-between py-2">
                   <span className="text-sm font-medium text-neutral-900">{apt.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      apt.status === 'CONFIRMÉ' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-200 text-neutral-600'
-                    }`}>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        apt.status === 'CONFIRMÉ'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-neutral-200 text-neutral-600'
+                      }`}
+                    >
                       {apt.status}
                     </span>
                     <span className="text-xs font-medium text-neutral-500">{apt.date}</span>

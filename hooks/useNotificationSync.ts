@@ -8,7 +8,8 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { mapBookingFromDb } from '../lib/supabaseBookings';
 import { mapAppointmentFromDb, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
-import { notifyNewBookingRequest, notifyDepositReceived, createInAppNotification } from '../lib/sendNotification';
+import { notifyDepositReceived, createInAppNotification } from '../lib/sendNotification';
+import { shouldNotifyAppointmentInsert } from '../lib/appointmentNotifications';
 
 const NOTIFICATION_TITLE_PREFIX = 'InkFlow';
 
@@ -66,12 +67,7 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
                 `${booking.clientName} a réservé : ${booking.description.slice(0, 50)}${booking.description.length > 50 ? '…' : ''}`,
                 `booking-${booking.id}`
               );
-              notifyNewBookingRequest(
-                studioId!,
-                booking.clientName,
-                booking.description,
-                booking.requestedDate
-              );
+              // Notification in-app : useIncomingBookings appelle notifyNewBookingRequest (évite doublon)
             }
           } catch {
             // ignore
@@ -99,7 +95,9 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
         { event: 'INSERT', schema: 'public', table: 'inkflow_appointments', filter },
         (payload) => {
           try {
-            const apt = mapAppointmentFromDb(payload.new as Record<string, unknown>);
+            const row = payload.new as Record<string, unknown>;
+            if (!shouldNotifyAppointmentInsert(row)) return;
+            const apt = mapAppointmentFromDb(row);
             if (initialLoadDone.current) {
               showWebNotification(
                 'Nouveau rendez-vous',
@@ -184,12 +182,12 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
     };
   }, [enabled, studioId]);
 
-  // Marquer le chargement initial comme terminé après un court délai (éviter les notifs au premier load)
+  // Après le premier chargement, les INSERT déclenchent notifs (délai court pour éviter le spam au refresh)
   useEffect(() => {
     if (!enabled || !studioId) return;
     const t = setTimeout(() => {
       initialLoadDone.current = true;
-    }, 3000);
+    }, 800);
     return () => clearTimeout(t);
   }, [enabled, studioId]);
 }

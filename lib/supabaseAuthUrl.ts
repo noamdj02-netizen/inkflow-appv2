@@ -1,29 +1,54 @@
 /**
  * Erreurs auth Supabase renvoyées dans le hash (#error=…) ou en query (?error=…)
  * après redirection (lien expiré, URL non autorisée, etc.).
- * Consomme et efface le paramètre pour éviter de le laisser dans l'URL.
  */
 export function consumeSupabaseAuthUrlError(): string | null {
-  if (typeof window === 'undefined') return null;
-
-  // Hash params : #error=...&error_description=...
-  const hash = new URLSearchParams(window.location.hash.slice(1));
-  const hashError = hash.get('error_description') ?? hash.get('error');
-  if (hashError) {
-    window.history.replaceState({}, '', window.location.pathname + window.location.search);
-    return hashError;
+  const rawHash = window.location.hash.replace(/^#/, '');
+  if (rawHash.includes('error=')) {
+    const p = new URLSearchParams(rawHash);
+    const code = p.get('error_code');
+    const desc = p.get('error_description');
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${window.location.search}`
+    );
+    return formatSupabaseAuthError(code, desc);
   }
 
-  // Query params : ?error=...&error_description=...
-  const query = new URLSearchParams(window.location.search);
-  const queryError = query.get('error_description') ?? query.get('error');
-  if (queryError) {
-    query.delete('error');
-    query.delete('error_description');
-    const qs = query.toString();
-    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
-    return queryError;
+  const sp = new URLSearchParams(window.location.search);
+  if (sp.get('error')) {
+    const code = sp.get('error_code');
+    const desc = sp.get('error_description');
+    const u = new URL(window.location.href);
+    u.hash = '';
+    ['error', 'error_code', 'error_description', 'error_hint'].forEach((k) =>
+      u.searchParams.delete(k)
+    );
+    window.history.replaceState({}, '', `${u.pathname}${u.search}`);
+    return formatSupabaseAuthError(code, desc);
   }
 
   return null;
+}
+
+function decodeDesc(desc: string | null): string {
+  if (!desc) return '';
+  try {
+    return decodeURIComponent(desc.replace(/\+/g, ' '));
+  } catch {
+    return desc;
+  }
+}
+
+function formatSupabaseAuthError(
+  code: string | null,
+  desc: string | null
+): string {
+  if (code === 'otp_expired') {
+    return "Ce lien a expiré. Demande un nouveau lien de connexion (il est valable environ 1 h).";
+  }
+  const d = decodeDesc(desc);
+  if (d) return d;
+  return "Impossible de te connecter avec ce lien. Demande un nouveau lien.";
 }

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Globe, Star, Users, Link2, Sparkles, X } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { Check, Globe, Star, Users, Link2, Sparkles, X, Zap } from 'lucide-react';
 import type { SubscriptionPlan } from '../../types';
 import { PLAN_CONFIG, canAccessFeature } from '../../lib/subscriptionPlans';
+import { INKFLOW_EASE_OUT } from '../../lib/motion/inkflowMotion';
 
 export interface PaymentSuccessModalProps {
   open: boolean;
@@ -46,6 +47,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   vitrinePublicUrl,
   googlePlaceConfigured,
 }) => {
+  const reduceMotion = useReducedMotion();
   const confettiFiredRef = useRef(false);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -63,11 +65,16 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open || confettiFiredRef.current) return;
+    if (!open || confettiFiredRef.current || reduceMotion) return;
     confettiFiredRef.current = true;
     void import('canvas-confetti').then((mod) => {
       const c = mod.default;
-      c({ particleCount: 110, spread: 70, origin: { y: 0.58 }, colors: ['#ffffff', '#c9a96e', '#7c5cfc', '#22d3ee'] });
+      c({
+        particleCount: 110,
+        spread: 70,
+        origin: { y: 0.58 },
+        colors: ['#ffffff', '#c9a96e', '#7c5cfc', '#22d3ee'],
+      });
       window.setTimeout(() => {
         c({ particleCount: 55, angle: 55, spread: 50, origin: { x: 0.15, y: 0.62 } });
       }, 180);
@@ -75,7 +82,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
         c({ particleCount: 55, angle: 125, spread: 50, origin: { x: 0.85, y: 0.62 } });
       }, 360);
     });
-  }, [open]);
+  }, [open, reduceMotion]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,10 +108,12 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+            transition={
+              reduceMotion ? { duration: 0.01 } : { duration: 0.22, ease: INKFLOW_EASE_OUT }
+            }
             role="dialog"
             aria-modal="true"
             aria-labelledby="payment-success-title"
@@ -113,14 +122,20 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Paiement confirmé</p>
-                <h2 id="payment-success-title" className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Paiement confirmé
+                </p>
+                <h2 id="payment-success-title" className="type-heading-sm sm:text-2xl text-white">
                   {isElitePlan ? (
-                    <>
-                      Bienvenue dans l&apos;élite, {displayName}&nbsp;! <span aria-hidden>⚡️</span>
-                    </>
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      <span>Bienvenue dans l&apos;élite, {displayName}&nbsp;!</span>
+                      <Zap className="w-6 h-6 shrink-0 text-amber-400" aria-hidden />
+                    </span>
                   ) : (
-                    <>Félicitations, {displayName}&nbsp;! <span aria-hidden>✨</span></>
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      <span>Félicitations, {displayName}&nbsp;!</span>
+                      <Sparkles className="w-6 h-6 shrink-0 text-blue-400" aria-hidden />
+                    </span>
                   )}
                 </h2>
               </div>
@@ -136,8 +151,8 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
             </div>
 
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-              Ton abonnement <span className="text-white font-semibold">{planLabel}</span> est désormais actif. Ton
-              business passe au niveau supérieur.
+              Ton abonnement <span className="text-white font-semibold">{planLabel}</span> est
+              désormais actif. Ton business passe au niveau supérieur.
             </p>
 
             <ul className="space-y-4">
@@ -167,8 +182,8 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
               <BenefitRow icon={<Link2 className="w-4 h-4" strokeWidth={2} />}>
                 <span className="font-medium text-white">Lien pro</span>
                 <span className="text-zinc-400 block mt-0.5 break-all">
-                  Ta page publique : <span className="text-white">{vitrinePublicUrl}</span> — garde ton slug, c&apos;est
-                  ton point d&apos;entrée clients.
+                  Ta page publique : <span className="text-white">{vitrinePublicUrl}</span> — garde
+                  ton slug, c&apos;est ton point d&apos;entrée clients.
                 </span>
               </BenefitRow>
             </ul>
@@ -183,12 +198,13 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
                 Explorer mon nouveau dashboard
               </button>
               <p className="text-center text-xs sm:text-sm text-zinc-500 leading-relaxed px-1">
-                Ta vitrine est prête : partage ton lien sur Instagram et dans ta bio pour convertir dès aujourd&apos;hui.
+                Ta vitrine est prête : partage ton lien sur Instagram et dans ta bio pour convertir
+                dès aujourd&apos;hui.
               </p>
             </div>
 
             <p className="flex items-center justify-center gap-2 text-xs text-zinc-600">
-              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" aria-hidden />
+              <Check className="w-3.5 h-3.5 text-blue-500 shrink-0" aria-hidden />
               Merci pour ta confiance — on t&apos;accompagne pour la suite.
             </p>
           </motion.div>

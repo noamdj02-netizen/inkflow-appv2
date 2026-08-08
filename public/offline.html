@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>InkFlow — Hors ligne</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #0a0a0a;
+        color: #fafafa;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 20px;
+        color: #a3a3a3;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        max-width: 320px;
+      }
+      button {
+        border: none;
+        background: #fafafa;
+        color: #0a0a0a;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      button:active {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pas de connexion</h1>
+    <p>Vérifiez le réseau (Wi‑Fi ou données), puis réessayez. Les données non synchronisées s’afficheront quand la connexion revient.</p>
+    <button type="button" onclick="location.reload()">Réessayer</button>
+  </body>
+</html>

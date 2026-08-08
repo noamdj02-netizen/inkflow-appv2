@@ -4,10 +4,11 @@
  * À configurer dans Supabase Dashboard > Database > Webhooks.
  */
 
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertInternalFunctionAuthorized } from "../_shared/edgeInvokeAuth.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-const jsonHeaders = { "Content-Type": "application/json" };
 
 interface WebhookPayload {
   type: "INSERT" | "UPDATE" | "DELETE";
@@ -68,6 +69,14 @@ function buildPushPayload(payload: WebhookPayload): { studioId: string; title: s
   }
 
   if (table === "inkflow_appointments" && type === "INSERT" && record) {
+    const status = String(record.status ?? "").toLowerCase().trim();
+    const depositPaid = Boolean(record.deposit_paid);
+    const depositNum = record.deposit != null && record.deposit !== "" ? Number(record.deposit) : 0;
+    const awaitingDeposit =
+      !depositPaid && status === "pending" && !Number.isNaN(depositNum) && depositNum > 0;
+    if (awaitingDeposit) {
+      return null;
+    }
     const clientName = String(record.client_name ?? "").trim() || "Un client";
     const service = String(record.service ?? "").trim() || "RDV";
     const date = formatDate(record.date);
@@ -101,9 +110,15 @@ function buildPushPayload(payload: WebhookPayload): { studioId: string; title: s
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const cors = getCorsHeaders(origin);
+  const jsonHeaders = { "Content-Type": "application/json", ...cors };
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*" } });
+    return new Response(null, { status: 204, headers: cors });
   }
+
+  const denied = assertInternalFunctionAuthorized(req, origin);
+  if (denied) return denied;
 
   try {
     const body: WebhookPayload = await req.json();

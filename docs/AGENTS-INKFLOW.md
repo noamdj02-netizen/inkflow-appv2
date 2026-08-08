@@ -18,7 +18,7 @@ Trois **personas** (règles Cursor optionnelles) complètent la règle toujours 
 ## Source de vérité — App mobile
 
 - **Canonique** : le dossier [`inkflow-mobile/`](../inkflow-mobile/) à la racine du repo (scripts `npm run start`, `app/`, dépendances à jour : `expo-blur`, `lucide-react-native`, `moti`, etc.).
-- **À ignorer pour le développement** : [`inkflow-mobile/inkflow-mobile/`](../inkflow-mobile/inkflow-mobile/) — copie emboîtée, dépendances réduites, risque de divergence. Ne pas lancer Expo depuis ce sous-dossier sauf audit de dette explicite.
+- L’ancienne copie emboîtée `inkflow-mobile/inkflow-mobile/` (doublon Expo) a été **supprimée du repo** pour alléger le stockage ; ne pas la recréer.
 
 ## Documents liés
 

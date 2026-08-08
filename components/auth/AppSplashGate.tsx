@@ -6,7 +6,14 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const PUBLIC_PATHS = ['/login', '/signup', '/reset-password', '/auth/callback', '/auth/update-password'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/signup',
+  '/reset-password',
+  '/auth/callback',
+  '/auth/update-password',
+  '/agenda',
+];
 
 function isPublicPath(path: string): boolean {
   if (path === '/') return true;
@@ -24,6 +31,16 @@ function hideSplash() {
 export const AppSplashGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { authLoading } = useAuth();
   const hiddenRef = useRef(false);
+
+  /** Filet de sécurité : masque le splash HTML même si l’auth ou une route reste bloquée */
+  useEffect(() => {
+    const failSafe = window.setTimeout(() => {
+      if (hiddenRef.current) return;
+      hiddenRef.current = true;
+      hideSplash();
+    }, 8000);
+    return () => window.clearTimeout(failSafe);
+  }, []);
 
   useEffect(() => {
     if (hiddenRef.current) return;

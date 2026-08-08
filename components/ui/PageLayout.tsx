@@ -8,20 +8,35 @@ interface PageHeaderProps {
   breadcrumbs?: { label: string; onClick?: () => void }[];
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, breadcrumbs }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({
+  title,
+  description,
+  actions,
+  breadcrumbs,
+}) => {
   return (
-    <div className="mb-8">
+    <div className="mb-6 sm:mb-8">
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+        <nav className="mb-3 flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
           {breadcrumbs.map((crumb, i) => (
             <React.Fragment key={i}>
-              {i > 0 && <ChevronRight className="w-3.5 h-3.5" />}
+              {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />}
               {crumb.onClick ? (
-                <button onClick={crumb.onClick} className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={crumb.onClick}
+                  className="rounded-md transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                >
                   {crumb.label}
                 </button>
               ) : (
-                <span className={i === breadcrumbs.length - 1 ? 'text-zinc-900 dark:text-white font-medium' : ''}>
+                <span
+                  className={
+                    i === breadcrumbs.length - 1
+                      ? 'font-medium text-[var(--text-primary)]'
+                      : undefined
+                  }
+                >
                   {crumb.label}
                 </span>
               )}
@@ -29,14 +44,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, acti
           ))}
         </nav>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">{title}</h1>
-          {description && (
-            <p className="mt-1.5 text-sm sm:text-base text-zinc-500 dark:text-zinc-400">{description}</p>
-          )}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="type-heading">{title}</h1>
+          {description && <p className="type-subtitle mt-2 max-w-2xl">{description}</p>}
         </div>
-        {actions && <div className="flex items-center gap-3 flex-shrink-0">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-3">{actions}</div>}
       </div>
     </div>
   );
@@ -52,34 +65,36 @@ interface SectionCardProps {
   noPadding?: boolean;
 }
 
-export const SectionCard: React.FC<SectionCardProps> = ({ 
-  title, 
-  description, 
-  icon, 
-  children, 
-  actions, 
+export const SectionCard: React.FC<SectionCardProps> = ({
+  title,
+  description,
+  icon,
+  children,
+  actions,
   className = '',
-  noPadding = false 
+  noPadding = false,
 }) => {
   return (
-    <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden ${className}`}>
+    <div
+      className={`overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] ${className}`}
+    >
       {(title || actions) && (
-        <div className="px-5 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 border-b border-[var(--border)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-start gap-3">
             {icon && (
-              <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 flex-shrink-0 mt-0.5">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-card-secondary)] text-[var(--text-secondary)]">
                 {icon}
               </div>
             )}
             <div className="min-w-0">
-              {title && <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white">{title}</h3>}
-              {description && <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{description}</p>}
+              {title && <h3 className="type-heading-sm text-base sm:text-lg">{title}</h3>}
+              {description && <p className="type-body text-muted-foreground mt-1">{description}</p>}
             </div>
           </div>
-          {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+          {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
         </div>
       )}
-      <div className={noPadding ? '' : 'p-5 sm:p-6'}>{children}</div>
+      <div className={noPadding ? '' : 'p-4 sm:p-6'}>{children}</div>
     </div>
   );
 };
@@ -101,35 +116,40 @@ const accentColors = {
   zinc: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
 };
 
-export const StatsCard: React.FC<StatsCardProps> = ({ 
-  label, 
-  value, 
-  icon, 
-  trend, 
+export const StatsCard: React.FC<StatsCardProps> = ({
+  label,
+  value,
+  icon,
+  trend,
   accentColor = 'blue',
-  className = '' 
+  className = '',
 }) => {
   return (
-    <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6 ${className}`}>
+    <div
+      className={`rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 sm:p-6 ${className}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
-          <p className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tabular-nums">
+          <p className="type-caption mb-1 font-medium">{label}</p>
+          <p className="type-stat sm:text-3xl">
             {typeof value === 'number' ? value.toLocaleString('fr-FR') : value}
           </p>
           {trend && (
             <div className="flex items-center gap-1.5 mt-2">
-              <span className={`text-sm font-medium ${trend.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {trend.value >= 0 ? '+' : ''}{trend.value}%
+              <span
+                className={`text-sm font-medium ${trend.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+              >
+                {trend.value >= 0 ? '+' : ''}
+                {trend.value}%
               </span>
-              {trend.label && <span className="text-xs text-zinc-400 dark:text-zinc-500">{trend.label}</span>}
+              {trend.label && (
+                <span className="text-xs text-zinc-400 dark:text-zinc-500">{trend.label}</span>
+              )}
             </div>
           )}
         </div>
         {icon && (
-          <div className={`p-3 rounded-xl flex-shrink-0 ${accentColors[accentColor]}`}>
-            {icon}
-          </div>
+          <div className={`p-3 rounded-xl flex-shrink-0 ${accentColors[accentColor]}`}>{icon}</div>
         )}
       </div>
     </div>
@@ -144,11 +164,19 @@ interface TabsProps {
   className?: string;
 }
 
-export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, variant = 'pills', className = '' }) => {
+export const Tabs: React.FC<TabsProps> = ({
+  tabs,
+  activeTab,
+  onChange,
+  variant = 'pills',
+  className = '',
+}) => {
   if (variant === 'underline') {
     return (
-      <div className={`flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 ${className}`}>
-        {tabs.map(tab => (
+      <div
+        className={`flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 ${className}`}
+      >
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
@@ -178,7 +206,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, variant =
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      {tabs.map(tab => (
+      {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
@@ -192,11 +220,13 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, variant =
             {tab.icon}
             {tab.label}
             {tab.badge !== undefined && tab.badge > 0 && (
-              <span className={`min-w-[18px] h-[18px] px-1.5 flex items-center justify-center text-[10px] font-bold rounded-full ${
-                activeTab === tab.id 
-                  ? 'bg-white/20 text-white dark:bg-zinc-900/30 dark:text-zinc-900' 
-                  : 'bg-blue-600 text-white'
-              }`}>
+              <span
+                className={`min-w-[18px] h-[18px] px-1.5 flex items-center justify-center text-[10px] font-bold rounded-full ${
+                  activeTab === tab.id
+                    ? 'bg-white/20 text-white dark:bg-zinc-900/30 dark:text-zinc-900'
+                    : 'bg-blue-600 text-white'
+                }`}
+              >
                 {tab.badge}
               </span>
             )}
@@ -215,16 +245,26 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export const EmptyStateCard: React.FC<EmptyStateProps> = ({ icon, title, description, action, className = '' }) => {
+export const EmptyStateCard: React.FC<EmptyStateProps> = ({
+  icon,
+  title,
+  description,
+  action,
+  className = '',
+}) => {
   return (
-    <div className={`flex flex-col items-center justify-center py-12 px-6 text-center ${className}`}>
+    <div
+      className={`flex flex-col items-center justify-center py-12 px-6 text-center ${className}`}
+    >
       {icon && (
         <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 mb-4">
           {icon}
         </div>
       )}
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-1">{title}</h3>
-      {description && <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">{description}</p>}
+      {description && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">{description}</p>
+      )}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -240,7 +280,15 @@ interface ListItemProps {
   className?: string;
 }
 
-export const ListItem: React.FC<ListItemProps> = ({ icon, title, subtitle, meta, actions, onClick, className = '' }) => {
+export const ListItem: React.FC<ListItemProps> = ({
+  icon,
+  title,
+  subtitle,
+  meta,
+  actions,
+  onClick,
+  className = '',
+}) => {
   const Wrapper = onClick ? 'button' : 'div';
   return (
     <Wrapper
@@ -254,7 +302,9 @@ export const ListItem: React.FC<ListItemProps> = ({ icon, title, subtitle, meta,
       )}
       <div className="flex-1 min-w-0 text-left">
         <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{title}</p>
-        {subtitle && <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{subtitle}</p>}
+        {subtitle && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{subtitle}</p>
+        )}
       </div>
       {meta && <div className="flex-shrink-0 text-sm text-zinc-500 dark:text-zinc-400">{meta}</div>}
       {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
@@ -270,19 +320,21 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   rightElement?: React.ReactNode;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({ 
-  label, 
-  error, 
-  hint, 
-  leftIcon, 
-  rightElement, 
-  className = '', 
-  ...props 
+export const InputField: React.FC<InputFieldProps> = ({
+  label,
+  error,
+  hint,
+  leftIcon,
+  rightElement,
+  className = '',
+  ...props
 }) => {
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</label>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          {label}
+        </label>
       )}
       <div className="relative">
         {leftIcon && (
@@ -294,9 +346,10 @@ export const InputField: React.FC<InputFieldProps> = ({
           className={`w-full px-4 py-2.5 rounded-xl border transition-all text-sm
             ${leftIcon ? 'pl-11' : ''}
             ${rightElement ? 'pr-11' : ''}
-            ${error 
-              ? 'border-red-300 dark:border-red-500/50 focus:ring-red-500 focus:border-red-500' 
-              : 'border-zinc-200 dark:border-zinc-700 focus:ring-blue-500 focus:border-blue-500'
+            ${
+              error
+                ? 'border-red-300 dark:border-red-500/50 focus:ring-red-500 focus:border-red-500'
+                : 'border-zinc-200 dark:border-zinc-700 focus:ring-blue-500 focus:border-blue-500'
             }
             bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white
             placeholder:text-zinc-400 dark:placeholder:text-zinc-500
@@ -307,9 +360,7 @@ export const InputField: React.FC<InputFieldProps> = ({
           {...props}
         />
         {rightElement && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            {rightElement}
-          </div>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
         )}
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -327,10 +378,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const buttonVariants = {
-  primary: 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100',
-  secondary: 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700',
-  outline: 'border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800',
-  ghost: 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white',
+  primary:
+    'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100',
+  secondary:
+    'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700',
+  outline:
+    'border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800',
+  ghost:
+    'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white',
   danger: 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700',
 };
 
@@ -340,16 +395,16 @@ const buttonSizes = {
   lg: 'px-6 py-3 text-base gap-2.5',
 };
 
-export const Button: React.FC<ButtonProps> = ({ 
-  variant = 'primary', 
-  size = 'md', 
-  icon, 
+export const Button: React.FC<ButtonProps> = ({
+  variant = 'primary',
+  size = 'md',
+  icon,
   iconPosition = 'left',
   loading = false,
-  children, 
-  className = '', 
+  children,
+  className = '',
   disabled,
-  ...props 
+  ...props
 }) => {
   return (
     <button
@@ -363,8 +418,19 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
         </svg>
       ) : (
         <>
@@ -392,20 +458,27 @@ const avatarSizes = {
 };
 
 export const Avatar: React.FC<AvatarProps> = ({ src, name = '', size = 'md', className = '' }) => {
-  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  
+  const initials = name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   if (src) {
     return (
-      <img 
-        src={src} 
-        alt={name} 
-        className={`rounded-full object-cover ${avatarSizes[size]} ${className}`} 
+      <img
+        src={src}
+        alt={name}
+        className={`rounded-full object-cover ${avatarSizes[size]} ${className}`}
       />
     );
   }
-  
+
   return (
-    <div className={`rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold flex items-center justify-center ${avatarSizes[size]} ${className}`}>
+    <div
+      className={`rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold flex items-center justify-center ${avatarSizes[size]} ${className}`}
+    >
       {initials || '?'}
     </div>
   );
@@ -426,9 +499,16 @@ const badgeVariants = {
   info: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
 };
 
-export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', size = 'sm', className = '' }) => {
+export const Badge: React.FC<BadgeProps> = ({
+  children,
+  variant = 'default',
+  size = 'sm',
+  className = '',
+}) => {
   return (
-    <span className={`inline-flex items-center font-medium rounded-full ${badgeVariants[variant]} ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'} ${className}`}>
+    <span
+      className={`inline-flex items-center font-medium rounded-full ${badgeVariants[variant]} ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'} ${className}`}
+    >
       {children}
     </span>
   );

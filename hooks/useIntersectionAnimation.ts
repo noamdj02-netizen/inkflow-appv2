@@ -31,7 +31,6 @@ export function useCountUp(target: number, isVisible: boolean, duration = 2000) 
   useEffect(() => {
     if (!isVisible) return;
 
-    let start = 0;
     const startTime = performance.now();
 
     const step = (currentTime: number) => {

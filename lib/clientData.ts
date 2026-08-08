@@ -10,8 +10,11 @@ export interface FlashItem {
   artistName: string;
   artistSlug: string | null;
   studioName: string;
+  studioSlug: string | null;
   distance: string;
   gradient: [string, string];
+  featured: boolean;
+  displayOrder: number;
 }
 
 export interface StudioItem {
@@ -27,6 +30,9 @@ export interface StudioItem {
   gradient: [string, string];
   initials: string;
   address: string;
+  /** Slug page réservation /book/[studioSlug] */
+  studioSlug: string | null;
+  availableNow: boolean;
 }
 
 const DEFAULT_GRADIENTS: [string, string][] = [
@@ -49,15 +55,16 @@ function randomHeight(seed: string): number {
   return 150 + (Math.abs(h) % 100);
 }
 
-export async function fetchAvailableFlashes(limit = 30): Promise<FlashItem[]> {
+export async function fetchAvailableFlashes(limit = 40): Promise<FlashItem[]> {
   const { data, error } = await supabase
     .from('inkflow_flash_designs')
     .select(`
-      id, slug, title, image_url, price, available,
+      id, slug, title, image_url, price, available, featured, display_order,
       inkflow_artists(name, slug),
-      inkflow_studios(studio_name)
+      inkflow_studios(studio_name, slug)
     `)
     .eq('available', true)
+    .eq('reserved', false)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -66,31 +73,39 @@ export async function fetchAvailableFlashes(limit = 30): Promise<FlashItem[]> {
     return [];
   }
 
-  return (data ?? []).map((f) => {
+  const rows = (data ?? []).map((f) => {
     const artist = f.inkflow_artists as { name?: string; slug?: string } | null;
-    const studio = f.inkflow_studios as { studio_name?: string } | null;
+    const studio = f.inkflow_studios as { studio_name?: string; slug?: string } | null;
 
     return {
       id: f.id,
-      slug: f.slug,
-      title: f.title,
-      imageUrl: f.image_url,
-      price: f.price ?? 0,
-      height: randomHeight(f.id),
+      slug: f.slug as string | null,
+      title: f.title as string,
+      imageUrl: f.image_url as string | null,
+      price: Number(f.price) || 0,
+      height: randomHeight(f.id as string),
       artistName: artist?.name ?? 'Artiste',
       artistSlug: artist?.slug ?? null,
       studioName: studio?.studio_name ?? 'Studio',
-      distance: '1.5 km',
-      gradient: randomGradient(f.id),
+      studioSlug: studio?.slug ?? null,
+      distance: '—',
+      gradient: randomGradient(f.id as string),
+      featured: Boolean(f.featured),
+      displayOrder: Number(f.display_order) || 0,
     };
+  });
+
+  return rows.sort((a, b) => {
+    if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    return a.displayOrder - b.displayOrder;
   });
 }
 
-export async function fetchFeaturedStudios(limit = 10): Promise<StudioItem[]> {
+export async function fetchFeaturedStudios(limit = 12): Promise<StudioItem[]> {
   const { data, error } = await supabase
     .from('inkflow_artists')
     .select(`
-      id, name, slug, styles, years_exp, rating, tattoos_count,
+      id, name, slug, styles, years_exp, rating, tattoos_count, available_now,
       inkflow_studios(id, studio_name, slug)
     `)
     .eq('is_active', true)
@@ -107,18 +122,31 @@ export async function fetchFeaturedStudios(limit = 10): Promise<StudioItem[]> {
     const styles = (a.styles as string[]) ?? [];
 
     return {
-      id: a.id,
-      slug: a.slug,
+      id: a.id as string,
+      slug: a.slug as string | null,
       name: studio?.studio_name ?? 'Studio',
-      artistName: a.name,
+      artistName: a.name as string,
       style: styles[0] ?? 'Tatouage',
-      rating: a.rating ?? 5.0,
-      yearsExp: a.years_exp ?? 0,
-      tattooCount: a.tattoos_count ?? 0,
-      distance: '1.0 km',
-      gradient: randomGradient(a.id),
-      initials: a.name.slice(0, 2).toUpperCase(),
+      rating: Number(a.rating) || 5.0,
+      yearsExp: Number(a.years_exp) || 0,
+      tattooCount: Number(a.tattoos_count) || 0,
+      distance: '—',
+      gradient: randomGradient(a.id as string),
+      initials: String(a.name).slice(0, 2).toUpperCase(),
       address: 'Adresse communiquée après réservation',
+      studioSlug: studio?.slug ?? null,
+      availableNow: Boolean(a.available_now),
     };
   });
+}
+
+export async function fetchAnyArtistAvailableNow(): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('inkflow_artists')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
+    .eq('available_now', true);
+
+  if (error) return false;
+  return (count ?? 0) > 0;
 }

@@ -3,7 +3,6 @@
  * Ligne bleu électrique, dégradé translucide, tooltip élégant, sélecteur de période.
  */
 import React, { useState, useMemo } from 'react';
-import { TrendingUp } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -12,11 +11,23 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  type TooltipProps,
 } from 'recharts';
 import type { Appointment } from '../../types';
 
-const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+const MONTH_LABELS = [
+  'Jan',
+  'Fév',
+  'Mar',
+  'Avr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Août',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Déc',
+];
 
 export type RevenuePeriod = '1M' | '6M' | '1A';
 
@@ -27,9 +38,15 @@ interface RevenueChartProps {
   compact?: boolean;
   height?: number;
   onPeriodChange?: (total: number, trend: number | null) => void;
+  /** Mode atelier : masque le graphique (montants sensibles) */
+  privacyMode?: boolean;
 }
 
-function computeChartData(appointments: Appointment[], period: RevenuePeriod, totalRevenue: number): { month: string; monthFull: string; revenue: number }[] {
+function computeChartData(
+  appointments: Appointment[],
+  period: RevenuePeriod,
+  _totalRevenue: number
+): { month: string; monthFull: string; revenue: number }[] {
   const now = new Date();
   const toStr = (d: Date) => d.toISOString().split('T')[0];
 
@@ -43,8 +60,11 @@ function computeChartData(appointments: Appointment[], period: RevenuePeriod, to
       const startStr = toStr(start);
       const endStr = toStr(end);
       const rev = appointments
-        .filter(a => a.date >= startStr && a.date <= endStr && (a.depositPaid || a.status === 'completed'))
-        .reduce((sum, a) => sum + (a.depositPaid ? (a.deposit || 0) : (a.price || 0)), 0);
+        .filter(
+          (a) =>
+            a.date >= startStr && a.date <= endStr && (a.depositPaid || a.status === 'completed')
+        )
+        .reduce((sum, a) => sum + (a.depositPaid ? a.deposit || 0 : a.price || 0), 0);
       weeks.push({
         month: `S${4 - i}`,
         monthFull: `${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`,
@@ -59,8 +79,8 @@ function computeChartData(appointments: Appointment[], period: RevenuePeriod, to
     const d = new Date(now.getFullYear(), now.getMonth() - monthsCount + 1 + i, 1);
     const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const rev = appointments
-      .filter(a => a.date.startsWith(monthStr) && (a.depositPaid || a.status === 'completed'))
-      .reduce((sum, a) => sum + (a.depositPaid ? (a.deposit || 0) : (a.price || 0)), 0);
+      .filter((a) => a.date.startsWith(monthStr) && (a.depositPaid || a.status === 'completed'))
+      .reduce((sum, a) => sum + (a.depositPaid ? a.deposit || 0 : a.price || 0), 0);
     return {
       month: MONTH_LABELS[d.getMonth()],
       monthFull: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
@@ -69,13 +89,19 @@ function computeChartData(appointments: Appointment[], period: RevenuePeriod, to
   });
 }
 
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
-  if (!active || !payload?.length || !payload[0].payload) return null;
-  const { monthFull, revenue } = payload[0].payload as { monthFull: string; revenue: number };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entry = payload[0] as any;
+  if (!entry?.payload) return null;
+  const { monthFull, revenue } = entry.payload as { monthFull: string; revenue: number };
   return (
     <div className="rounded-xl bg-zinc-900 dark:bg-zinc-950 px-4 py-3 shadow-xl border border-zinc-700/50">
       <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">{monthFull}</p>
-      <p className="text-lg font-bold text-white tabular-nums">{revenue.toLocaleString('fr-FR')}€</p>
+      <p className="text-lg font-bold text-white tabular-nums">
+        {revenue.toLocaleString('fr-FR')}€
+      </p>
     </div>
   );
 }
@@ -92,6 +118,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
   compact = false,
   height = 200,
   onPeriodChange,
+  privacyMode = false,
 }) => {
   const [period, setPeriod] = useState<RevenuePeriod>('6M');
 
@@ -116,11 +143,18 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
     { key: '1A', label: '1A' },
   ];
 
-  const maxRevenue = Math.max(...chartData.map(d => d.revenue), 100);
+  const maxRevenue = Math.max(...chartData.map((d) => d.revenue), 100);
+
+  const maskOverlay = privacyMode ? (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-zinc-100/95 dark:bg-zinc-900/95 border border-zinc-200/80 dark:border-zinc-800 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      Graphique masqué
+    </div>
+  ) : null;
 
   if (compact || hideGrid) {
     return (
-      <div className="w-full">
+      <div className="w-full relative">
+        {maskOverlay}
         <div className="flex items-center justify-end gap-1 mb-4">
           {periodLabels.map(({ key, label }) => (
             <button
@@ -155,7 +189,10 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
                 dy={8}
               />
               <YAxis hide domain={[0, maxRevenue * 1.1]} />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }}
+              />
               <Area
                 type="monotone"
                 dataKey="revenue"
@@ -171,7 +208,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
+      {maskOverlay}
       <div className="flex items-center justify-end gap-1 p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 w-fit ml-auto mb-4">
         {periodLabels.map(({ key, label }) => (
           <button
@@ -197,7 +235,12 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
                 <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" className="dark:stroke-zinc-800" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#E5E7EB"
+              className="dark:stroke-zinc-800"
+              vertical={false}
+            />
             <XAxis
               dataKey="month"
               stroke="#9CA3AF"
@@ -217,7 +260,10 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
               tickFormatter={formatYAxis}
               domain={[0, maxRevenue * 1.1]}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }}
+            />
             <Area
               type="monotone"
               dataKey="revenue"

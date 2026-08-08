@@ -98,7 +98,9 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
 }) => {
   const [step, setStep] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Partial<Record<Exclude<SectionId, 'intro'>, HTMLDivElement | null>>>({});
+  const sectionRefs = useRef<Partial<Record<Exclude<SectionId, 'intro'>, HTMLDivElement | null>>>(
+    {}
+  );
 
   const activeSection = sectionForStep(step);
 
@@ -123,8 +125,7 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
       ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950 rounded-2xl transition-shadow duration-300 z-[1] relative'
       : 'rounded-2xl transition-shadow duration-300';
 
-  const fmt = (n: number) =>
-    n.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+  const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
 
   const s = STEPS[step];
 
@@ -140,11 +141,10 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
             <Smartphone className="w-5 h-5 flex-shrink-0" aria-hidden />
             <span className="text-xs font-bold uppercase tracking-widest">Démo interactive</span>
           </div>
-          <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            Téléphone + guide — nouveau design mobile
-          </h2>
+          <h2 className="type-heading-sm sm:text-2xl">Téléphone + guide — nouveau design mobile</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xl">
-            Faites défiler les étapes pour comprendre chaque zone de l’écran d’accueil. C’est une maquette fidèle au rendu produit ; le vrai compte offre en plus les widgets
+            Faites défiler les étapes pour comprendre chaque zone de l’écran d’accueil. C’est une
+            maquette fidèle au rendu produit ; le vrai compte offre en plus les widgets
             configurables.
           </p>
 
@@ -152,7 +152,9 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
             <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">
               Étape {step + 1} / {STEPS.length}
             </p>
-            <h3 className="text-base font-semibold text-zinc-900 dark:text-white mb-2">{s.title}</h3>
+            <h3 className="text-base font-semibold text-zinc-900 dark:text-white mb-2">
+              {s.title}
+            </h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{s.body}</p>
           </div>
 
@@ -185,7 +187,9 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
                 aria-label={`Aller à l’étape ${i + 1}`}
                 onClick={() => setStep(i)}
                 className={`h-2 rounded-full transition-all ${
-                  i === step ? 'w-8 bg-blue-600' : 'w-2 bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400'
+                  i === step
+                    ? 'w-8 bg-blue-600'
+                    : 'w-2 bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400'
                 }`}
               />
             ))}
@@ -196,7 +200,9 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
         <div className="flex justify-center lg:justify-end order-1 lg:order-2 flex-shrink-0">
           <div
             className={`relative w-[min(100%,340px)] transition-[box-shadow] duration-300 ${
-              activeSection === 'intro' ? 'ring-4 ring-blue-500/40 rounded-[2.75rem] ring-offset-4 ring-offset-zinc-100 dark:ring-offset-zinc-900' : ''
+              activeSection === 'intro'
+                ? 'ring-4 ring-blue-500/40 rounded-[2.75rem] ring-offset-4 ring-offset-zinc-100 dark:ring-offset-zinc-900'
+                : ''
             }`}
           >
             <div className="rounded-[2.75rem] bg-zinc-900 p-2.5 sm:p-3 shadow-2xl shadow-zinc-900/40">
@@ -316,7 +322,9 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
                         }`}
                       >
                         <Icon className="w-4 h-4" />
-                        <span className="text-[10px] font-semibold text-center leading-tight">{label}</span>
+                        <span className="text-[10px] font-semibold text-center leading-tight">
+                          {label}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -342,12 +350,18 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
                           className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-zinc-900 truncate">{firstToday.clientName}</p>
+                          <p className="text-sm font-semibold text-zinc-900 truncate">
+                            {firstToday.clientName}
+                          </p>
                           <p className="text-xs text-zinc-500 truncate">{firstToday.service}</p>
-                          <p className="text-[11px] text-zinc-400 mt-0.5">{firstToday.duration} min</p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            {firstToday.duration} min
+                          </p>
                         </div>
                         <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <span className="text-sm font-bold tabular-nums text-zinc-900">{firstToday.time}</span>
+                          <span className="text-sm font-bold tabular-nums text-zinc-900">
+                            {firstToday.time}
+                          </span>
                           <ChevronRight className="w-4 h-4 text-zinc-300" />
                         </div>
                       </button>
@@ -359,10 +373,17 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
                   </div>
 
                   {/* KPI */}
-                  <div ref={(el) => { sectionRefs.current.kpi = el; }} className={ring('kpi')}>
+                  <div
+                    ref={(el) => {
+                      sectionRefs.current.kpi = el;
+                    }}
+                    className={ring('kpi')}
+                  >
                     <div className="flex items-center justify-between mb-3 px-0.5">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Ce mois</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+                          Ce mois
+                        </p>
                         <p className="text-sm font-semibold text-zinc-900">Indicateurs clés</p>
                       </div>
                       <div className="flex gap-1">
@@ -377,13 +398,17 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="rounded-2xl border border-zinc-200 p-3 bg-zinc-50/50">
                         <div className="flex justify-between items-start mb-1">
-                          <span className="text-[11px] font-medium text-zinc-500">Revenu du mois</span>
+                          <span className="text-[11px] font-medium text-zinc-500">
+                            Revenu du mois
+                          </span>
                           <span className="p-1 rounded-lg bg-blue-50 text-blue-600">
                             <ChevronRight className="w-3.5 h-3.5 rotate-[-45deg]" />
                           </span>
                         </div>
                         <p className="text-lg font-bold tabular-nums">{fmt(monthlyRevenue)} €</p>
-                        <p className="text-[10px] text-red-500 font-medium mt-1">↓ 42 % vs mois dernier</p>
+                        <p className="text-[10px] text-red-500 font-medium mt-1">
+                          ↓ 42 % vs mois dernier
+                        </p>
                       </div>
                       <div className="rounded-2xl border border-zinc-200 p-3 bg-zinc-50/50">
                         <div className="flex justify-between items-start mb-1">
@@ -401,7 +426,9 @@ export const DemoMobilePhoneGuide: React.FC<DemoMobilePhoneGuideProps> = ({
                       </div>
                       <div className="rounded-2xl border border-zinc-200 p-3 bg-zinc-50/50">
                         <span className="text-[11px] font-medium text-zinc-500">RDV ce mois</span>
-                        <p className="text-lg font-bold tabular-nums mt-1">{appointmentsThisMonth}</p>
+                        <p className="text-lg font-bold tabular-nums mt-1">
+                          {appointmentsThisMonth}
+                        </p>
                       </div>
                     </div>
                   </div>

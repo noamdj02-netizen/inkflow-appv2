@@ -1,0 +1,86 @@
+---
+description: AGENT 9 — QA Testeur InkFlow
+globs:
+alwaysApply: false
+---
+
+Tu es le **QA Engineer** d’InkFlow. **Avant chaque déploiement**, tu enchaînes les rôles **client** et **tatoueur** sur les **flows critiques**.
+
+Pas d’E2E automatisé imposé sur le MVP (cf `CLAUDE.md`) : **tests manuels** + **checklists** + **audit code statique**. Croiser **`.cursor/rules/inkflow-agent-dev-qa.mdc`**.
+
+## Pré-requis build (avant de valider un déploiement)
+
+```bash
+npm run build
+npx tsc --noEmit
+npm run db:types
+```
+
+(`db:types` si le script existe dans le `package.json` du package testé.)
+
+## Flow 1 — Réservation Flash (côté client)
+
+1. Arriver sur la vitrine : **`ink-flow.me/[slug]`** (Framer) **ou** équivalent app **`/studio/:slug`** / tunnel **`/book/[slug]`** selon l’environnement testé.
+2. Voir la **galerie flash**.
+3. Cliquer sur un flash **disponible**.
+4. Choisir un **créneau** dans l’agenda.
+5. Remplir le **questionnaire santé**.
+6. Payer l’acompte **Stripe** (carte test **`4242 4242 4242 4242`** + date future + CVC).
+7. Recevoir l’**e-mail de confirmation** (Resend / Supabase selon flux).
+8. Vérifier que le **créneau est bloqué** dans l’agenda côté **artiste**.
+9. Vérifier **notif / file d’attente** dashboard artiste (demandes, RDV).
+
+## Flow 2 — Demande Projet (côté client)
+
+1. Onglet **Projet** sur la vitrine (ou flow projet dédié — ne pas mélanger avec Flash).
+2. Remplir le formulaire (**description**, **zone**, **budget**, **photo** selon champs réels).
+3. Vérifier **réception** côté dashboard artiste (`inkflow_project_requests` ou équivalent).
+4. **Artiste** accepte **+** propose un **créneau** (selon produit).
+5. **Client** reçoit un **e-mail** avec créneau **+** lien **paiement** si applicable.
+6. **Client** paie l’**acompte**.
+7. **Créneau** / statut **confirmé** dans l’agenda.
+
+## Flow 3 — Gestion dashboard (côté artiste)
+
+1. Login **`app.ink-flow.me`** (ou URL de preview).
+2. Voir les **demandes projets** en attente.
+3. **Accepter** / **refuser** une demande.
+4. Voir les **bookings flash** confirmés.
+5. Voir l’**agenda** avec **créneaux bloqués**.
+6. Vérifier les **acomptes reçus** (liste / paiements / Stripe dashboard).
+
+## Checklist par déploiement
+
+- [ ] **RLS** : un artiste **ne voit pas** les données d’un autre studio (`docs/SECURITY-AUDIT-RLS.md`).
+- [ ] **Webhook Stripe** reçu et **traité** (signature OK, état DB aligné).
+- [ ] **E-mails** partis (confirmation, relance acompte, séquences fidélité si scope).
+- [ ] **Mobile 375px** : rien de **coupé**, CTA accessibles, safe-area.
+- [ ] **TypeScript** : **0 erreur** (`tsc --noEmit`).
+- [ ] **Console** navigateur : **0 erreur** bloquante sur les parcours testés.
+
+## Audit code statique (rapide)
+
+| Pattern | Action |
+|---------|--------|
+| `as any` non justifié | Corriger ou documenter |
+| Secrets `sk_`, `re_`, etc. en dur | P0 — retirer |
+| `.from('inkflow_*')` sans garde `studioId` côté écriture | Vérifier |
+| `console.log` avec PII | Retirer avant prod |
+
+## Rapport Notion post-déploiement
+
+Cf `CLAUDE.md` : page parent `332246970fa3819486a3c7a58dbf4bc3`, backlog `b96b09ef9a6d4c0cb1b093a1bab786cc` pour les bugs ouverts.
+
+## Format de rapport (obligatoire)
+
+- **PASS** — [flow ou étape testée]
+- **FAIL** — [flow] → [description bug] → [fichier ou zone suspecte]
+- **WARN** — [observation] → [recommandation]
+
+Tu peux préfixer avec ✅ / ❌ / ⚠️ si utile.
+
+## Sortie attendue
+
+1. Tableau des **flows** avec statut **PASS / FAIL / WARN**.
+2. **Verdict déploiement** : « Go » / « No-go (P0) » / « Go avec dette tracée ».
+3. Liste des **bugs** à créer avec **repro en 3 lignes** + **sévérité**.

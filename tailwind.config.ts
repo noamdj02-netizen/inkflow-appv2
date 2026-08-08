@@ -6,9 +6,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-geist)', 'Geist', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['var(--font-geist)', 'Geist', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'Geist Mono', 'ui-monospace', 'monospace'],
         serif: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
-        display: ['var(--font-syne)', 'Syne', 'Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        display: ['var(--font-geist)', 'Geist', 'system-ui', 'sans-serif'],
         playfair: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
       },
       colors: {
@@ -34,10 +36,23 @@ export default {
           900: '#3b1668',
           950: '#1e1535',
         },
+        /** Accent marque — blue-600 + blanc (cf. index.css : --pro-accent) */
+        pro: {
+          accent: '#2563eb',
+          'accent-fg': '#ffffff',
+        },
       },
       borderRadius: {
         'inkflow-card': '1rem',
         'inkflow-btn': '9999px',
+        /** Pro UI — mêmes rayons partout (éviter 9px, 10.5px, etc.) */
+        'pro-btn': '8px',
+        'pro-card': '12px',
+        'pro-modal': '16px',
+      },
+      boxShadow: {
+        /** Une seule ombre « produit » — préférer partout */
+        pro: '0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.1)',
       },
       height: {
         screen: '100dvh',
@@ -48,6 +63,19 @@ export default {
       spacing: {
         'safe-bottom': 'env(safe-area-inset-bottom, 0px)',
         'safe-top': 'env(safe-area-inset-top, 0px)',
+        /** Multiples de 4px — pas 13, 21, 27 */
+        'pro-1': '4px',
+        'pro-2': '8px',
+        'pro-3': '12px',
+        'pro-4': '16px',
+        'pro-5': '24px',
+        'pro-6': '32px',
+        'pro-7': '48px',
+      },
+      fontWeight: {
+        /** Préférer regular + medium seulement sur les écrans « pro » */
+        'pro-regular': '400',
+        'pro-medium': '500',
       },
     },
   },

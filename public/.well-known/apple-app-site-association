@@ -1,0 +1,28 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "Z38CK66528.me.inkflow.studio",
+        "paths": [
+          "/dashboard*",
+          "/book/*",
+          "/studio/*",
+          "/agenda",
+          "/agenda*",
+          "/messages/*",
+          "/c/*",
+          "/consent/*",
+          "/reservation-succes",
+          "/reservation-succes*",
+          "/client/*",
+          "/p/*",
+          "/tap-to-pay*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["Z38CK66528.me.inkflow.studio"]
+  }
+}

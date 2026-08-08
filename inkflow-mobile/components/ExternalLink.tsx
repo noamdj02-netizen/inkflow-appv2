@@ -1,24 +1,28 @@
-import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Pressable, type StyleProp, type ViewStyle } from 'react-native';
 
-export function ExternalLink(
-  props: Omit<React.ComponentProps<typeof Link>, 'href'> & { href: string }
-) {
+export interface ExternalLinkProps {
+  href: string;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}
+
+/** Lien HTTPS externe — évite le conflit `typedRoutes` d’expo-router sur `href: string`. */
+export function ExternalLink({ href, style, children }: ExternalLinkProps) {
+  const onPress = () => {
+    if (Platform.OS === 'web') {
+      if (typeof globalThis.window !== 'undefined') {
+        globalThis.window.open(href, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+    void WebBrowser.openBrowserAsync(href);
+  };
+
   return (
-    <Link
-      target="_blank"
-      {...props}
-      href={props.href}
-      onPress={(e) => {
-        if (Platform.OS !== 'web') {
-          // Prevent the default behavior of linking to the default browser on native.
-          e.preventDefault();
-          // Open the link in an in-app browser.
-          WebBrowser.openBrowserAsync(props.href as string);
-        }
-      }}
-    />
+    <Pressable style={style} onPress={onPress} accessibilityRole="link">
+      {children}
+    </Pressable>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Star, Check, ArrowRight } from 'lucide-react';
+import { PublicPictureImage } from './common/PublicPictureImage';
 
 const FEATURES = [
   'Réservations en ligne 24/7',
@@ -29,13 +30,19 @@ export const HeroSection: React.FC = () => {
               par semaine
             </h1>
             <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 sm:mb-8 leading-relaxed">
-              La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie Flash, et CRM.
-              Concentrez-vous sur votre art, on s&apos;occupe du reste.
+              La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie
+              Flash, et CRM. Concentrez-vous sur votre art, on s&apos;occupe du reste.
             </p>
             <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 max-w-md mx-auto lg:mx-0">
               {FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300 text-sm sm:text-base">
-                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 flex-shrink-0" strokeWidth={2.5} />
+                <li
+                  key={f}
+                  className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300 text-sm sm:text-base"
+                >
+                  <Check
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 flex-shrink-0"
+                    strokeWidth={2.5}
+                  />
                   <span>{f}</span>
                 </li>
               ))}
@@ -56,8 +63,8 @@ export const HeroSection: React.FC = () => {
               </a>
             </div>
             <p className="mt-4 flex items-center justify-center lg:justify-start gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-              <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />
-              14 jours d&apos;essai
+              <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />1 mois d&apos;essai
+              gratuit
             </p>
           </div>
 
@@ -67,7 +74,7 @@ export const HeroSection: React.FC = () => {
               <div className="relative w-[200px] min-[375px]:w-[220px] sm:w-[260px] lg:w-[300px] aspect-[9/19] rounded-[2rem] sm:rounded-[2.5rem] bg-zinc-900 dark:bg-zinc-950 p-2 sm:p-2.5 shadow-2xl shadow-zinc-900/30 sm:shadow-zinc-900/40 ring-2 sm:ring-4 ring-zinc-800/60">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 sm:w-20 h-4 sm:h-5 bg-zinc-900 rounded-b-lg sm:rounded-b-xl z-10" />
                 <div className="w-full h-full rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden bg-white">
-                  <img
+                  <PublicPictureImage
                     src="/images/hero-dashboard-mockup.png"
                     alt="Dashboard InkFlow — Accueil"
                     className="w-full h-full object-cover object-top"

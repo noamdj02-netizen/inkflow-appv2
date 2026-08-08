@@ -6,9 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Gift, Copy, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
-import { getInviteBaseUrl, APP_URL } from '../../lib/urls';
-
-const APP_ORIGIN = typeof window !== 'undefined' ? window.location.origin : APP_URL;
+import { getInviteBaseUrl } from '../../lib/urls';
 
 export interface ReferralWidgetProps {
   studioId: string | null;
@@ -38,11 +36,9 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
       return;
     }
     let cancelled = false;
-    supabase
-      .from('inkflow_studios')
-      .select('referral_code')
-      .eq('id', studioId)
-      .single()
+    void Promise.resolve(
+      supabase.from('inkflow_studios').select('referral_code').eq('id', studioId).single()
+    )
       .then(({ data, error }) => {
         if (cancelled) return;
         setCode(error || !data?.referral_code ? 'ABC123' : data.referral_code);
@@ -50,11 +46,12 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [studioId, useSupabase, propCode]);
 
   const inviteBase = getInviteBaseUrl();
-  const inviteUrl = code ? `${inviteBase}/${code}` : `${APP_ORIGIN}/signup`;
   const fallbackUrl = `${inviteBase}/${code || 'ABC123'}`;
 
   const handleCopy = useCallback(async () => {
@@ -72,8 +69,8 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
   return (
     <div className="prodify-card p-5">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-          <Gift className="w-5 h-5 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
+        <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center flex-shrink-0">
+          <Gift className="w-5 h-5 text-zinc-300" strokeWidth={1.5} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">

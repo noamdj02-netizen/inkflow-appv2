@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Calendar, RefreshCw, ExternalLink, Check, X, Link2, Unlink2, CloudOff, Download } from 'lucide-react';
+import {
+  Calendar,
+  RefreshCw,
+  ExternalLink,
+  Check,
+  Link2,
+  Unlink2,
+  CloudOff,
+  Download,
+} from 'lucide-react';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import {
   getCalendarStatus,
@@ -49,10 +58,8 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       setLoading(true);
       const status = await getCalendarStatus(studioId);
       setGoogleStatus(status);
-    } catch (err) {
+    } catch {
       setGoogleStatus({ connected: false, integration: null });
-      const msg = err instanceof Error ? err.message : 'Impossible de vérifier la connexion.';
-      onToastRef.current?.(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -79,8 +86,13 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       const authUrl = await initiateGoogleAuth(studioId);
       window.location.href = authUrl;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Impossible d\'initier la connexion Google';
-      onToast?.(msg.includes('non configuré') ? 'Google Calendar non configuré. Vérifiez les secrets Supabase (GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI).' : msg, 'error');
+      const msg = err instanceof Error ? err.message : "Impossible d'initier la connexion Google";
+      onToast?.(
+        msg.includes('non configuré')
+          ? 'Google Calendar non configuré. Vérifiez les secrets Supabase (GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI).'
+          : msg,
+        'error'
+      );
     }
   };
 
@@ -102,7 +114,10 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
     try {
       setSyncing(true);
       const count = await pushAllAppointments(studioId);
-      onToast?.(`${count} rendez-vous synchronisé${count > 1 ? 's' : ''} vers Google Agenda`, 'success');
+      onToast?.(
+        `${count} rendez-vous synchronisé${count > 1 ? 's' : ''} vers Google Agenda`,
+        'success'
+      );
       loadStatus();
     } catch {
       onToast?.('Erreur de synchronisation', 'error');
@@ -116,9 +131,12 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       setPulling(true);
       const events = await pullGoogleEvents(studioId);
       setImportedEvents(events);
-      onToast?.(`${events.length} événement${events.length > 1 ? 's' : ''} trouvé${events.length > 1 ? 's' : ''} dans Google Agenda`, 'success');
+      onToast?.(
+        `${events.length} événement${events.length > 1 ? 's' : ''} trouvé${events.length > 1 ? 's' : ''} dans Google Agenda`,
+        'success'
+      );
     } catch {
-      onToast?.('Erreur lors de l\'import', 'error');
+      onToast?.("Erreur lors de l'import", 'error');
     } finally {
       setPulling(false);
     }
@@ -151,14 +169,14 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--bg-card)] shadow-sm border border-[var(--border)] flex items-center justify-center">
               <svg viewBox="0 0 24 24" className="w-6 h-6">
-                <path d="M18.316 5.684L24 0H18.316V5.684Z" fill="#1A73E8"/>
-                <path d="M5.684 24L0 18.316V24H5.684Z" fill="#EA4335"/>
-                <path d="M18.316 24V18.316L24 24H18.316Z" fill="#34A853"/>
-                <path d="M0 5.684V0H5.684L0 5.684Z" fill="#C5221F"/>
-                <path d="M18.316 5.684V18.316H24V5.684H18.316Z" fill="#174EA6"/>
-                <path d="M5.684 5.684H0V18.316H5.684V5.684Z" fill="#E37400"/>
-                <path d="M5.684 5.684H18.316V18.316H5.684V5.684Z" fill="#fff"/>
-                <path d="M8.5 16.5V8.5H15.5V10H10V12H14.5V13.5H10V16.5H8.5Z" fill="#1A73E8"/>
+                <path d="M18.316 5.684L24 0H18.316V5.684Z" fill="#1A73E8" />
+                <path d="M5.684 24L0 18.316V24H5.684Z" fill="#EA4335" />
+                <path d="M18.316 24V18.316L24 24H18.316Z" fill="#34A853" />
+                <path d="M0 5.684V0H5.684L0 5.684Z" fill="#C5221F" />
+                <path d="M18.316 5.684V18.316H24V5.684H18.316Z" fill="#174EA6" />
+                <path d="M5.684 5.684H0V18.316H5.684V5.684Z" fill="#E37400" />
+                <path d="M5.684 5.684H18.316V18.316H5.684V5.684Z" fill="#fff" />
+                <path d="M8.5 16.5V8.5H15.5V10H10V12H14.5V13.5H10V16.5H8.5Z" fill="#1A73E8" />
               </svg>
             </div>
             <div>
@@ -192,7 +210,8 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
           <div className="space-y-3">
             {googleStatus.integration?.last_synced_at && (
               <p className="text-xs text-[var(--foreground-muted)]">
-                Dernière sync : {new Date(googleStatus.integration.last_synced_at).toLocaleString('fr-FR')}
+                Dernière sync :{' '}
+                {new Date(googleStatus.integration.last_synced_at).toLocaleString('fr-FR')}
               </p>
             )}
 
@@ -248,7 +267,9 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-medium text-[var(--text-primary)]">Exporter vers Apple / Outlook</div>
+              <div className="font-medium text-[var(--text-primary)]">
+                Exporter vers Apple / Outlook
+              </div>
               <div className="text-xs text-[var(--text-secondary)]">
                 Export .ics — compatible Apple Calendrier, Outlook, Google (sans connexion)
               </div>
@@ -261,15 +282,16 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         </div>
 
         <p className="text-xs text-[var(--foreground-muted)]">
-          Téléchargez un fichier .ics pour ouvrir vos rendez-vous Inkflow dans Apple Calendrier, Outlook ou tout calendrier standard.
+          Téléchargez un fichier .ics pour ouvrir vos rendez-vous Inkflow dans Apple Calendrier,
+          Outlook ou tout calendrier standard.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={() => {
               const toExport = appointments
-                .filter(a => ['pending', 'confirmed', 'in_progress'].includes(a.status))
-                .map(a => ({
+                .filter((a) => ['pending', 'confirmed', 'in_progress'].includes(a.status))
+                .map((a) => ({
                   id: a.id,
                   clientName: a.clientName,
                   service: a.service || 'Tattoo',
@@ -284,7 +306,10 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 return;
               }
               downloadICSAll(toExport);
-              onToast?.(`${toExport.length} rendez-vous exporté${toExport.length > 1 ? 's' : ''}`, 'success');
+              onToast?.(
+                `${toExport.length} rendez-vous exporté${toExport.length > 1 ? 's' : ''}`,
+                'success'
+              );
             }}
             className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-50 text-blue-700 font-medium text-sm hover:bg-blue-100 transition-colors"
           >
@@ -292,20 +317,26 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             Exporter tous les RDV (.ics)
           </button>
           <a
-            href={appointments.length > 0 ? getGoogleCalendarAddUrl({
-              clientName: appointments[0].clientName,
-              service: appointments[0].service || 'Tattoo',
-              date: appointments[0].date,
-              time: appointments[0].time || '10:00',
-              duration: appointments[0].duration || 60,
-              location: appointments[0].location,
-            }) : 'https://calendar.google.com'}
+            href={
+              appointments.length > 0
+                ? getGoogleCalendarAddUrl({
+                    clientName: appointments[0].clientName,
+                    service: appointments[0].service || 'Tattoo',
+                    date: appointments[0].date,
+                    time: appointments[0].time || '10:00',
+                    duration: appointments[0].duration || 60,
+                    location: appointments[0].location,
+                  })
+                : 'https://calendar.google.com'
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-[var(--border)] text-[var(--foreground)] font-medium text-sm hover:bg-[var(--bg-hover)] transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            {appointments.length > 0 ? 'Ajouter un RDV à Google (sans OAuth)' : 'Ouvrir Google Calendar'}
+            {appointments.length > 0
+              ? 'Ajouter un RDV à Google (sans OAuth)'
+              : 'Ouvrir Google Calendar'}
           </a>
         </div>
       </div>
@@ -319,11 +350,21 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
           </h4>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {importedEvents.map((ev) => (
-              <div key={ev.googleId} className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+              <div
+                key={ev.googleId}
+                className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]"
+              >
                 <div>
-                  <div className="text-sm font-medium text-[var(--foreground)]">{ev.title || 'Sans titre'}</div>
+                  <div className="text-sm font-medium text-[var(--foreground)]">
+                    {ev.title || 'Sans titre'}
+                  </div>
                   <div className="text-xs text-[var(--foreground-muted)]">
-                    {ev.start ? new Date(ev.start).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : ''}
+                    {ev.start
+                      ? new Date(ev.start).toLocaleString('fr-FR', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })
+                      : ''}
                   </div>
                 </div>
                 {ev.location && (

@@ -46,7 +46,7 @@ export async function saveStampLoyaltySettings(studioId: string, settings: Stamp
   const { error } = await supabase
     .from('inkflow_studios')
     .update({
-      stamp_loyalty_settings: parseStampLoyaltySettings(settings),
+      stamp_loyalty_settings: parseStampLoyaltySettings(settings) as unknown as import('../types/database').Json,
       updated_at: new Date().toISOString(),
     })
     .eq('id', studioId);
@@ -221,6 +221,17 @@ export async function processStampLoyaltyAfterCompletedAppointment(
           promoCode,
         },
       });
+
+      // Notifier le tatoueur via push (fire-and-forget)
+      supabase.functions.invoke('send-push-notification', {
+        body: {
+          studioId,
+          title: 'Récompense fidélité débloquée 🎉',
+          body: `${appointment.clientName} a atteint ${settings.tattoosRequired} séances — ${settings.rewardEuros}€ offerts !`,
+          url: '/dashboard?tab=loyalty',
+          tag: 'stamp-reward',
+        },
+      }).catch(() => {});
     }
   }
 

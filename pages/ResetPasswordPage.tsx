@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { supabase } from '../lib/supabase';
-import { getPasswordRecoveryRedirectTo } from '../lib/urls';
+import { requestPasswordRecoveryEmail } from '../lib/requestPasswordRecoveryEmail';
 import { resetPasswordSchema } from '../lib/authValidation';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -10,6 +10,26 @@ export const ResetPasswordPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Lien e-mail Supabase → /reset-password ; on envoie vers la page « nouveau mot de passe » (session recovery). */
+  useEffect(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    if (hash && hash.includes('type=recovery')) {
+      window.location.replace(`/auth/update-password${hash}`);
+      return;
+    }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (
+        event === 'PASSWORD_RECOVERY' &&
+        window.location.pathname.replace(/\/$/, '') === '/reset-password'
+      ) {
+        window.location.replace('/auth/update-password');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +41,7 @@ export const ResetPasswordPage: React.FC = () => {
     }
     setLoading(true);
     try {
-      const redirectTo = getPasswordRecoveryRedirectTo();
-      const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email, { redirectTo });
-      if (err) throw err;
+      await requestPasswordRecoveryEmail(parsed.data.email);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
@@ -39,11 +57,15 @@ export const ResetPasswordPage: React.FC = () => {
           <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
             <CheckCircle className="w-6 h-6 text-emerald-600" />
           </div>
-          <h1 className="text-xl font-bold text-neutral-900 mb-2">Email envoyé</h1>
+          <h1 className="type-heading-sm mb-2">Email envoyé</h1>
           <p className="text-neutral-600 text-sm mb-6">
-            Si un compte existe pour {email}, vous recevrez un lien pour réinitialiser votre mot de passe.
+            Si un compte existe pour {email}, vous recevrez un lien pour réinitialiser votre mot de
+            passe.
           </p>
-          <a href="/login" className="inline-block px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
+          <a
+            href="/login"
+            className="inline-block px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
+          >
             Retour à la connexion
           </a>
         </div>
@@ -54,14 +76,17 @@ export const ResetPasswordPage: React.FC = () => {
   return (
     <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <a href="/login" className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-6">
+        <a
+          href="/login"
+          className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-6"
+        >
           <ArrowLeft className="w-5 h-5" />
           Retour
         </a>
         <div className="bg-white rounded-2xl p-8 border border-neutral-200 shadow-sm">
           <div className="text-center mb-6">
             <Logo size="lg" className="rounded-2xl mx-auto mb-4" />
-            <h1 className="text-xl font-bold text-neutral-900">Mot de passe oublié ?</h1>
+            <h1 className="type-heading-sm">Mot de passe oublié ?</h1>
             <p className="text-neutral-600 text-sm mt-2">
               Entrez votre email pour recevoir un lien de réinitialisation.
             </p>

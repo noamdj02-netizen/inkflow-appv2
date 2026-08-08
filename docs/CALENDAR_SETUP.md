@@ -1,8 +1,11 @@
 # Configuration Google Calendar & Apple Calendar — InkFlow
 
+Vue d’ensemble go-live (ports, OAuth, Stripe, déploiements) : **[`PRODUCTION-READINESS-CHECKLIST.md`](./PRODUCTION-READINESS-CHECKLIST.md)**.
+
 ## Vue d'ensemble
 
 L'intégration calendrier permet :
+
 - **Google Agenda** : OAuth + sync bidirectionnelle (push/pull) via Edge Functions Supabase
 - **Apple Calendrier** : Export .ics par rendez-vous (sans OAuth)
 
@@ -14,12 +17,12 @@ L'intégration calendrier permet :
 
 Dans **Supabase Dashboard → Project Settings → Edge Functions → Secrets** :
 
-| Secret | Valeur | Obligatoire |
-|-------|--------|-------------|
-| `GOOGLE_CLIENT_ID` | Votre Client ID Google (ex: `xxx.apps.googleusercontent.com`) | Oui |
-| `GOOGLE_CLIENT_SECRET` | Votre Client Secret Google | Oui |
-| `GOOGLE_REDIRECT_URI` | `http://localhost:5173/dashboard` (dev) ou `https://ink-flow.me/dashboard` (prod) | Oui |
-| `SITE_URL` | `https://ink-flow.me` (pour redirections post-OAuth) | Optionnel |
+| Secret                 | Valeur                                                                                                                                                        | Obligatoire |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `GOOGLE_CLIENT_ID`     | Votre Client ID Google (ex: `xxx.apps.googleusercontent.com`)                                                                                                 | Oui         |
+| `GOOGLE_CLIENT_SECRET` | Votre Client Secret Google                                                                                                                                    | Oui         |
+| `GOOGLE_REDIRECT_URI`  | `http://localhost:3000/dashboard` (dev — **port Vite par défaut dans `vite.config.ts`**) ou l’URL prod du dashboard (ex. `https://app.ink-flow.me/dashboard`) | Oui         |
+| `SITE_URL`             | `https://ink-flow.me` (pour redirections post-OAuth)                                                                                                          | Optionnel   |
 
 ### Pour développement local (.env.local)
 
@@ -28,7 +31,7 @@ Si tu utilises un serveur Next.js ou autre backend local, ajoute :
 ```env
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxx
-GOOGLE_REDIRECT_URI=http://localhost:5173/dashboard
+GOOGLE_REDIRECT_URI=http://localhost:3000/dashboard
 ```
 
 **Important** : `GOOGLE_REDIRECT_URI` doit correspondre **exactement** à une URI configurée dans Google Cloud Console.
@@ -43,8 +46,8 @@ GOOGLE_REDIRECT_URI=http://localhost:5173/dashboard
 4. **APIs & Services → Credentials** → **Create Credentials** → **OAuth Client ID**
    - Type : **Web application**
    - Authorized redirect URIs :
-     - `http://localhost:5173/dashboard` (dev)
-     - `https://votre-domaine.com/dashboard` (prod)
+     - `http://localhost:3000/dashboard` (dev — aligné sur le port Vite du repo)
+     - `https://votre-domaine-app.com/dashboard` (prod, ex. app hébergée sur Vercel)
 5. Copier **Client ID** et **Client Secret**
 6. **OAuth consent screen** : ajouter les scopes `https://www.googleapis.com/auth/calendar` et `https://www.googleapis.com/auth/calendar.events`
 7. **Vérification du branding** : pour la validation Google, fournir les URLs publiques :

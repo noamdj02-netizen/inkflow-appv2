@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { Upload, Pencil, Trash2 } from 'lucide-react';
-import { ImageCropModal } from './ImageCropModal';
+import { LazyImageCropModal } from './lazyImageCropModal';
+import { ImageCropModalSuspenseFallback } from './skeleton';
 import { useToast } from '../../contexts/ToastContext';
 
 interface ImageUploadFieldProps {
@@ -105,7 +106,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
     ? `overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] ${shapeClasses[shape]}`
     : `${sizeClasses[previewSize]} overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] flex-shrink-0 ${shapeClasses[shape]}`;
 
-  const aspect = shapeToAspect(shape);
+  const aspect = shapeToAspect(shape as 'cover' | 'round' | 'square');
   const cropShape = shape === 'round' ? 'round' : 'rect';
 
   return (
@@ -114,18 +115,22 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
         <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">{label}</label>
       )}
 
-      <ImageCropModal
-        isOpen={Boolean(cropSrc)}
-        imageSrc={cropSrc ?? ''}
-        aspect={aspect}
-        cropShape={cropShape}
-        title="Ajuster le cadrage"
-        onClose={revokeCropSrc}
-        onConfirm={async (dataUrl) => {
-          onChange(dataUrl);
-          revokeCropSrc();
-        }}
-      />
+      {cropSrc ? (
+        <Suspense fallback={<ImageCropModalSuspenseFallback />}>
+          <LazyImageCropModal
+            isOpen
+            imageSrc={cropSrc}
+            aspect={aspect}
+            cropShape={cropShape}
+            title="Ajuster le cadrage"
+            onClose={revokeCropSrc}
+            onConfirm={async (dataUrl) => {
+              onChange(dataUrl);
+              revokeCropSrc();
+            }}
+          />
+        </Suspense>
+      ) : null}
 
       <input
         ref={inputRef}

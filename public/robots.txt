@@ -1,7 +1,27 @@
 # InkFlow - robots.txt
 # https://ink-flow.me
+# Fichiers utiles SEO / IA : /llms.txt , /pricing.md , /sitemap.xml
 
 User-Agent: *
+Allow: /
+
+# Crawlers IA (citation, aperçus) — même politique : contenu public indexable
+User-Agent: GPTBot
+Allow: /
+
+User-Agent: ChatGPT-User
+Allow: /
+
+User-Agent: PerplexityBot
+Allow: /
+
+User-Agent: ClaudeBot
+Allow: /
+
+User-Agent: anthropic-ai
+Allow: /
+
+User-Agent: Google-Extended
 Allow: /
 
 # Zones privées ou techniques (connexion / tokens / callbacks)

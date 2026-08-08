@@ -10,6 +10,28 @@ if (dsn && typeof dsn === 'string' && dsn.startsWith('https://')) {
     dsn,
     sendDefaultPii: true,
     enableLogs: true,
+    /** Évite le bruit Sentry quand Vite HMR casse temporairement l’arbre des providers (dev uniquement). */
+    beforeSend(event, hint) {
+      if (import.meta.env.DEV) {
+        const ex = hint.originalException;
+        const msg = ex instanceof Error ? ex.message : typeof ex === 'string' ? ex : '';
+        if (
+          msg.includes('must be used within an AuthProvider') ||
+          msg.includes('must be used within SupabaseSyncProvider') ||
+          msg.includes('must be used within ToastProvider') ||
+          msg.includes('Should have a queue') ||
+          msg.includes('Rendered more hooks')
+        ) {
+          return null;
+        }
+      }
+      return event;
+    },
+    /** Réduit le bruit : extensions navigateur, rejets non-Error souvent capturés en double. */
+    ignoreErrors: [
+      'ResizeObserver loop limit exceeded',
+      'ResizeObserver loop completed with undelivered notifications',
+    ],
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),

@@ -1,19 +1,15 @@
-// This file configures the initialization of Sentry on the server.
-// The config you add here will be used whenever the server handles a request.
+// Next.js Sentry (si build Next). Prod InkFlow = Vite + instrumentation.ts (VITE_SENTRY_DSN) — voir docs/MONITORING-P0.md
+// DSN : SENTRY_DSN (env), jamais en dur.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from '@sentry/nextjs';
 
-Sentry.init({
-  dsn: "https://6045cc58a7b03968e314a98f23df5482@o4510981037424640.ingest.de.sentry.io/4510981049614416",
-
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
-
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
-
-  // Enable sending user PII (Personally Identifiable Information)
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
-});
+const dsn = process.env.SENTRY_DSN;
+if (dsn) {
+  Sentry.init({
+    dsn,
+    tracesSampleRate: 1,
+    enableLogs: true,
+    sendDefaultPii: true,
+  });
+}

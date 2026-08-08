@@ -6,9 +6,10 @@
  * Déploiement : supabase functions deploy send-email-test
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { addPreviewBccToPayload, RESEND_FROM } from "../_shared/resend.ts";
+import { escapeHtml, wrapEmailLayout, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -18,8 +19,8 @@ async function getUserEmailFromJwt(req: Request): Promise<string | null> {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
   const jwt = auth.slice(7);
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data, error } = await client.auth.getUser(jwt);
+  const client = createSupabaseUserClient(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+  const { data, error } = await client.auth.getUser();
   if (error || !data.user?.email) return null;
   return data.user.email;
 }
@@ -63,8 +64,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const html = `<p>Si vous recevez ce message, <strong>Resend</strong> et les secrets Supabase Edge Functions sont correctement configurés.</p>
-<p style="color:#666;font-size:12px;">Test InkFlow — expéditeur : ${RESEND_FROM}</p>`;
+    const html = wrapEmailLayout({
+      tag: "TEST",
+      title: "E-mail de test",
+      subtitle: "Vérification Resend + secrets Edge Functions.",
+      bodyHtml: `<p style="${EMAIL_STYLES.text}">Si vous recevez ce message, <strong>Resend</strong> et les secrets Supabase Edge Functions sont correctement configurés.</p>
+<p style="${EMAIL_STYLES.small}">Expéditeur : ${escapeHtml(RESEND_FROM)}</p>`,
+      hideAppPromo: true,
+    });
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

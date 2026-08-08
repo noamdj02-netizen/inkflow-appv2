@@ -1,12 +1,47 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  rateLimitByIp,
+  internalFunctionSecretOk,
+  verifyProjectRequestNotificationPayload,
+} from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** URL de l'app dashboard (jamais la landing Framer). Définir APP_URL dans les secrets Supabase. */
+const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
+
+async function notifyArtistPushNewProject(studioId: string, clientName: string): Promise<void> {
+  const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
+  try {
+    const res = await fetch(pushUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        studioId,
+        title: "Nouvelle demande de projet",
+        body: `${clientName} — ouvre Demandes pour répondre.`,
+        url: `${APP_URL}/dashboard?tab=requests`,
+        tag: "inkflow-project-request",
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      console.warn("[send-project-notification] push:", res.status, t);
+    }
+  } catch (e) {
+    console.warn("[send-project-notification] push error:", e);
+  }
+}
 
 interface NotificationPayload {
+  /** Ligne inkflow_project_requests à valider (anti-abus). */
+  projectRequestId: string;
   studioId: string;
   clientName: string;
   clientEmail: string;
@@ -69,23 +104,51 @@ function buildClientConfirmationHtml(clientName: string, studioName: string): st
   return wrapEmailLayout({ tag: "DEMANDE ENVOYÉE", title: "Demande envoyée", bodyHtml });
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
+    if (!rateLimitByIp(req, "send-project-notification", 25)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests" }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const payload: NotificationPayload = await req.json();
 
-    if (!payload.studioId || !payload.clientName || !payload.clientEmail) {
+    if (!payload.projectRequestId?.trim?.() || !payload.studioId || !payload.clientName || !payload.clientEmail) {
       return new Response(
-        JSON.stringify({ error: "studioId, clientName, and clientEmail are required" }),
+        JSON.stringify({ error: "projectRequestId, studioId, clientName, and clientEmail are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (
+      !internalFunctionSecretOk(req) &&
+      !(await verifyProjectRequestNotificationPayload(
+        supabase,
+        payload.projectRequestId,
+        payload.studioId,
+        payload.clientEmail,
+        payload.clientName,
+        payload.description ?? "",
+      ))
+    ) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!payload.description?.trim?.()) {
+      return new Response(
+        JSON.stringify({ error: "description is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
@@ -97,7 +160,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const dashboardUrl = `${SITE_URL}/dashboard`;
+    const dashboardUrl = `${APP_URL}/dashboard`;
     const artistName = studio.name || "Artiste";
     const artistHtml = buildEmailHtml(payload, artistName, dashboardUrl);
     const placementLabel = payload.placement ? ` - ${payload.placement}` : "";
@@ -115,6 +178,8 @@ Deno.serve(async (req: Request) => {
         { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    await notifyArtistPushNewProject(payload.studioId, payload.clientName);
 
     const clientHtml = buildClientConfirmationHtml(payload.clientName, studio.studioName || "le studio");
     const clientSubject = `Demande envoyée à ${studio.studioName || "le studio"} — InkFlow`;

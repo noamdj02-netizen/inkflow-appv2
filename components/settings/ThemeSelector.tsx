@@ -1,19 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import {
-  Palette,
-  Sparkles,
-  Lock,
-  Eye,
-  Check,
-  X,
-  ExternalLink,
-  LayoutTemplate,
-  Zap,
-  LayoutGrid,
-} from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Palette, Sparkles, Lock, Eye, Check, X, ExternalLink, LayoutTemplate } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-import { VITRINE_THEMES, type VitrineTheme } from '../../lib/themes';
-import { getStudioVitrineTheme, getStudioUnlockedThemes, updateStudioVitrineTheme } from '../../lib/supabaseDashboard';
+import { VITRINE_THEMES, VITRINE_THEMES_SELECTOR, type VitrineTheme } from '../../lib/themes';
+import {
+  getStudioVitrineTheme,
+  getStudioUnlockedThemes,
+  updateStudioVitrineTheme,
+} from '../../lib/supabaseDashboard';
 import { createThemeCheckoutSession } from '../../lib/stripeClient';
 
 interface ThemeSelectorProps {
@@ -27,10 +20,15 @@ interface ThemeSelectorProps {
 const ThemePreviewCard: React.FC<{ theme: VitrineTheme }> = ({ theme }) => {
   const p = theme.preview;
   const isLight =
-    p.bg.includes('fafaf9') || p.bg.includes('F5F5DC') || p.bg.includes('white') || p.bg.includes('amber');
+    p.bg.includes('fafaf9') ||
+    p.bg.includes('F5F5DC') ||
+    p.bg.includes('white') ||
+    p.bg.includes('amber');
 
   return (
-    <div className={`w-full h-full ${p.bg} flex flex-col items-center pt-4 px-3 gap-2 overflow-hidden`}>
+    <div
+      className={`w-full h-full ${p.bg} flex flex-col items-center pt-4 px-3 gap-2 overflow-hidden`}
+    >
       <div className={`w-8 h-8 rounded-full ${p.accent} flex items-center justify-center shrink-0`}>
         <div className={`w-4 h-4 rounded-full ${isLight ? 'bg-white/60' : 'bg-black/30'}`} />
       </div>
@@ -78,7 +76,10 @@ const PreviewModal: React.FC<{
   const isPremiumLocked = theme.premium && !isUnlocked;
   const p = theme.preview;
   const isLight =
-    p.bg.includes('fafaf9') || p.bg.includes('F5F5DC') || p.bg.includes('white') || p.bg.includes('amber');
+    p.bg.includes('fafaf9') ||
+    p.bg.includes('F5F5DC') ||
+    p.bg.includes('white') ||
+    p.bg.includes('amber');
 
   return (
     <div
@@ -95,7 +96,10 @@ const PreviewModal: React.FC<{
       >
         <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-[var(--border)] shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div id={titleId} className="font-display font-semibold text-base sm:text-lg text-[var(--text-primary)] truncate">
+            <div
+              id={titleId}
+              className="font-display font-semibold text-base sm:text-lg text-[var(--text-primary)] truncate"
+            >
               {theme.name}
             </div>
             {theme.premium && (
@@ -116,7 +120,9 @@ const PreviewModal: React.FC<{
           </button>
         </div>
 
-        <div className={`w-full min-h-[220px] sm:h-72 ${p.bg} relative flex justify-center overflow-y-auto overflow-x-hidden`}>
+        <div
+          className={`w-full min-h-[220px] sm:h-72 ${p.bg} relative flex justify-center overflow-y-auto overflow-x-hidden`}
+        >
           <div className="w-full max-w-sm sm:w-72 py-6 sm:pt-8 flex flex-col items-center gap-3 px-4">
             <div className={`w-16 h-16 rounded-full ${p.accent} flex items-center justify-center`}>
               <div className={`w-8 h-8 rounded-full ${isLight ? 'bg-white/60' : 'bg-black/30'}`} />
@@ -141,13 +147,17 @@ const PreviewModal: React.FC<{
           {isPremiumLocked && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-3 p-4">
               <Lock className="w-10 h-10 sm:w-12 sm:h-12 text-white" aria-hidden />
-              <p className="text-white font-semibold text-sm text-center">Thème premium — 2,99 € (paiement unique)</p>
+              <p className="text-white font-semibold text-sm text-center">
+                Thème premium — 2,99 € (paiement unique)
+              </p>
             </div>
           )}
         </div>
 
         <div className="px-4 sm:px-5 py-4 border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0 bg-[var(--bg-card-secondary)]/30">
-          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{theme.description}</p>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+            {theme.description}
+          </p>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:shrink-0">
             {isActive ? (
               <span className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 rounded-xl bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm font-semibold border border-emerald-500/25">
@@ -182,7 +192,11 @@ const PreviewModal: React.FC<{
   );
 };
 
-export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmail, publicVitrineUrl }) => {
+export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
+  studioId,
+  userEmail,
+  publicVitrineUrl,
+}) => {
   const toast = useToast();
   const [currentThemeId, setCurrentThemeId] = useState<string>('light');
   const [unlockedThemes, setUnlockedThemes] = useState<string[]>([]);
@@ -190,7 +204,6 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
   const [applying, setApplying] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<VitrineTheme | null>(null);
-  const [activeTab, setActiveTab] = useState<'free' | 'premium'>('free');
 
   const fetchData = useCallback(async () => {
     if (!studioId) {
@@ -218,14 +231,11 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
   }, [fetchData]);
 
   /** Toujours avant tout return — ne pas placer après `if (loading)` (règles des hooks). */
-  const focusThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'focus'), []);
-  const fullThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'full'), []);
-  const focusThemeNames = focusThemes.map((t) => t.name).join(' · ');
-  const fullThemeNames = fullThemes.map((t) => t.name).join(' · ');
+  const hasUnlockedTheme = (theme: VitrineTheme) =>
+    !theme.premium || unlockedThemes.includes(theme.id);
 
-  const hasUnlockedTheme = (theme: VitrineTheme) => !theme.premium || unlockedThemes.includes(theme.id);
-
-  const currentThemeName = VITRINE_THEMES.find((t) => t.id === currentThemeId)?.name ?? currentThemeId;
+  const currentThemeName =
+    VITRINE_THEMES.find((t) => t.id === currentThemeId)?.name ?? currentThemeId;
 
   const handleApplyTheme = async (theme: VitrineTheme) => {
     if (theme.premium && !hasUnlockedTheme(theme)) {
@@ -270,68 +280,35 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
     return (
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-6">
         <div className="h-8 w-48 bg-zinc-200 dark:bg-zinc-800 rounded-lg animate-pulse mb-4" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="aspect-[3/4] bg-zinc-100 dark:bg-zinc-800 rounded-2xl animate-pulse" />
-          ))}
+        <div className="max-w-sm">
+          <div className="aspect-[3/4] bg-zinc-100 dark:bg-zinc-800 rounded-2xl animate-pulse" />
         </div>
       </div>
     );
   }
 
-  const freeThemes = VITRINE_THEMES.filter((t) => !t.premium);
-  const premiumThemes = VITRINE_THEMES.filter((t) => t.premium);
-  const visibleThemes = activeTab === 'free' ? freeThemes : premiumThemes;
+  const visibleThemes = VITRINE_THEMES_SELECTOR;
 
   return (
     <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-6 md:p-8 space-y-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1.5">
-          <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+          <h3 className="type-heading flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700">
               <Palette className="w-5 h-5 text-zinc-600 dark:text-zinc-400" aria-hidden />
             </span>
             Thème de la vitrine
           </h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
-            Choisissez l’apparence de votre page publique. Aperçu en grand, puis application en un geste — même sur
-            mobile.
+          <p className="type-subtitle max-w-2xl">
+            Choisis un style puis applique avec aperçu en grand ; les modèles premium se débloquent
+            avec l&apos;offre correspondante.
           </p>
-
-          <div
-            className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/40 p-4 sm:p-5 space-y-3 max-w-3xl"
-            aria-label="Types de thèmes vitrine"
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Deux familles de thèmes
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
-              <div className="flex gap-3 min-w-0">
-                <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-zinc-900 dark:text-white">Focus & conversion</p>
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
-                    <span className="text-zinc-700 dark:text-zinc-300">{focusThemeNames}</span> — page courte : flashs,
-                    contact, réservation. Idéal depuis Instagram ou le lien en bio.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3 min-w-0">
-                <LayoutGrid className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-zinc-900 dark:text-white">Full Studio</p>
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
-                    <span className="text-zinc-700 dark:text-zinc-300">{fullThemeNames}</span> — vitrine complète :
-                    services, artistes, FAQ, contenu riche. Idéal pour le SEO et les studios avec plusieurs artistes.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-500">
             Thème actuel :{' '}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-200">{currentThemeName}</span>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-200">
+              {currentThemeName}
+            </span>
           </p>
         </div>
         {publicVitrineUrl ? (
@@ -347,42 +324,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
         ) : null}
       </div>
 
-      {/* Onglets Gratuits / Premium (style pill) */}
-      <div
-        className="inline-flex rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 gap-0.5 w-full sm:w-auto"
-        role="tablist"
-        aria-label="Type de thèmes"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'free'}
-          onClick={() => setActiveTab('free')}
-          className={`flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] ${
-            activeTab === 'free'
-              ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Gratuits ({freeThemes.length})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'premium'}
-          onClick={() => setActiveTab('premium')}
-          className={`flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5 ${
-            activeTab === 'premium'
-              ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" aria-hidden />
-          Premium ({premiumThemes.length})
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:max-w-md gap-4">
         {visibleThemes.map((theme) => (
           <ThemeCard
             key={theme.id}
@@ -474,8 +416,12 @@ const ThemeCard: React.FC<{
         <div className="flex items-start gap-2">
           <LayoutTemplate className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" aria-hidden />
           <div className="min-w-0">
-            <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{theme.name}</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">{theme.description}</p>
+            <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate">
+              {theme.name}
+            </h4>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
+              {theme.description}
+            </p>
           </div>
         </div>
 

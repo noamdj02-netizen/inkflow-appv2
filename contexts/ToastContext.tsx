@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { CheckCircle2, CircleX, AlertTriangle, Info, X } from 'lucide-react';
+import { inkflowToastVariants, inkflowTransition } from '@/lib/motion/inkflowMotion';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -26,22 +28,24 @@ export const useToast = () => {
 };
 
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle2 className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0" />,
-  error: <XCircle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0" />,
-  warning: <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />,
-  info: <Info className="w-5 h-5 text-blue-500 shrink-0" />,
+  success: <CheckCircle2 className="w-[18px] h-[18px] text-emerald-500 shrink-0" />,
+  error: <CircleX className="w-[18px] h-[18px] text-red-500 shrink-0" />,
+  warning: <AlertTriangle className="w-[18px] h-[18px] text-amber-500 shrink-0" />,
+  info: <Info className="w-[18px] h-[18px] text-blue-500 shrink-0" />,
 };
 
 const BG: Record<ToastType, string> = {
-  success: 'bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30',
-  error: 'bg-zinc-100 border-zinc-200 dark:bg-zinc-500/20 dark:border-zinc-600',
-  warning: 'bg-zinc-100 border-zinc-200 dark:bg-zinc-500/20 dark:border-zinc-600',
-  info: 'bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30',
+  success: 'bg-white/90 dark:bg-zinc-900/90 border-white/60 dark:border-zinc-700/60',
+  error: 'bg-white/90 dark:bg-zinc-900/90 border-white/60 dark:border-zinc-700/60',
+  warning: 'bg-white/90 dark:bg-zinc-900/90 border-white/60 dark:border-zinc-700/60',
+  info: 'bg-white/90 dark:bg-zinc-900/90 border-white/60 dark:border-zinc-700/60',
 };
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const reduceMotion = useReducedMotion();
   const [currentToast, setCurrentToast] = useState<Toast | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastVariants = inkflowToastVariants(Boolean(reduceMotion));
 
   const removeToast = useCallback(() => {
     setCurrentToast(null);
@@ -78,30 +82,43 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Toast container — centré en largeur (flex, pas left 50% + translate, évite décalages) ; bas sur mobile, haut sur sm+ */}
+      {/* Toast — style iOS : pill glassmorphism, spring from top */}
       <div
-        className="fixed z-[9999] pointer-events-none inset-x-0 bottom-20 flex justify-center px-4
-          sm:bottom-auto sm:top-4"
-        aria-live="polite"
-        aria-atomic="true"
-        role="status"
+        className="fixed z-[9999] pointer-events-none inset-x-0 top-4 flex justify-center px-4"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        {currentToast && (
-          <div
-            key={currentToast.id}
-            className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg animate-slide-down w-full max-w-[min(380px,calc(100vw-2rem))] ${BG[currentToast.type]}`}
-          >
-            <span className="mt-0.5 shrink-0">{ICONS[currentToast.type]}</span>
-            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100 flex-1 line-clamp-3">{currentToast.message}</span>
-            <button
-              onClick={removeToast}
-              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10 shrink-0 active:scale-95 transition-transform"
-              aria-label="Fermer"
+        <AnimatePresence>
+          {currentToast ? (
+            <motion.div
+              key={currentToast.id}
+              role={currentToast.type === 'error' ? 'alert' : 'status'}
+              aria-live={currentToast.type === 'error' ? 'assertive' : 'polite'}
+              aria-atomic="true"
+              variants={toastVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={inkflowTransition.toast(Boolean(reduceMotion))}
+              className={`pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-full border shadow-xl backdrop-blur-xl w-auto max-w-[min(400px,calc(100vw-2rem))] ${BG[currentToast.type]} ${currentToast.type === 'error' ? 'border-l-4 border-l-red-500/80 dark:border-l-red-400/70' : ''}`}
+              style={{
+                boxShadow: '0 8px 32px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08)',
+              }}
             >
-              <X className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-            </button>
-          </div>
-        )}
+              <span className="shrink-0">{ICONS[currentToast.type]}</span>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 line-clamp-2">
+                {currentToast.message}
+              </span>
+              <button
+                type="button"
+                onClick={removeToast}
+                className="ml-1 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full hover:bg-black/8 dark:hover:bg-white/10 shrink-0 active:scale-90 transition-transform"
+                aria-label="Fermer"
+              >
+                <X className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

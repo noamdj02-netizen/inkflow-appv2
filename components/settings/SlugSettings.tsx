@@ -3,6 +3,8 @@ import { Link2, Check, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { checkSlugAvailable, updateStudioSlug } from '../../lib/supabaseDashboard';
 import { APP_URL } from '../../lib/urls';
+import { trackNorthStarFunnelStep } from '../../lib/analytics/capture';
+import { Modal } from '../ui/Modal';
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
 const SLUG_MIN_LENGTH = 3;
@@ -10,10 +12,37 @@ const SLUG_MAX_LENGTH = 50;
 
 // Slugs système réservés — un tatoueur ne peut pas les usurper
 const RESERVED_SLUGS = new Set([
-  'demo', 'admin', 'api', 'app', 'auth', 'billing', 'blog', 'callback',
-  'dashboard', 'help', 'inkflow', 'login', 'logout', 'mail', 'me', 'pricing',
-  'privacy', 'profile', 'public', 'register', 'reset', 'settings', 'signup',
-  'status', 'studio', 'support', 'terms', 'test', 'user', 'users', 'www',
+  'demo',
+  'admin',
+  'api',
+  'app',
+  'auth',
+  'billing',
+  'blog',
+  'callback',
+  'dashboard',
+  'help',
+  'inkflow',
+  'login',
+  'logout',
+  'mail',
+  'me',
+  'pricing',
+  'privacy',
+  'profile',
+  'public',
+  'register',
+  'reset',
+  'settings',
+  'signup',
+  'status',
+  'studio',
+  'support',
+  'terms',
+  'test',
+  'user',
+  'users',
+  'www',
 ]);
 
 function isReservedSlug(s: string): boolean {
@@ -34,14 +63,9 @@ function sanitizeSlugInput(value: string): string {
 
 function generateCandidates(base: string): string[] {
   const b = sanitizeSlugInput(base);
-  return [
-    `${b}-ink`,
-    `${b}-tattoo`,
-    `${b}-studio`,
-    `${b}-art`,
-    `${b}-2`,
-    `${b}-3`,
-  ].filter(s => s.length >= SLUG_MIN_LENGTH && SLUG_REGEX.test(s));
+  return [`${b}-ink`, `${b}-tattoo`, `${b}-studio`, `${b}-art`, `${b}-2`, `${b}-3`].filter(
+    (s) => s.length >= SLUG_MIN_LENGTH && SLUG_REGEX.test(s)
+  );
 }
 
 interface SlugSettingsProps {
@@ -59,9 +83,12 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
   const [slug, setSlug] = useState(currentSlug);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [availability, setAvailability] = useState<'idle' | 'available' | 'taken' | 'invalid'>('idle');
+  const [availability, setAvailability] = useState<'idle' | 'available' | 'taken' | 'invalid'>(
+    'idle'
+  );
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSlugChangeConfirm, setShowSlugChangeConfirm] = useState(false);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : APP_URL;
   const prefix = `${baseUrl}/studio/`;
@@ -136,30 +163,48 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
   }, [slug, currentSlug, studioId]);
 
   const isValid = slug.length >= SLUG_MIN_LENGTH && SLUG_REGEX.test(slug);
-  const canSave = isValid && (availability === 'available' || slug === currentSlug) && !saving;
+  const hasSlugChange = slug !== currentSlug;
+  const canSave = isValid && hasSlugChange && availability === 'available' && !saving;
 
-  const handleSave = async () => {
-    if (!canSave || !slug) return;
-    // Double guard — refuse reserved slugs even if canSave somehow passed
-    if (isReservedSlug(slug)) {
-      toast.error('Ce slug est réservé par le système.');
-      return;
-    }
+  const performSave = async (nextSlug: string) => {
+    const isFirstPublicSlug = !currentSlug?.trim();
     setSaving(true);
     try {
-      await updateStudioSlug(studioId, slug);
-      if (currentSlug && currentSlug !== slug) {
+      await updateStudioSlug(studioId, nextSlug);
+      if (isFirstPublicSlug) {
+        trackNorthStarFunnelStep('public_booking_url_live', { slug: nextSlug });
+      }
+      if (currentSlug && currentSlug !== nextSlug) {
         localStorage.removeItem(`inkflow-vitrine-${currentSlug}`);
       }
-      onSlugUpdated?.(slug);
+      onSlugUpdated?.(nextSlug);
       toast.success('URL personnalisée enregistrée');
       setAvailability('idle');
       setSuggestions([]);
+      setShowSlugChangeConfirm(false);
     } catch {
       toast.error('Erreur lors de la sauvegarde. Ce slug est peut-être déjà pris.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveClick = () => {
+    if (!canSave || !slug) return;
+    if (isReservedSlug(slug)) {
+      toast.error('Ce slug est réservé par le système.');
+      return;
+    }
+    if (currentSlug && slug !== currentSlug) {
+      setShowSlugChangeConfirm(true);
+      return;
+    }
+    void performSave(slug);
+  };
+
+  const handleConfirmSlugChange = () => {
+    if (!slug || !canSave) return;
+    void performSave(slug);
   };
 
   const pickSuggestion = useCallback((s: string) => {
@@ -175,15 +220,21 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
         URL personnalisée
       </h3>
       <p className="text-sm text-[var(--text-secondary)] mb-4">
-        Choisissez l&apos;adresse unique de votre page vitrine. Uniquement minuscules, chiffres et tirets.
+        Choisissez l&apos;adresse de votre page vitrine. Uniquement minuscules, chiffres et tirets (
+        {SLUG_MIN_LENGTH}–{SLUG_MAX_LENGTH} caractères). Modifier l&apos;URL après coup invalide les
+        anciens liens et QR — une confirmation vous sera demandée.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className={`flex flex-1 rounded-xl border overflow-hidden transition-colors ${
-          availability === 'taken' ? 'border-red-400 dark:border-red-500' :
-          availability === 'available' ? 'border-green-500 dark:border-green-400' :
-          'border-[var(--border)]'
-        } bg-[var(--bg-primary)]`}>
+        <div
+          className={`flex flex-1 rounded-xl border overflow-hidden transition-colors ${
+            availability === 'taken'
+              ? 'border-red-400 dark:border-red-500'
+              : availability === 'available'
+                ? 'border-green-500 dark:border-green-400'
+                : 'border-[var(--border)]'
+          } bg-[var(--bg-primary)]`}
+        >
           <span className="px-4 py-3 text-sm text-[var(--text-secondary)] bg-[var(--bg-card-secondary)] border-r border-[var(--border)] whitespace-nowrap">
             {prefix}
           </span>
@@ -208,9 +259,10 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
           )}
         </div>
         <button
-          onClick={handleSave}
+          type="button"
+          onClick={handleSaveClick}
           disabled={!canSave}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] min-h-[44px]"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-blue-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] min-h-[44px]"
         >
           {saving ? (
             <>
@@ -240,7 +292,9 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
               <div className="space-y-3">
                 <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1.5 font-medium">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {isReservedSlug(slug) ? 'Ce slug est réservé par le système InkFlow' : 'Ce slug est déjà pris par un autre studio'}
+                  {isReservedSlug(slug)
+                    ? 'Ce slug est réservé par le système InkFlow'
+                    : 'Ce slug est déjà pris par un autre studio'}
                 </p>
 
                 {/* Suggestions */}
@@ -253,11 +307,11 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
                     {loadingSuggestions ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--text-tertiary)]" />
                     ) : (
-                      suggestions.map(s => (
+                      suggestions.map((s) => (
                         <button
                           key={s}
                           onClick={() => pickSuggestion(s)}
-                          className="px-3 py-1 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30 hover:bg-violet-100 dark:hover:bg-violet-500/20 transition-colors active:scale-95"
+                          className="px-3 py-1 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 hover:bg-violet-100 dark:hover:bg-violet-500/20 transition-colors active:scale-95"
                         >
                           {s}
                         </button>
@@ -276,6 +330,47 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
           </>
         )}
       </div>
+
+      <Modal
+        isOpen={showSlugChangeConfirm}
+        onClose={() => !saving && setShowSlugChangeConfirm(false)}
+        title="Confirmer le changement d’URL"
+        size="sm"
+      >
+        <div className="space-y-4 text-[var(--text-secondary)] text-sm">
+          <p>
+            L&apos;adresse{' '}
+            <span className="font-mono text-[var(--text-primary)]">/studio/{currentSlug}</span> ne
+            fonctionnera plus. Les clients qui utilisent encore ce lien ou un QR imprimé devront
+            utiliser la nouvelle URL.
+          </p>
+          <p className="font-medium text-[var(--text-primary)]">
+            Nouvelle URL :{' '}
+            <span className="font-mono break-all">
+              {prefix}
+              {slug}
+            </span>
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3 pt-2">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setShowSlugChangeConfirm(false)}
+              className="min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2.5 font-semibold text-[var(--text-primary)] transition-all hover:bg-[var(--bg-hover)] active:scale-[0.98] disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleConfirmSlugChange}
+              className="min-h-[44px] rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition-all hover:bg-violet-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Confirmer et enregistrer'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

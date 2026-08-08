@@ -20,7 +20,7 @@ import { useToast } from '../../contexts/ToastContext';
 import {
   parseClientImportFile,
   isClientImportFileNameOk,
-  downloadClientImportTemplateXlsx,
+  downloadClientImportTemplateCsv,
 } from '../../lib/parseClientImportFile';
 
 /** Ligne prête pour l’API après validation (date normalisée ISO jour ou null) */
@@ -53,7 +53,9 @@ const EMPTY_MAP = '';
 
 const emailSchema = z.string().trim().email({ message: 'Email invalide' });
 
-function parseReservationDate(raw: string): { ok: true; iso: string } | { ok: false; error: string } {
+function parseReservationDate(
+  raw: string
+): { ok: true; iso: string } | { ok: false; error: string } {
   const t = raw.trim();
   if (!t) return { ok: false, error: 'Date vide' };
 
@@ -125,8 +127,7 @@ function validateParsedRows(
     const lineErr: string[] = [];
     const name = String(raw[mapping.name] ?? '').trim();
     const emailRaw = String(raw[mapping.email] ?? '').trim();
-    const phoneRaw =
-      mapping.phone === EMPTY_MAP ? '' : String(raw[mapping.phone] ?? '').trim();
+    const phoneRaw = mapping.phone === EMPTY_MAP ? '' : String(raw[mapping.phone] ?? '').trim();
     const dateRaw =
       mapping.reservationDate === EMPTY_MAP
         ? ''
@@ -245,7 +246,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
   const processFile = useCallback(
     async (file: File) => {
       if (!isClientImportFileNameOk(file.name)) {
-        toast.error('Formats acceptés : CSV, Excel (.xlsx, .xls)');
+        toast.error('Formats acceptés : fichier .csv uniquement');
         return;
       }
       const maxBytes = maxFileSizeMb * 1024 * 1024;
@@ -276,11 +277,11 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
     [applyGuessMapping, maxFileSizeMb, maxRows, toast]
   );
 
-  const handleDownloadTemplate = useCallback(async () => {
+  const handleDownloadTemplate = useCallback(() => {
     setTemplateLoading(true);
     try {
-      await downloadClientImportTemplateXlsx();
-      toast.success('Modèle téléchargé — ouvre-le dans Excel ou Google Sheets');
+      downloadClientImportTemplateCsv();
+      toast.success('Modèle CSV téléchargé — ouvre-le dans Excel ou Google Sheets');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Téléchargement impossible');
     } finally {
@@ -434,7 +435,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
             <h3 className="text-sm font-semibold truncate">Importer des clients</h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
               {step === 'drop' &&
-                'CSV ou Excel — ou saisis tes clients directement ici (enregistrés dans ton CRM)'}
+                'Fichier CSV — ou saisis tes clients directement ici (enregistrés dans ton CRM)'}
               {step === 'map' && fileName && <span className="tabular-nums">{fileName}</span>}
               {step === 'preview' && `${validatedRows.length} ligne(s) validée(s)`}
             </p>
@@ -472,9 +473,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
               <ArrowRight className="w-3.5 h-3.5 opacity-50 shrink-0" />
               <span
                 className={
-                  step === 'preview'
-                    ? 'font-semibold text-sky-600 dark:text-sky-400'
-                    : 'opacity-70'
+                  step === 'preview' ? 'font-semibold text-sky-600 dark:text-sky-400' : 'opacity-70'
                 }
               >
                 Validation
@@ -486,9 +485,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
                 {i > 0 && <ArrowRight className="w-3.5 h-3.5 opacity-50 shrink-0" />}
                 <span
                   className={
-                    step === s
-                      ? 'font-semibold text-sky-600 dark:text-sky-400'
-                      : 'opacity-70'
+                    step === s ? 'font-semibold text-sky-600 dark:text-sky-400' : 'opacity-70'
                   }
                 >
                   {s === 'drop' ? 'Fichier' : s === 'map' ? 'Colonnes' : 'Validation'}
@@ -542,12 +539,12 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
               <>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Modèle prêt à remplir (Excel, Numbers, Google Sheets).
+                    Modèle prêt à remplir — exporte en .csv pour l’import InkFlow.
                   </p>
                   <button
                     type="button"
                     disabled={templateLoading}
-                    onClick={() => void handleDownloadTemplate()}
+                    onClick={() => handleDownloadTemplate()}
                     className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] disabled:opacity-50"
                   >
                     {templateLoading ? (
@@ -555,7 +552,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
                     ) : (
                       <FileDown className="w-4 h-4" />
                     )}
-                    Télécharger le modèle (.xlsx)
+                    Télécharger le modèle (.csv)
                   </button>
                 </div>
 
@@ -579,8 +576,8 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
                     className={`w-10 h-10 ${dragOver ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400'}`}
                   />
                   <p className="text-sm text-center text-zinc-600 dark:text-zinc-300 max-w-md">
-                    Glisse-dépose un fichier <strong>.csv</strong>, <strong>.xlsx</strong> ou{' '}
-                    <strong>.xls</strong> (première feuille = tableau avec en-têtes)
+                    Glisse-dépose un fichier <strong>.csv</strong> avec en-têtes sur la première
+                    ligne (UTF-8).
                   </p>
                   <label className="cursor-pointer">
                     <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98]">
@@ -588,14 +585,14 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
                     </span>
                     <input
                       type="file"
-                      accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      accept=".csv,text/csv"
                       className="hidden"
                       onChange={onFileInput}
                     />
                   </label>
                   <p className="text-[11px] text-zinc-500 text-center max-w-md leading-relaxed">
-                    Max {maxFileSizeMb} Mo · {maxRows} lignes · UTF-8 pour le CSV. Tu peux aussi exporter depuis
-                    Excel / Google Sheets en <strong>.xlsx</strong> sans passer par le CSV.
+                    Max {maxFileSizeMb} Mo · {maxRows} lignes · UTF-8. Exporte depuis Excel ou
+                    Google Sheets au format CSV.
                   </p>
                 </div>
               </>
@@ -604,8 +601,8 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
             {sourceTab === 'manual' && (
               <div className="space-y-3">
                 <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                  Une ligne = un client. <span className="text-rose-500 dark:text-rose-400">*</span> Nom et email
-                  obligatoires pour valider la ligne.
+                  Une ligne = un client. <span className="text-rose-500 dark:text-rose-400">*</span>{' '}
+                  Nom et email obligatoires pour valider la ligne.
                 </p>
                 <div className="max-h-[min(50vh,320px)] overflow-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
                   <table className="w-full text-left text-xs min-w-[520px]">
@@ -751,9 +748,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
                     </label>
                     <select
                       value={mapping[key]}
-                      onChange={(e) =>
-                        setMapping((m) => ({ ...m, [key]: e.target.value }))
-                      }
+                      onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
                       className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 dark:focus:border-sky-500"
                     >
                       <option value={EMPTY_MAP}>
@@ -844,7 +839,9 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
 
             {rowErrors.size > 0 && (
               <details className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 px-3 py-2 text-xs text-rose-900 dark:text-rose-200">
-                <summary className="cursor-pointer font-medium py-1">Détail des erreurs (n° ligne fichier)</summary>
+                <summary className="cursor-pointer font-medium py-1">
+                  Détail des erreurs (n° ligne fichier)
+                </summary>
                 <ul className="mt-2 space-y-1 max-h-32 overflow-auto">
                   {[...rowErrors.entries()].slice(0, 50).map(([line, errs]) => (
                     <li key={line}>

@@ -11,11 +11,26 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
+    "resolveJsonModule": true,
     "jsx": "react-jsx",
     "paths": { "@/*": ["./*"] },
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": ["**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "supabase/functions", "app", "inkflow-mobile"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "supabase/functions",
+    "app",
+    "inkflow-mobile",
+    "mobile",
+    "_design_import",
+    "test-results",
+    "pages/_error.tsx",
+    "claude-skills",
+    "mon-app",
+    "video",
+    "docs/build-partner"
+  ]
 }

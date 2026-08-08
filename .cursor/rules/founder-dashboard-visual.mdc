@@ -1,0 +1,67 @@
+---
+description: AGENT 13 — Founder Dashboard (visuel)
+globs: pages/admin/**,components/admin/**,App.tsx
+alwaysApply: false
+---
+
+Tu es le **développeur** du **Founder Dashboard** InkFlow : interface de **monitoring personnel** pour **Noam**.
+
+Pour les **définitions de métriques** et le **rapport quotidien texte**, croiser **`.cursor/rules/founder-dashboard.mdc`** (AGENT 5).
+
+## Surface & accès
+
+- **URL cible** : **`/admin`** sur l’app (`app.ink-flow.me/admin` en prod).
+- **Privé** : **aucun** accès public ; **aucun** lien dans le marketing.
+- **Autorisé** : uniquement le **compte fondateur** — implémenter via **allowlist** (ex. `VITE_FOUNDER_ADMIN_EMAILS` ou variable serveur) comparée à `user.email` **après** session Supabase, **+** `email_confirmed_at` / équivalent. **Ne jamais** hardcoder l’email en clair dans le repo ; **ne pas** s’appuyer sur le seul `isAdmin` côté client sans vérif serveur / RLS pour les agrégats sensibles.
+
+Si la route n’existe pas encore : ajouter dans `App.tsx` (ex. `{ path: '/admin', component: AdminFounderPage, requiresAuth: true }`) + garde **redirect** hors allowlist.
+
+## Layout — 4 rangées de widgets
+
+### ROW 1 — KPIs temps réel
+
+- **Studios actifs** (fenêtre **7 derniers jours** — définition alignée sur `founder-dashboard.mdc` / schéma).
+- **MRR estimé** : abonnements actifs × prix plan (source Stripe ou `inkflow_subscriptions` — **documenter** la formule).
+- **Bookings aujourd’hui** (`inkflow_bookings` ou équivalent, timezone UTC → Europe/Paris).
+- **Acomptes encaissés ce mois** (`inkflow_payments`, `status = paid`, période calendaire mois courant).
+
+### ROW 2 — Activité
+
+- **Nouveaux inscrits** : courbe **30 jours** (`inkflow_studios.created_at`).
+- **Taux activation onboarding** : progression **step 0 → 3** (`inkflow_user_settings.onboarding_step`).
+- **Demandes projets par statut** : graphique **donut** (`inkflow_project_requests`).
+- **Taux acceptation projets** : acceptés / total (statuts à valider en prod).
+
+### ROW 3 — Alertes
+
+- **Studios bloqués** en onboarding (step inférieur à 3 au-delà de X jours — seuil produit).
+- **Acomptes impayés** depuis **plus de 48 h** (aligner sur `remind-unpaid-deposits` / champs `deposit_paid`, etc.).
+- **Erreurs** : `auth_suspicious_logs` **si la table existe** — sinon section « à brancher » ou **logs Supabase** / Edge (pas de faux positif).
+- **Studios inactifs** depuis **plus de 14 jours** (proxy activité — voir AGENT 5).
+
+### ROW 4 — Croissance
+
+- **Churn estimé** (mois en cours — définition avec Stripe / `inkflow_subscriptions`).
+- **Upgrades** Basic → Pro → Studio (mapping `plan_type` / Stripe — voir `pricing-retention.mdc`).
+- **Top studios** (plus actifs — KPI à définir : bookings, revenus, etc.).
+- **Géographie** : carte **studios par ville** (`city`, `city_slug`, `inkflow_city_pages` — pas de précision adresse personnelle).
+
+## Stack (repo)
+
+- **React + Tailwind** ; tokens **`.cursor/rules/design-system.mdc`** (`#0d0d0d`, etc.).
+- **Graphiques** : **Recharts** (déjà dans `package.json`).
+- **Données** : préférer **Edge Function** ou **RPC** avec **service role** côté serveur pour agrégats admin — **ne pas** exposer les clés ; le client appelle une route sécurisée.
+- **Temps réel** : **Supabase Realtime** sur tables ciblées si pertinent ; sinon **refresh auto toutes les 5 min** (`setInterval` + `refetch` / React Query si présent).
+
+## Règles produit / légal
+
+- **Mobile-first** même pour l’admin (grilles responsive, scroll par rangée).
+- **Données sensibles** (MRR exact, volumes) : **masquées par défaut** (floutage ou `••••`) + **toggle** « afficher » (session courte, pas de persistance en localStorage pour les montants si possible).
+- **Export CSV** : disponible **par widget** (agrégats uniquement).
+- **0 données personnelles clients** : pas de nom, email, téléphone d’un **client final** ; uniquement **métriques** et **IDs studio** / **slug** si besoin opérationnel.
+
+## Sortie attendue (dev)
+
+1. **Arborescence** composants (`AdminLayout`, `KpiRow`, `ActivityRow`, …).
+2. **Liste des requêtes** (RPC ou Edge) avec champs utilisés.
+3. **Checklist** avant merge : auth allowlist, pas de PII, pas de secret client.

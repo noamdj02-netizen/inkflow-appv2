@@ -1,10 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const STRIPE_PORTAL_CONFIGURATION_ID = Deno.env.get("STRIPE_PORTAL_CONFIGURATION_ID") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 /** URL absolue de l'app (dashboard, etc.). En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
 const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
@@ -53,6 +55,57 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Configuration serveur incomplète" }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.match(/^Bearer\s+(.+)$/i);
+    const jwt = bearer?.[1]?.trim();
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Non authentifié" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const supabaseUser = createSupabaseUserClient(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+    const { data: userData, error: authErr } = await supabaseUser.auth.getUser();
+    const user = userData?.user;
+    if (authErr || !user?.id) {
+      return new Response(JSON.stringify({ error: "Non authentifié" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    let emailNorm = user.email?.trim().toLowerCase() ?? "";
+    if (!emailNorm) {
+      const { data: fullUser, error: adminErr } = await supabase.auth.admin.getUserById(user.id);
+      if (adminErr) {
+        console.error("[create-portal-session] admin.getUserById:", adminErr.message);
+        return new Response(JSON.stringify({ error: "Non authentifié" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      emailNorm = fullUser.user?.email?.trim().toLowerCase() ?? "";
+    }
+    if (!emailNorm) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Aucune adresse e-mail sur ce compte : nécessaire pour le portail de facturation.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     const payload: PortalPayload = await req.json().catch(() => ({}));
 
     if (!payload.studioId && !payload.email) {
@@ -62,14 +115,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    if (payload.email && payload.email.trim().toLowerCase() !== emailNorm) {
+      return new Response(
+        JSON.stringify({ error: "Accès refusé : cet abonnement ne vous appartient pas." }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     if (!STRIPE_SECRET_KEY) {
       return new Response(
         JSON.stringify({ error: "Stripe is not configured" }),
         { status: 501, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     let studioId: string;
     let studioEmail: string;
@@ -86,7 +144,8 @@ Deno.serve(async (req: Request) => {
           { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
-      if (payload.email && (studio.email as string)?.toLowerCase() !== (payload.email as string)?.toLowerCase()) {
+      const rowEmail = ((studio.email as string) || "").trim().toLowerCase();
+      if (rowEmail !== emailNorm) {
         return new Response(
           JSON.stringify({ error: "Accès refusé : cet abonnement ne vous appartient pas." }),
           { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -98,7 +157,7 @@ Deno.serve(async (req: Request) => {
       const { data: rows, error } = await supabase
         .from("inkflow_studios")
         .select("id, email")
-        .eq("email", payload.email)
+        .ilike("email", emailNorm)
         .order("updated_at", { ascending: false })
         .limit(1);
       const studio = rows?.[0];
@@ -106,6 +165,13 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({ error: "Studio not found for this email" }),
           { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      const rowEmail = ((studio.email as string) || "").trim().toLowerCase();
+      if (rowEmail !== emailNorm) {
+        return new Response(
+          JSON.stringify({ error: "Accès refusé : cet abonnement ne vous appartient pas." }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
       studioId = studio.id;
@@ -122,7 +188,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const returnUrl = `${APP_URL}/dashboard`;
+    /** Retour utilisateur : ouvre Facturation dans l’app (effet `billing_portal` dans DashboardPro). */
+    const returnUrl = `${APP_URL}/dashboard?billing_portal=return`;
     const body = new URLSearchParams({
       customer: customerId,
       return_url: returnUrl,

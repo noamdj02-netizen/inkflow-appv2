@@ -5,6 +5,7 @@
 
 import { wrapEmailLayout, escapeHtml } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -17,11 +18,6 @@ interface Payload {
   studioName?: string;
   threadId: string;
 }
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 function buildEmailHtml(payload: Payload, conversationUrl: string): string {
   const safeClientName = escapeHtml(payload.clientName);
@@ -41,6 +37,7 @@ function buildEmailHtml(payload: Payload, conversationUrl: string): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

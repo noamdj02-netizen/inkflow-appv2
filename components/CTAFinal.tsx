@@ -32,7 +32,8 @@ export const CTAFinal: React.FC = () => {
         </h2>
 
         <p className="text-base sm:text-lg md:text-xl text-neutral-300 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed px-2">
-          Rejoignez 500+ tatoueurs qui ont déjà automatisé leur gestion et se concentrent sur leur art.
+          Rejoignez 500+ tatoueurs qui ont déjà automatisé leur gestion et se concentrent sur leur
+          art.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -55,13 +56,25 @@ export const CTAFinal: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-neutral-400">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-green-400" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-5 h-5 text-green-400"
+              fill="none"
+              strokeWidth="2"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <span>Essai gratuit 14 jours</span>
+            <span>Essai gratuit 1 mois</span>
           </div>
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-green-400" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-5 h-5 text-green-400"
+              fill="none"
+              strokeWidth="2"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             <span>Annulation à tout moment</span>
@@ -71,11 +84,13 @@ export const CTAFinal: React.FC = () => {
         <div className="mt-16 pt-10 border-t border-white/10">
           <p className="text-neutral-400 mb-4">Ils nous font déjà confiance</p>
           <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-            {['Ink & Soul', 'Dark Art Studio', 'Electric Tattoo', 'Urban Ink', 'Noir Tattoo'].map((studio, i) => (
-              <div key={i} className="text-sm font-semibold tracking-wider">
-                {studio}
-              </div>
-            ))}
+            {['Ink & Soul', 'Dark Art Studio', 'Electric Tattoo', 'Urban Ink', 'Noir Tattoo'].map(
+              (studio, i) => (
+                <div key={i} className="text-sm font-semibold tracking-wider">
+                  {studio}
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
