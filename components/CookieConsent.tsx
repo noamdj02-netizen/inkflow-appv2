@@ -85,14 +85,14 @@ export const CookieConsent: React.FC = () => {
             publicité ciblée.{' '}
             <a
               href={APP_COOKIES_PATH}
-              className="font-medium text-blue-900 underline-offset-2 hover:underline"
+              className="font-medium text-zinc-700 underline-offset-2 hover:underline hover:text-zinc-900"
             >
               Politique cookies
             </a>{' '}
             ·{' '}
             <a
               href={APP_PRIVACY_PATH}
-              className="font-medium text-blue-900 underline-offset-2 hover:underline"
+              className="font-medium text-zinc-700 underline-offset-2 hover:underline hover:text-zinc-900"
             >
               Confidentialité
             </a>

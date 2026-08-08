@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConfigProvider } from 'antd-mobile';
+import ConfigProvider from 'antd-mobile/es/components/config-provider';
 import frFR from 'antd-mobile/es/locales/fr-FR';
 import 'antd-mobile/es/global/global.css';
 import { getAntdMobileDashboardTheme } from '@/lib/antdMobileDashboardTheme';

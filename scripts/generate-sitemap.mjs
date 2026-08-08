@@ -15,7 +15,27 @@ import { createClient } from '@supabase/supabase-js';
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const SITE_URL = 'https://ink-flow.me';
+/** Domaine canonique SPA (aligné lib/urls.ts APP_URL) — vitrines /book sous app.ink-flow.me */
+const APP_ORIGIN = 'https://app.ink-flow.me';
+
+function resolveSitemapOrigin() {
+  const raw = (process.env.VITE_APP_URL || process.env.SITE_URL || APP_ORIGIN).trim();
+  try {
+    const u = new URL(raw.replace(/\/+$/, '') || APP_ORIGIN);
+    u.hostname = u.hostname.replace(/\.+$/, '').toLowerCase();
+    if (u.hostname === 'ink-flow.me' || u.hostname === 'www.ink-flow.me') {
+      return APP_ORIGIN;
+    }
+    if (u.protocol === 'http:' || u.protocol === 'https:') {
+      return u.origin;
+    }
+  } catch {
+    /* fall through */
+  }
+  return APP_ORIGIN;
+}
+
+const SITE_URL = resolveSitemapOrigin();
 
 // Charger .env.local (Node 18+ : --env-file=.env.local peut être utilisé à la place)
 const envPath = resolve(process.cwd(), '.env.local');

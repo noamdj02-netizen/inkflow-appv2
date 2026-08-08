@@ -512,6 +512,49 @@ video {
     sans-serif;
 }
 
+/*
+ * antd-mobile/global.css force `a { color: #1677ff }` — si le chunk dashboard
+ * est déjà en cache, neutraliser sur landing / vitrine (classes Tailwind conservées).
+ */
+.landing-scroll a.text-zinc-900 {
+  color: rgb(24 24 27);
+}
+.landing-scroll a.text-zinc-700 {
+  color: rgb(63 63 70);
+}
+.landing-scroll a.text-zinc-600 {
+  color: rgb(82 82 91);
+}
+.landing-scroll a.text-white {
+  color: rgb(255 255 255);
+}
+.landing-scroll a.text-neutral-600 {
+  color: rgb(82 82 91);
+}
+.landing-scroll a.text-neutral-900 {
+  color: rgb(23 23 23);
+}
+.landing-scroll header a:not(.bg-zinc-900):not(.text-white) {
+  color: rgb(63 63 70);
+}
+.landing-scroll header a.text-zinc-600 {
+  color: rgb(82 82 91);
+}
+.landing-scroll header a.text-zinc-900,
+.landing-scroll header a.bg-zinc-900,
+.landing-scroll header a.text-white {
+  color: rgb(255 255 255);
+}
+.landing-scroll [role='dialog'] a.text-zinc-700 {
+  color: rgb(63 63 70);
+}
+.landing-scroll .landing-hero a.text-zinc-900 {
+  color: rgb(24 24 27);
+}
+.landing-scroll .landing-hero a.text-white {
+  color: rgb(255 255 255);
+}
+
 /* Landing marketing — fond hero (vidéo + repli sombre) */
 .landing-hero {
   background-color: #0a0a0a;

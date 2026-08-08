@@ -1,4 +1,4 @@
-import { Empty } from 'antd-mobile';
+import Empty from 'antd-mobile/es/components/empty';
 import type { ReactNode } from 'react';
 
 type DashboardAdmEmptyProps = {

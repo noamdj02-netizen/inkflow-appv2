@@ -94,7 +94,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CapsuleTabs, PullToRefresh } from 'antd-mobile';
+import CapsuleTabs from 'antd-mobile/es/components/capsule-tabs';
+import PullToRefresh from 'antd-mobile/es/components/pull-to-refresh';
 import { DashboardAdmEmpty } from './ui/DashboardAdmEmpty';
 import type { RequestsSourceFilter } from '@/lib/dashboardNavUrl';
 import {

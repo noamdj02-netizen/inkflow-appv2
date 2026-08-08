@@ -1,4 +1,4 @@
-import { CapsuleTabs } from 'antd-mobile';
+import CapsuleTabs from 'antd-mobile/es/components/capsule-tabs';
 import type { LucideIcon } from 'lucide-react';
 
 export type DashboardSettingsTabOption = {
