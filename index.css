@@ -517,42 +517,42 @@ video {
  * est déjà en cache, neutraliser sur landing / vitrine (classes Tailwind conservées).
  */
 .landing-scroll a.text-zinc-900 {
-  color: rgb(24 24 27);
+  color: rgb(24 24 27) !important;
 }
 .landing-scroll a.text-zinc-700 {
-  color: rgb(63 63 70);
+  color: rgb(63 63 70) !important;
 }
 .landing-scroll a.text-zinc-600 {
-  color: rgb(82 82 91);
+  color: rgb(82 82 91) !important;
 }
 .landing-scroll a.text-white {
-  color: rgb(255 255 255);
+  color: rgb(255 255 255) !important;
 }
 .landing-scroll a.text-neutral-600 {
-  color: rgb(82 82 91);
+  color: rgb(82 82 91) !important;
 }
 .landing-scroll a.text-neutral-900 {
-  color: rgb(23 23 23);
+  color: rgb(23 23 23) !important;
 }
 .landing-scroll header a:not(.bg-zinc-900):not(.text-white) {
-  color: rgb(63 63 70);
+  color: rgb(63 63 70) !important;
 }
 .landing-scroll header a.text-zinc-600 {
-  color: rgb(82 82 91);
+  color: rgb(82 82 91) !important;
 }
 .landing-scroll header a.text-zinc-900,
 .landing-scroll header a.bg-zinc-900,
 .landing-scroll header a.text-white {
-  color: rgb(255 255 255);
+  color: rgb(255 255 255) !important;
 }
 .landing-scroll [role='dialog'] a.text-zinc-700 {
-  color: rgb(63 63 70);
+  color: rgb(63 63 70) !important;
 }
 .landing-scroll .landing-hero a.text-zinc-900 {
-  color: rgb(24 24 27);
+  color: rgb(24 24 27) !important;
 }
 .landing-scroll .landing-hero a.text-white {
-  color: rgb(255 255 255);
+  color: rgb(255 255 255) !important;
 }
 
 /* Landing marketing — fond hero (vidéo + repli sombre) */

@@ -145,7 +145,7 @@ export const EnhanceAIHero: React.FC = () => {
           >
             <motion.a
               href="/signup"
-              className="group inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-zinc-900 shadow-[0_16px_32px_-12px_rgba(0,0,0,0.45)] transition-colors hover:bg-zinc-100 sm:w-auto sm:justify-center"
+              className="group inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold !text-zinc-900 shadow-[0_16px_32px_-12px_rgba(0,0,0,0.45)] transition-colors hover:bg-zinc-100 sm:w-auto sm:justify-center"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -157,7 +157,7 @@ export const EnhanceAIHero: React.FC = () => {
             </motion.a>
             <motion.a
               href="/dashboard-demo"
-              className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/15 sm:w-auto"
+              className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-semibold !text-white backdrop-blur-sm transition-colors hover:bg-white/15 sm:w-auto"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

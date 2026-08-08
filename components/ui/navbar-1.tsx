@@ -53,7 +53,10 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
         aria-label="Navigation principale"
       >
         <div className="pointer-events-auto relative z-10 flex w-full max-w-3xl items-center justify-between rounded-full border border-zinc-200/80 bg-white/95 px-4 py-2.5 shadow-lg shadow-zinc-900/5 backdrop-blur-md sm:px-6 sm:py-3">
-          <a href={getLandingHomeHref()} className="flex shrink-0 items-center gap-2.5">
+          <a
+            href={getLandingHomeHref()}
+            className="flex shrink-0 items-center gap-2.5 !text-zinc-900"
+          >
             <motion.div
               className="flex items-center"
               initial={{ scale: 0.92 }}
@@ -79,7 +82,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
               >
                 <a
                   href={item.href}
-                  className="rounded-full px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                  className="rounded-full px-3 py-1.5 text-sm font-medium !text-zinc-700 transition-colors hover:bg-zinc-100 hover:!text-zinc-900"
                 >
                   {item.label}
                 </a>
@@ -91,7 +94,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
             <LanguageToggle />
             <a
               href="/login"
-              className="text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900"
+              className="text-sm font-semibold !text-zinc-600 transition-colors hover:!text-zinc-900"
             >
               {t('nav.login')}
             </a>
@@ -103,7 +106,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
             >
               <a
                 href="/signup"
-                className="inline-flex min-h-[40px] items-center justify-center rounded-full bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 active:scale-[0.98]"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-full bg-zinc-900 px-4 text-sm font-semibold !text-white transition-colors hover:bg-zinc-800 active:scale-[0.98]"
               >
                 {t('nav.trial')}
               </a>
@@ -156,7 +159,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
                 >
                   <a
                     href={item.href}
-                    className="block rounded-xl px-2 py-3.5 text-base font-medium text-zinc-900"
+                    className="block rounded-xl px-2 py-3.5 text-base font-medium !text-zinc-900"
                     onClick={closeMenu}
                   >
                     {item.label}
@@ -177,14 +180,14 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
               >
                 <a
                   href="/login"
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-200 text-base font-semibold text-zinc-900"
+                  className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-200 text-base font-semibold !text-zinc-900"
                   onClick={closeMenu}
                 >
                   {t('nav.login')}
                 </a>
                 <a
                   href="/signup"
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-zinc-900 text-base font-semibold text-white active:scale-[0.98]"
+                  className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-zinc-900 text-base font-semibold !text-white active:scale-[0.98]"
                   onClick={closeMenu}
                 >
                   {t('nav.trial')}
