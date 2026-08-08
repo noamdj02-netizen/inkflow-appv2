@@ -32,7 +32,7 @@ import {
   PLACEMENT_OTHER_VALUE,
 } from '../../hooks/useBookingFlow';
 import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
-import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
+import { getLandingHomeHref, getClientAccountHubPath } from '../../lib/urls';
 
 /** Emplacements proposés si le flash n’a pas de liste côté artiste */
 const DEFAULT_BODY_PLACEMENTS = [
@@ -47,8 +47,6 @@ const DEFAULT_BODY_PLACEMENTS = [
   'Cheville',
   'Main / doigts',
 ];
-
-const PLACEMENT_OTHER_VALUE = '__other__';
 
 interface PublicBookingPageProps {
   studioSlug: string;
@@ -65,48 +63,6 @@ interface PublicFlash {
   available: boolean;
   /** Zones conseillées par l’artiste (vitrine ou Supabase) */
   placement?: string[];
-}
-
-function mapVitrineFlashToPublic(f: {
-  id: string;
-  title?: string;
-  price?: number;
-  depositAmount?: number;
-  depositPercentage?: number;
-  imageUrl?: string;
-  available?: boolean;
-  placement?: string[];
-}): PublicFlash {
-  return {
-    id: f.id,
-    title: f.title,
-    price: f.price,
-    depositAmount: f.depositAmount,
-    depositPercentage: f.depositPercentage,
-    imageUrl: f.imageUrl,
-    available: f.available !== false,
-    placement: Array.isArray(f.placement) && f.placement.length > 0 ? f.placement : undefined,
-  };
-}
-
-function mapDbFlashToPublic(f: FlashDesign): PublicFlash {
-  return {
-    id: f.id,
-    title: f.title,
-    price: f.price,
-    depositAmount: f.depositAmount,
-    imageUrl: f.imageUrl,
-    available: f.available && !f.reserved,
-    placement: f.placement?.length ? f.placement : undefined,
-  };
-}
-
-function replaceUrlFlashParam(flashId: string | null): void {
-  if (typeof window === 'undefined') return;
-  const url = new URL(window.location.href);
-  if (flashId) url.searchParams.set('flash', flashId);
-  else url.searchParams.delete('flash');
-  window.history.replaceState({}, '', url.toString());
 }
 
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
@@ -272,7 +228,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </p>
         <div className="flex w-full max-w-xs flex-col gap-3">
           <motion.a
-            href={LANDING_URL}
+            href={getLandingHomeHref()}
             whileTap={tap}
             className="h-14 flex items-center justify-center rounded-xl border border-ink-border bg-white text-ink-text font-semibold hover:bg-zinc-50 transition-colors"
           >

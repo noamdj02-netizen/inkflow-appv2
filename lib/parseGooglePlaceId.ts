@@ -115,49 +115,6 @@ function extractFromAllDataSegments(s: string): string | null {
   return null;
 }
 
-function tryDecode(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-}
-
-function extractChIJFromString(s: string): string | null {
-  const m = s.match(CHIJ_IN_TEXT);
-  if (!m?.[1]) return null;
-  const id = m[1];
-  return PLACE_ID_LIKE.test(id) ? id : null;
-}
-
-/** Variantes utiles (encodage partiel dans la barre d’adresse) */
-function inputVariants(raw: string): string[] {
-  const s = raw.trim();
-  const out: string[] = [s];
-  const dec = tryDecode(s);
-  if (dec !== s) out.push(dec);
-  const bang = s.replace(/%21/gi, '!').replace(/%26/gi, '&');
-  if (bang !== s) out.push(bang);
-  const bangDec = tryDecode(bang);
-  if (bangDec !== bang && bangDec !== s && bangDec !== dec) out.push(bangDec);
-  return [...new Set(out)];
-}
-
-/** Segment data=… des URL Maps (souvent !1sChIJ… ou !1s0x…:0x…) */
-function extractFromDataSegment(s: string): string | null {
-  const m = s.match(/(?:^|[?&/])data=([^?#]+)/);
-  if (!m?.[1]) return null;
-  let part = m[1];
-  try {
-    part = decodeURIComponent(part);
-  } catch {
-    /* garde brut */
-  }
-  const chij = part.match(/!1s(ChIJ[A-Za-z0-9_-]{10,200})/);
-  if (chij?.[1] && PLACE_ID_LIKE.test(chij[1])) return chij[1];
-  return null;
-}
-
 /**
  * Retourne le Place ID si trouvé, sinon null.
  */

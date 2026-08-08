@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, CalendarDays, Mail, Map, Wallet } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
-import { LANDING_URL, sanitizePostAuthRedirect } from '../lib/urls';
+import { getLandingHomeHref, sanitizePostAuthRedirect } from '../lib/urls';
 import {
   resolvePostLoginPath,
   remapSunsetClientPortalPaths,
@@ -17,6 +17,8 @@ import {
   useAuth,
 } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { HeroBackgroundVideo } from '../components/common/HeroBackgroundVideo';
 
 const LOGIN_HERO_POSTER = '/images/login-hero-poster.jpg';
@@ -272,6 +274,7 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
 
 export const LoginPage: React.FC = () => {
   const { user, isAuthenticated, authLoading, resendSignupConfirmation } = useAuth();
+  const { t } = useLanguage();
   const toast = useToast();
   const initialQ = readLoginPageQueryOnce();
   const [checkEmailMessage, setCheckEmailMessage] = useState(initialQ.checkEmail);
@@ -346,7 +349,7 @@ export const LoginPage: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-black">
         <Logo className="dark:invert" />
-        <p className="mt-4 text-sm text-zinc-500">Redirection…</p>
+        <p className="mt-4 text-sm text-zinc-500">{t('auth.redirecting')}</p>
       </div>
     );
   }
@@ -360,24 +363,23 @@ export const LoginPage: React.FC = () => {
         transition={{ duration: 0.3 }}
       >
         <SEO
-          title="Connexion"
-          description="Connectez-vous à votre espace InkFlow : agenda, réservations, clients et paiements Stripe pour votre studio de tatouage."
+          title={t('auth.login.seoTitle')}
+          description={t('auth.login.seoDescription')}
           canonical="/login"
           keywords="connexion InkFlow, espace tatoueur, login studio tattoo"
           ogImageAlt="Connexion InkFlow"
         />
         {/* ── LEFT — Login Form (scrollable : Safari / clavier mobile) ── */}
         <div className="flex-1 flex flex-col min-h-0 min-h-[100dvh]">
-          <header className="p-4 sm:p-6 safe-top flex-shrink-0">
+          <header className="p-4 sm:p-6 safe-top flex-shrink-0 flex items-center justify-between gap-3">
             <a
-              href={LANDING_URL}
+              href={getLandingHomeHref()}
               className="inline-flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Retour</span>
+              <span className="text-sm font-medium">{t('auth.back')}</span>
             </a>
+            <LanguageToggle />
           </header>
 
           <div
@@ -409,9 +411,9 @@ export const LoginPage: React.FC = () => {
                     </span>
                   </div>
                   <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
-                    Bon retour !
+                    {t('auth.login.title')}
                   </h1>
-                  <p className="type-body text-muted-foreground">Connectez-vous à votre compte</p>
+                  <p className="type-body text-muted-foreground">{t('auth.login.subtitle')}</p>
                 </div>
 
                 {/* Email confirmation message */}
@@ -420,24 +422,15 @@ export const LoginPage: React.FC = () => {
                     <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                        Compte créé ! Ouvrez l’e-mail InkFlow et cliquez sur le lien pour activer
-                        votre compte.
+                        {t('auth.login.confirmTitle')}
                       </p>
                       <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
-                        {inviteTeamEmailPending ? (
-                          <>
-                            Invitation équipe : ouvrez l&apos;email de confirmation, validez votre
-                            compte, puis{' '}
-                            <strong className="font-semibold">revenez sur cette page</strong> pour
-                            vous connecter avec la même adresse (celle du tatoueur).
-                          </>
-                        ) : (
-                          <>Cliquez sur le lien dans l&apos;email pour activer votre compte.</>
-                        )}
+                        {inviteTeamEmailPending
+                          ? t('auth.login.confirmInvite')
+                          : t('auth.login.confirmBody')}
                       </p>
                       <p className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-2">
-                        Rien reçu ? Vérifiez les courriers indésirables, puis utilisez le bouton
-                        sous le champ e-mail.
+                        {t('auth.login.confirmSpam')}
                       </p>
                     </div>
                   </div>
@@ -456,30 +449,26 @@ export const LoginPage: React.FC = () => {
                       setResendLoading(true);
                       try {
                         await resendSignupConfirmation(loginEmailForResend.trim());
-                        toast.success(
-                          'Lien d’activation envoyé. Vérifiez votre boîte (et les spams).'
-                        );
+                        toast.success(t('auth.login.resendSuccess'));
                       } catch (e) {
-                        toast.error(
-                          e instanceof Error ? e.message : 'Impossible de renvoyer l’e-mail.'
-                        );
+                        toast.error(e instanceof Error ? e.message : t('auth.login.resendError'));
                       } finally {
                         setResendLoading(false);
                       }
                     }}
                     className="mt-3 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-semibold text-zinc-900 shadow-sm transition-all active:scale-[0.98] disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 min-h-[48px]"
                   >
-                    {resendLoading ? 'Envoi…' : 'Renvoyer l’e-mail de confirmation'}
+                    {resendLoading ? t('auth.login.resending') : t('auth.login.resend')}
                   </button>
                 )}
 
                 <p className="text-center mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-                  Pas encore de compte ?{' '}
+                  {t('auth.login.noAccount')}{' '}
                   <a
                     href="/signup"
                     className="font-semibold text-zinc-900 dark:text-white hover:text-zinc-700 dark:hover:text-zinc-200 underline underline-offset-2"
                   >
-                    Créer un compte
+                    {t('auth.login.createAccount')}
                   </a>
                 </p>
               </motion.div>
@@ -499,7 +488,7 @@ export const LoginPage: React.FC = () => {
             posterFallbackSrc={LOGIN_HERO_POSTER_FALLBACK}
             mp4Src={LOGIN_HERO_MP4}
             webmSrc={LOGIN_HERO_WEBM}
-            alt="Tatoueur au travail dans un studio"
+            alt={t('auth.login.heroAlt')}
             className="min-h-full"
             objectPosition="bottom"
           />
@@ -511,10 +500,10 @@ export const LoginPage: React.FC = () => {
 
           <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
             <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
-              Gérez votre studio.
+              {t('auth.login.heroTitle')}
             </h2>
             <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
-              Libérez votre art.
+              {t('auth.login.heroSubtitle')}
             </p>
           </div>
         </motion.div>
