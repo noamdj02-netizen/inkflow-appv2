@@ -9,7 +9,7 @@ import {
   createFaqSchemaFromPairs,
   createWebPageSchema,
 } from '../../components/SEO';
-import { APP_URL, LANDING_URL } from '../../lib/urls';
+import { APP_URL, getLandingHomeHref, getLandingHomeUrl } from '../../lib/urls';
 import { FeaturePreview } from '../../components/features/FeaturePreview';
 import { FEATURES, FEATURE_PAGE_UPDATED } from './featureSlugsData';
 
@@ -30,7 +30,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
         />
         <div className="text-center">
           <h1 className="type-heading mb-4">Page non trouvée</h1>
-          <a href={LANDING_URL} className="text-blue-600 hover:underline">
+          <a href={getLandingHomeHref()} className="text-blue-600 hover:underline">
             Retour à l'accueil
           </a>
         </div>
@@ -60,7 +60,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
             dateModified: FEATURE_PAGE_UPDATED,
           }),
           createBreadcrumbSchema([
-            { name: 'Accueil', url: LANDING_URL },
+            { name: 'Accueil', url: getLandingHomeUrl() },
             { name: feature.title, url: pageUrl },
           ]),
           createFaqSchemaFromPairs(faqPairs),
@@ -114,7 +114,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
                   <ArrowRight className="w-4 h-4" />
                 </a>
                 <a
-                  href={LANDING_URL}
+                  href={getLandingHomeHref()}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-neutral-300 text-neutral-700 font-semibold hover:bg-neutral-50 transition-colors"
                 >
                   Retour à l'accueil

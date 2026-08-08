@@ -46,7 +46,7 @@ import {
   getClientAccountHubPath,
   getClientMagicLinkRedirectTo,
   getClientPortalOAuthRedirectTo,
-  LANDING_URL,
+  getLandingHomeHref,
 } from '../../lib/urls';
 import { isAppleSignInEnabled } from '../../lib/appleAuthFeature';
 
@@ -356,7 +356,7 @@ export const ClientAccountHubPage: React.FC = () => {
           noindex
         />
         <div className="mx-auto max-w-md px-4 py-10 sm:py-14">
-          <a href={LANDING_URL} className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 mb-8">
+          <a href={getLandingHomeHref()} className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 mb-8">
             <Sparkles className="w-4 h-4" aria-hidden />
             InkFlow
           </a>

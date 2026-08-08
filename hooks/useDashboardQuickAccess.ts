@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { buildQuickAccessInsightI18n } from '../lib/dashboardI18n';
 import {
-  buildQuickAccessInsight,
   filterQuickAccessIds,
   loadQuickAccessState,
   quickAccessStorageKey,
@@ -40,6 +41,7 @@ export function useDashboardQuickAccess(options: {
   todaySessionCount: number;
   moduleFlags: QuickAccessModuleFlags;
 }) {
+  const { t, lang } = useLanguage();
   const storageKey = quickAccessStorageKey(options.studioId, options.userId);
   const [state, setState] = useState<QuickAccessPersisted>(() => loadQuickAccessState(storageKey));
 
@@ -83,13 +85,13 @@ export function useDashboardQuickAccess(options: {
 
   const insight: QuickAccessInsight = useMemo(
     () =>
-      buildQuickAccessInsight({
+      buildQuickAccessInsightI18n(t, {
         demandes: options.demandes,
         todaySessionCount: options.todaySessionCount,
         lastRecentId: recents[0] ?? pins[0] ?? null,
         flags: options.moduleFlags,
       }),
-    [options.demandes, options.todaySessionCount, recents, pins, options.moduleFlags]
+    [t, lang, options.demandes, options.todaySessionCount, recents, pins, options.moduleFlags]
   );
 
   const togglePin = useCallback(

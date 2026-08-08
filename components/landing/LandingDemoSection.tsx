@@ -1,20 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardDemoPreview } from './DashboardDemoPreview';
 import { LandingSectionHeader } from './landingUi';
 import { LandingMotionItem, LandingMotionStagger } from './landingMotion';
-
-export const LANDING_DEMO_BULLETS = [
-  'Créneaux bloqués dès l’acompte',
-  'Fiche client + historique en un tap',
-  'Demandes projet et vitrine dans l’inbox',
-] as const;
 
 /**
  * Démo produit — stagger Motion + parallax scrub sur la preview.
  */
 export const LandingDemoSection: React.FC = () => {
+  const { t } = useLanguage();
+
+  const bullets = useMemo(() => [t('demo.bullet1'), t('demo.bullet2'), t('demo.bullet3')], [t]);
+
   return (
     <section
       id="demo"
@@ -26,15 +25,15 @@ export const LandingDemoSection: React.FC = () => {
           <LandingMotionStagger className="min-w-0">
             <LandingMotionItem hover3D={false} className="min-w-0">
               <LandingSectionHeader
-                badge="Démo interactive"
-                title="Vois InkFlow en action"
-                description="Agenda, encaissements Stripe, inbox demandes et CRM — aperçu de l’interface InkFlow."
+                badge={t('demo.badge')}
+                title={t('demo.title')}
+                description={t('demo.description')}
                 align="left"
                 static
                 className="mb-8"
               />
             </LandingMotionItem>
-            {LANDING_DEMO_BULLETS.map((line, i) => (
+            {bullets.map((line, i) => (
               <LandingMotionItem
                 key={line}
                 index={i + 1}
@@ -52,23 +51,20 @@ export const LandingDemoSection: React.FC = () => {
                   className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-zinc-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_-12px_rgba(9,9,11,0.35)] transition-all hover:bg-zinc-800 active:scale-[0.98]"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  title="Sandbox interactive — flux réel sans inscription"
+                  title={t('demo.sandboxTitle')}
                 >
                   <Play className="h-4 w-4" strokeWidth={2} />
-                  Lancer la démo live
+                  {t('demo.ctaLive')}
                   <ArrowRight className="h-4 w-4" strokeWidth={2} />
                 </motion.a>
                 <a
                   href="/signup"
                   className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-zinc-200 bg-white/80 px-6 py-3 text-sm font-semibold text-zinc-900 backdrop-blur-sm transition-colors hover:bg-white active:scale-[0.98]"
                 >
-                  Créer mon studio
+                  {t('demo.ctaSignup')}
                 </a>
               </div>
-              <p className="max-w-md text-xs text-zinc-500">
-                L&apos;aperçu joue une démo automatique — pages, demandes et notifications. Survole
-                pour mettre en pause, ou lance la sandbox pour tester le flux réel.
-              </p>
+              <p className="max-w-md text-xs text-zinc-500">{t('demo.hint')}</p>
             </LandingMotionItem>
           </LandingMotionStagger>
 

@@ -1,8 +1,11 @@
 import React from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { LandingSnowDashboardScaled } from './LandingSnowDashboard';
 
 /** Aperçu dashboard landing — démo auto (pages + notifications). */
 export const DashboardDemoPreview: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const { t } = useLanguage();
+
   return (
     <div
       className={`relative w-full max-w-[min(100%,1104px)] overflow-hidden rounded-3xl shadow-[0_24px_48px_-16px_rgba(9,9,11,0.22)] ${className}`}
@@ -16,7 +19,7 @@ export const DashboardDemoPreview: React.FC<{ className?: string }> = ({ classNa
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-          En direct
+          {t('demo.liveBadge')}
         </span>
       </div>
       <LandingSnowDashboardScaled />

@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabase';
 import { ensureStudio, getStudioAvatarUrlByEmail } from '../lib/supabaseDashboard';
 import { linkCollaboratorArtistAccountToUser } from '../lib/collaboratorStudio';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
-import { getAuthCallbackRedirectTo, LANDING_URL } from '../lib/urls';
+import { getAuthCallbackRedirectTo, getLandingHomeHref } from '../lib/urls';
 import { mapSignupError } from '../lib/supabaseAuthMessages';
 import { requestStudioActivationLink } from '../lib/studioActivationEmail';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
@@ -449,7 +449,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     resetPosthogIdentity();
     setUser(null);
     clearAllInkflowStorage();
-    if (typeof window !== 'undefined') window.location.href = LANDING_URL;
+    if (typeof window !== 'undefined') window.location.href = getLandingHomeHref();
   }, [isSupabaseAuthEnabled]);
 
   const updateUser = useCallback((updates: Partial<User>) => {

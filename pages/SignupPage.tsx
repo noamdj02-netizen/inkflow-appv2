@@ -4,9 +4,12 @@ import { ArrowLeft, Gift } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { SignupForm } from '../components/auth/SignupForm';
 import { SEO } from '../components/SEO';
-import { LANDING_URL } from '../lib/urls';
+import { getLandingHomeHref } from '../lib/urls';
+import { useLanguage } from '../contexts/LanguageContext';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 export const SignupPage: React.FC = () => {
+  const { t } = useLanguage();
   const hasRef = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return !!new URLSearchParams(window.location.search).get('ref');
@@ -20,24 +23,23 @@ export const SignupPage: React.FC = () => {
       transition={{ duration: 0.3 }}
     >
       <SEO
-        title="Créer un compte gratuit"
-        description="Créez votre compte studio en France : 1 mois pour tester résa en ligne, CRM, acomptes Stripe (EUR), page vitrine. Sans carte au départ."
+        title={t('auth.signup.seoTitle')}
+        description={t('auth.signup.seoDescription')}
         canonical="/signup"
         keywords="inscription InkFlow, essai gratuit tatoueur France, créer compte studio tattoo, logiciel tatoueur"
         ogImageAlt="Inscription InkFlow"
       />
       {/* ── LEFT — Signup Form ── */}
       <div className="flex-1 flex flex-col min-h-0 min-h-[100dvh]">
-        <header className="p-4 sm:p-6 safe-top flex-shrink-0">
+        <header className="p-4 sm:p-6 safe-top flex-shrink-0 flex items-center justify-between gap-3">
           <a
-            href={LANDING_URL}
+            href={getLandingHomeHref()}
             className="inline-flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Retour</span>
+            <span className="text-sm font-medium">{t('auth.back')}</span>
           </a>
+          <LanguageToggle />
         </header>
 
         <div
@@ -67,35 +69,36 @@ export const SignupPage: React.FC = () => {
                         strokeWidth={1.5}
                       />
                       <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                        1 mois offert — lien parrainé
+                        {t('auth.signup.referralBadge')}
                       </span>
                     </div>
                   </div>
                 )}
 
                 <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
-                  Ouvre ton compte studio
+                  {t('auth.signup.title')}
                 </h1>
-                <p className="type-body text-muted-foreground">
-                  Environ 1 minute · 1 mois d&apos;essai gratuit · Sans carte au départ
-                </p>
+                <p className="type-body text-muted-foreground">{t('auth.signup.subtitle')}</p>
               </div>
 
               <SignupForm />
 
               <p className="text-center mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-                Vous avez déjà un compte ?{' '}
+                {t('auth.signup.hasAccount')}{' '}
                 <a
                   href="/login"
                   className="font-semibold text-zinc-900 dark:text-white hover:text-zinc-700 dark:hover:text-zinc-200 underline underline-offset-2"
                 >
-                  Se connecter
+                  {t('auth.signup.signIn')}
                 </a>
               </p>
 
-              {/* Garanties */}
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-400 dark:text-zinc-500">
-                {['1 mois gratuit', 'Pas de carte bancaire', 'Annulation facile'].map((g) => (
+                {[
+                  t('auth.signup.guarantee1'),
+                  t('auth.signup.guarantee2'),
+                  t('auth.signup.guarantee3'),
+                ].map((g) => (
                   <div key={g} className="flex items-center gap-1.5">
                     <svg
                       className="w-3.5 h-3.5 text-emerald-500"
@@ -125,7 +128,7 @@ export const SignupPage: React.FC = () => {
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
           src="/images/referral-hero-studio1.png"
-          alt="Studio de tatouage"
+          alt={t('auth.signup.heroAlt')}
           className="absolute inset-0 w-full min-h-full object-cover object-bottom"
           loading="eager"
           fetchPriority="high"
@@ -134,12 +137,10 @@ export const SignupPage: React.FC = () => {
         {/* Texte en overlay par-dessus la photo */}
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
-            Votre art mérite
-            <br />
-            le meilleur outil.
+            {t('auth.signup.heroTitle')}
           </h2>
           <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
-            Rejoignez 500+ tatoueurs sur InkFlow.
+            {t('auth.signup.heroSubtitle')}
           </p>
         </div>
       </motion.div>

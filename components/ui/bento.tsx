@@ -11,33 +11,33 @@ type BentoImage = {
   imgClassName?: string;
 };
 
-/** Visuels produit InkFlow — captures et mockups déjà utilisés sur la landing. */
+/** Visuels section Tarifs — `public/images/pricing-bento/` (alignés sur le copy des cartes). */
 const BENTO_IMAGES = {
   booking: {
-    src: '/images/pricing-bento-inkflow-mobile.png',
-    alt: 'Demandes projet et aperçu rapide — app InkFlow sur mobile',
-    objectPosition: 'center',
+    src: '/images/pricing-bento/agenda-reservations.png',
+    alt: 'Agenda InkFlow — demandes projet, acompte Stripe et acceptation RDV',
+    objectPosition: 'center top',
   },
   payments: {
-    src: '/Mobile_Mockup_2.2.jpg',
-    alt: 'Acomptes Stripe encaissés dans InkFlow',
-    objectPosition: 'center',
+    src: '/images/pricing-bento/paiements-acompte-stripe.jpg',
+    alt: 'Checkout Stripe — acompte tatouage encaissé via InkFlow',
+    objectPosition: 'center top',
   },
   crm: {
-    src: '/images/feature-crm.png',
-    alt: 'CRM client et projets tatouage InkFlow',
-    objectPosition: 'top center',
+    src: '/images/pricing-bento/crm-dossier-client.png',
+    alt: 'Vitrine et dossier client — historique, avis et réservation en ligne',
+    objectPosition: 'center 20%',
   },
   traceability: {
-    src: '/images/referral-hero-workstation.png',
-    alt: 'Poste de travail studio — traçabilité consommables',
-    objectPosition: 'center',
+    src: '/images/pricing-bento/traceabilite-consommables.png',
+    alt: 'Poste de travail tatoueur — encres et traçabilité consommables légale',
+    objectPosition: 'center 75%',
   },
   team: {
-    src: '/images/feature-dashboard.png',
-    webpSrc: '/images/hero-dashboard-mockup.webp',
-    alt: 'Pilotage studio et statistiques InkFlow',
-    objectPosition: 'top center',
+    src: '/images/pricing-bento/studio-pilotage.png',
+    webpSrc: '/images/pricing-bento/studio-pilotage.webp',
+    alt: 'Pilotage studio — agenda, demandes et RDV sans acompte sur mobile',
+    objectPosition: 'center top',
   },
 } as const satisfies Record<string, BentoImage>;
 
@@ -50,7 +50,7 @@ function BentoGraphic({
   imgClassName = '',
 }: BentoImage & { className?: string }) {
   return (
-    <picture className={clsx('absolute inset-0 block h-full w-full', className)}>
+    <picture className={clsx('block h-full w-full', className)}>
       {webpSrc ? <source srcSet={webpSrc} type="image/webp" /> : null}
       <img
         src={src}
@@ -94,14 +94,14 @@ export function BentoCard({
       )}
     >
       <div className="relative h-52 shrink-0 sm:h-60 lg:h-[17rem]">
-        {graphic}
+        <div className="absolute inset-0 z-0">{graphic}</div>
         {fade.includes('top') && (
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 to-transparent opacity-60" />
+          <div className="absolute inset-0 z-[1] bg-gradient-to-b from-zinc-950/80 to-transparent opacity-60" />
         )}
         {fade.includes('bottom') && (
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent to-50% opacity-90" />
+          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-zinc-950 to-transparent to-55% opacity-80" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent to-65%" />
       </div>
       <div className="relative z-20 -mt-16 flex min-h-[9.5rem] flex-col justify-end p-6 backdrop-blur-sm sm:p-8 lg:-mt-20 lg:min-h-[10.5rem]">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">{eyebrow}</p>

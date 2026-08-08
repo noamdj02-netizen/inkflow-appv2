@@ -61,10 +61,11 @@ interface BillingSettingsProps {
   onStudioSubscriptionRefresh?: () => void | Promise<void>;
 }
 
-const BILLING_PLAN_IDS: SubscriptionPlan[] = ['solo', 'pro', 'studio'];
+const BILLING_PLAN_IDS = ['solo', 'pro', 'studio'] as const satisfies readonly SubscriptionPlan[];
+type BillablePlanId = (typeof BILLING_PLAN_IDS)[number];
 
 type BillingPlanCard = {
-  id: SubscriptionPlan;
+  id: BillablePlanId;
   name: string;
   description: string;
   details: string;
@@ -77,7 +78,7 @@ type BillingPlanCard = {
 };
 
 const BILLING_PLAN_COPY: Record<
-  (typeof BILLING_PLAN_IDS)[number],
+  BillablePlanId,
   Omit<BillingPlanCard, 'id' | 'name' | 'priceMonthly' | 'priceAnnual'>
 > = {
   solo: {

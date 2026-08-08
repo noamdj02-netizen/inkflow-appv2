@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { ArrowLeft, CreditCard, HelpCircle, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { SEO } from '../components/SEO';
-import { LANDING_URL } from '../lib/urls';
+import { getLandingHomeHref } from '../lib/urls';
 import { supportMailto, SUPPORT_EMAIL } from '../lib/supportContact';
 
 /** Playbook déploiement — uniquement en dev local (jamais en prod pour clients / utilisateurs finaux). */
@@ -29,7 +29,7 @@ export const AidePage: React.FC = () => {
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <a
-            href={LANDING_URL}
+            href={getLandingHomeHref()}
             className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />

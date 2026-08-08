@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type {
   DashboardExpandedMenus,
   DashboardTabId,
@@ -19,53 +20,82 @@ export type LandingDemoScene = {
   };
 };
 
-export const LANDING_DEMO_SCENES: LandingDemoScene[] = [
+const SCENE_DEFS: Array<{
+  id: LandingDemoSceneId;
+  tab: DashboardTabId;
+  durationMs: number;
+  expandedMenus: Partial<DashboardExpandedMenus>;
+  titleKey: string;
+  breadcrumbKey: string;
+  notifTitleKey: string;
+  notifTimeKey: string;
+}> = [
   {
     id: 'overview',
     tab: 'overview',
-    title: 'Vue d’ensemble',
-    breadcrumb: 'Vue d’ensemble',
     durationMs: 4500,
     expandedMenus: { requests: true },
-    notification: { title: 'RDV confirmé — Léa M.', time: 'À l’instant' },
+    titleKey: 'demo.scene.overview.title',
+    breadcrumbKey: 'demo.scene.overview.breadcrumb',
+    notifTitleKey: 'demo.scene.overview.notif',
+    notifTimeKey: 'demo.scene.overview.time',
   },
   {
     id: 'requests',
     tab: 'requests',
-    title: 'Demandes',
-    breadcrumb: 'Demandes / À traiter',
     durationMs: 5200,
     expandedMenus: { requests: true },
-    notification: { title: 'Nouvelle demande vitrine — Alice M.', time: 'Il y a 2 min' },
+    titleKey: 'demo.scene.requests.title',
+    breadcrumbKey: 'demo.scene.requests.breadcrumb',
+    notifTitleKey: 'demo.scene.requests.notif',
+    notifTimeKey: 'demo.scene.requests.time',
   },
   {
     id: 'appointments',
     tab: 'appointments',
-    title: 'Planning',
-    breadcrumb: 'Planning / Semaine',
     durationMs: 4200,
     expandedMenus: { planning: true },
-    notification: { title: 'Créneau bloqué — 14:00', time: 'Il y a 5 min' },
+    titleKey: 'demo.scene.appointments.title',
+    breadcrumbKey: 'demo.scene.appointments.breadcrumb',
+    notifTitleKey: 'demo.scene.appointments.notif',
+    notifTimeKey: 'demo.scene.appointments.time',
   },
   {
     id: 'clients',
     tab: 'clients',
-    title: 'Clients',
-    breadcrumb: 'Clients / Vue d’ensemble',
     durationMs: 4000,
     expandedMenus: { clients: true },
-    notification: { title: 'Message client — Tom R.', time: 'Il y a 8 min' },
+    titleKey: 'demo.scene.clients.title',
+    breadcrumbKey: 'demo.scene.clients.breadcrumb',
+    notifTitleKey: 'demo.scene.clients.notif',
+    notifTimeKey: 'demo.scene.clients.time',
   },
   {
     id: 'finance',
     tab: 'finance',
-    title: 'Finance',
-    breadcrumb: 'Finance / Acomptes',
     durationMs: 4200,
     expandedMenus: { finance: true },
-    notification: { title: 'Acompte 120 € encaissé — Stripe', time: 'Il y a 12 min' },
+    titleKey: 'demo.scene.finance.title',
+    breadcrumbKey: 'demo.scene.finance.breadcrumb',
+    notifTitleKey: 'demo.scene.finance.notif',
+    notifTimeKey: 'demo.scene.finance.time',
   },
 ];
+
+export function buildLandingDemoScenes(t: (key: string) => string): LandingDemoScene[] {
+  return SCENE_DEFS.map((def) => ({
+    id: def.id,
+    tab: def.tab,
+    durationMs: def.durationMs,
+    expandedMenus: def.expandedMenus,
+    title: t(def.titleKey),
+    breadcrumb: t(def.breadcrumbKey),
+    notification: {
+      title: t(def.notifTitleKey),
+      time: t(def.notifTimeKey),
+    },
+  }));
+}
 
 const DEFAULT_EXPANDED: DashboardExpandedMenus = {
   finance: false,
@@ -77,14 +107,20 @@ const DEFAULT_EXPANDED: DashboardExpandedMenus = {
 };
 
 /** Onglet sidebar → scène démo (agenda = planning). */
-export function resolveLandingDemoSceneForTab(tab: DashboardTabId): LandingDemoScene {
+export function resolveLandingDemoSceneForTab(
+  tab: DashboardTabId,
+  scenes: LandingDemoScene[]
+): LandingDemoScene {
   if (tab === 'agenda') {
-    return LANDING_DEMO_SCENES.find((s) => s.id === 'appointments') ?? LANDING_DEMO_SCENES[0]!;
+    return scenes.find((s) => s.id === 'appointments') ?? scenes[0]!;
   }
-  return LANDING_DEMO_SCENES.find((s) => s.tab === tab) ?? LANDING_DEMO_SCENES[0]!;
+  return scenes.find((s) => s.tab === tab) ?? scenes[0]!;
 }
 
 export function useLandingDashboardDemoPlayback() {
+  const { t, lang } = useLanguage();
+  const scenes = useMemo(() => buildLandingDemoScenes(t), [t]);
+
   const [sceneIndex, setSceneIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<DashboardTabId>('overview');
   const [expandedMenus, setExpandedMenus] = useState<DashboardExpandedMenus>(DEFAULT_EXPANDED);
@@ -92,22 +128,31 @@ export function useLandingDashboardDemoPlayback() {
   const [bellPulse, setBellPulse] = useState(false);
   const pausedRef = useRef(false);
 
-  const scene = LANDING_DEMO_SCENES[sceneIndex] ?? LANDING_DEMO_SCENES[0];
+  const scene = scenes[sceneIndex] ?? scenes[0]!;
 
-  const applyScene = useCallback((index: number) => {
-    const next = LANDING_DEMO_SCENES[index];
-    if (!next) return;
+  useEffect(() => {
+    setSceneIndex(0);
+    setActiveTab('overview');
+    setToastQueue([]);
+  }, [lang]);
 
-    setSceneIndex(index);
-    setActiveTab(next.tab);
-    setExpandedMenus((prev) => ({ ...prev, ...next.expandedMenus }));
+  const applyScene = useCallback(
+    (index: number) => {
+      const next = scenes[index];
+      if (!next) return;
 
-    if (next.notification) {
-      setToastQueue((q) => [next.notification!.title, ...q].slice(0, 4));
-      setBellPulse(true);
-      window.setTimeout(() => setBellPulse(false), 700);
-    }
-  }, []);
+      setSceneIndex(index);
+      setActiveTab(next.tab);
+      setExpandedMenus((prev) => ({ ...prev, ...next.expandedMenus }));
+
+      if (next.notification) {
+        setToastQueue((q) => [next.notification!.title, ...q].slice(0, 4));
+        setBellPulse(true);
+        window.setTimeout(() => setBellPulse(false), 700);
+      }
+    },
+    [scenes]
+  );
 
   useEffect(() => {
     const reduced =
@@ -118,12 +163,12 @@ export function useLandingDashboardDemoPlayback() {
 
     const timer = window.setTimeout(() => {
       if (pausedRef.current) return;
-      const nextIndex = (sceneIndex + 1) % LANDING_DEMO_SCENES.length;
+      const nextIndex = (sceneIndex + 1) % scenes.length;
       applyScene(nextIndex);
     }, scene.durationMs);
 
     return () => window.clearTimeout(timer);
-  }, [sceneIndex, scene.durationMs, applyScene]);
+  }, [sceneIndex, scene.durationMs, applyScene, scenes.length]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;
@@ -145,5 +190,6 @@ export function useLandingDashboardDemoPlayback() {
     pause,
     resume,
     applyScene,
+    scenes,
   };
 }

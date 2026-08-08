@@ -152,6 +152,8 @@ export function LandingMotionStagger({
 }
 
 type LandingMotionItemProps = {
+  /** Réservé React — évite TS2322 dans les `.map()` landing. */
+  key?: React.Key;
   children: React.ReactNode;
   className?: string;
   index?: number;

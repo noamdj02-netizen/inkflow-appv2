@@ -14,8 +14,11 @@ import {
   Check,
   Building2,
   AlertTriangle,
+  Languages,
 } from 'lucide-react';
 import { BillingSettings } from './BillingSettings';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   dashboardAvatarFrame,
   dashboardBtnAccent,
@@ -237,6 +240,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   isStudioOwner = true,
 }) => {
   const toast = useToast();
+  const { t } = useLanguage();
   const [view, setView] = useState<AccountView>('home');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -247,10 +251,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
 
   const planLabel =
     subscriptionStatus === 'active'
-      ? 'Plan Pro actif'
+      ? t('dashboard.account.planActive')
       : subscriptionStatus === 'trialing'
-        ? "Période d'essai"
-        : 'Plan gratuit';
+        ? t('dashboard.account.planTrial')
+        : t('dashboard.account.planFree');
 
   // ── HOME ──────────────────────────────────────────────────────────────────
   if (view === 'home') {
@@ -266,7 +270,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               dashboardBtnAccent,
               'absolute top-4 right-4 !size-10 !min-h-0 !p-0 rounded-full'
             )}
-            aria-label="Modifier le profil"
+            aria-label={t('dashboard.account.editProfile')}
           >
             <Camera className="w-4 h-4" />
           </button>
@@ -312,42 +316,64 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         </div>
 
         {/* Mon compte */}
-        <Section title="Mon compte">
+        <Section title={t('dashboard.account.sectionAccount')}>
           <Row
             icon={<User className="w-4 h-4" />}
-            label="Informations du studio"
-            value={siret ? `SIRET ${siret.slice(0, 6)}…` : 'Compléter'}
+            label={t('dashboard.account.studioInfo')}
+            value={siret ? `SIRET ${siret.slice(0, 6)}…` : t('dashboard.account.complete')}
             onClick={() => setView('profil')}
           />
           <Row
             icon={<CreditCard className="w-4 h-4" />}
-            label="Abonnement & Factures"
+            label={t('dashboard.account.billing')}
             value={planLabel}
             onClick={() => setView('facturation')}
             accent={subscriptionStatus !== 'active'}
           />
         </Section>
 
-        {/* Mon studio */}
-        <Section title="Mon studio">
+        <Section title={t('dashboard.account.sectionStudio')}>
           <Row
             icon={<Users className="w-4 h-4" />}
-            label="Collaborateurs"
-            value={`${artists.length} membre${artists.length !== 1 ? 's' : ''}`}
+            label={t('dashboard.account.collaborators')}
+            value={
+              artists.length === 1
+                ? t('dashboard.account.memberOne')
+                : t('dashboard.account.memberMany').replace('{n}', String(artists.length))
+            }
             onClick={onGoToCollaborateurs}
           />
           <Row
             icon={<Bell className="w-4 h-4" />}
-            label="Notifications"
+            label={t('dashboard.account.notifications')}
             onClick={onGoToNotifications}
           />
+        </Section>
+
+        <Section title={t('settings.language.section')}>
+          <div className="px-4 py-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <span className={dashboardSettingsRowIcon}>
+                <Languages className="w-4 h-4" />
+              </span>
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
+                  {t('settings.language.title')}
+                </p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {t('settings.language.description')}
+                </p>
+              </div>
+            </div>
+            <LanguageToggle variant="buttons" />
+          </div>
         </Section>
 
         {/* Déconnexion */}
         <Section>
           <Row
             icon={<LogOut className="w-4 h-4" />}
-            label="Déconnexion"
+            label={t('dashboard.account.logout')}
             onClick={() => void onLogout()}
             danger
           />
@@ -359,12 +385,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-red-900 dark:text-red-200">
-                  Compte &amp; données
+                  {t('dashboard.account.deleteTitle')}
                 </p>
                 <p className="text-xs text-red-800/90 dark:text-red-300/90 mt-1 leading-relaxed">
-                  Suppression définitive : studio, clients, messages, acomptes côté app, fichiers
-                  d’illustration liés. Les obligations comptables / Stripe peuvent conserver des
-                  traces (factures, législation). Pas de simple « désactivation ».
+                  {t('dashboard.account.deleteDesc')}
                 </p>
                 <button
                   type="button"
@@ -374,21 +398,21 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   }}
                   className={cn(dashboardBtnDanger, 'mt-3 w-full sm:w-auto min-h-[44px]')}
                 >
-                  Supprimer mon compte studio
+                  {t('dashboard.account.deleteButton')}
                 </button>
                 {deleteOpen && (
                   <div className="mt-4 space-y-2 p-3 rounded-xl bg-white/90 dark:bg-zinc-900/80 border border-red-200/80 dark:border-red-800/40">
                     <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                      Tape ton email{' '}
+                      {t('dashboard.account.deleteConfirmHint')}{' '}
                       <strong className="text-zinc-900 dark:text-zinc-100">{displayEmail}</strong>{' '}
-                      pour confirmer.
+                      {t('dashboard.account.deleteConfirmFor')}
                     </p>
                     <input
                       type="email"
                       value={deleteConfirm}
                       onChange={(e) => setDeleteConfirm(e.target.value)}
                       className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
-                      placeholder="Email du compte"
+                      placeholder={t('dashboard.account.deleteEmailPlaceholder')}
                       autoComplete="off"
                     />
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -422,14 +446,16 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                         }}
                         className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold disabled:opacity-50"
                       >
-                        {deleteBusy ? 'Suppression…' : 'Confirmer la suppression définitive'}
+                        {deleteBusy
+                          ? t('dashboard.account.deleteBusy')
+                          : t('dashboard.account.deleteConfirm')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setDeleteOpen(false)}
                         className="px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 text-sm"
                       >
-                        Annuler
+                        {t('dashboard.account.cancel')}
                       </button>
                     </div>
                   </div>
@@ -446,7 +472,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   if (view === 'profil') {
     return (
       <div className={cn('mx-auto w-full max-w-lg space-y-4 px-1 pb-28', dashboardPageBg)}>
-        <SubPageHeader title="Mon profil" onBack={() => setView('home')} />
+        <SubPageHeader title={t('dashboard.account.profileTitle')} onBack={() => setView('home')} />
 
         <Section>
           <div className="flex items-center gap-4 px-4 py-4">
@@ -486,7 +512,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               <button
                 onClick={onAvatarRemove}
                 className="p-2 text-zinc-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10"
-                title="Supprimer la photo"
+                title={t('dashboard.account.removePhoto')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -494,30 +520,30 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
           <Field
             icon={<Building2 className="w-4 h-4" />}
-            label="Nom du studio"
+            label={t('dashboard.account.studioName')}
             value={studioName}
             onChange={onStudioNameChange}
-            placeholder="Mon studio de tatouage"
+            placeholder={t('dashboard.account.studioNamePlaceholder')}
           />
           <Field
             icon={<Mail className="w-4 h-4" />}
-            label="Email"
+            label={t('dashboard.account.email')}
             value={email}
             onChange={onEmailChange}
             type="email"
             placeholder="contact@example.com"
-            hint="Utilisé pour les notifications et la facturation."
+            hint={t('dashboard.account.emailHint')}
           />
           <Field
             icon={<Hash className="w-4 h-4" />}
-            label="N° SIRET"
+            label={t('dashboard.account.siret')}
             value={siret}
             onChange={(v) => onSiretChange(v.replace(/\D/g, '').slice(0, 14))}
             inputMode="numeric"
             pattern="[0-9\s]*"
             maxLength={14}
             placeholder="12345678900012"
-            hint="Obligatoire pour la facturation et les mentions légales."
+            hint={t('dashboard.account.siretHint')}
           />
         </Section>
 

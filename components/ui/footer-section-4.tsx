@@ -52,52 +52,52 @@ export function FooterSection4({ className }: { className?: string }) {
 
   const contactMailtoHref = (() => {
     const trimmed = email.trim();
-    if (!trimmed) return supportMailto('Demande accès InkFlow');
+    if (!trimmed) return supportMailto(t('footer.accessSubject'));
     const params = new URLSearchParams({
-      subject: 'Demande accès InkFlow',
-      body: `Bonjour,\n\nMon email : ${trimmed}\n`,
+      subject: t('footer.accessSubject'),
+      body: t('footer.accessBody').replace('{email}', trimmed),
     });
     return `mailto:${SUPPORT_EMAIL}?${params.toString()}`;
   })();
 
   const footerColumns: FooterColumn[] = [
     {
-      title: 'Produit',
+      title: t('footer.product'),
       links: [
-        { label: 'Plans & tarifs', href: '/#pricing' },
-        { label: 'Démo', href: '/#demo' },
-        { label: 'Fonctionnalités', href: '/#fonctionnalites' },
-        { label: 'Connexion', href: '/login' },
-        { label: 'Essai gratuit', href: '/signup' },
+        { label: t('footer.pricing'), href: '/#pricing' },
+        { label: t('nav.demo'), href: '/#demo' },
+        { label: t('nav.features'), href: '/#fonctionnalites' },
+        { label: t('nav.login'), href: '/login' },
+        { label: t('nav.trial'), href: '/signup' },
       ],
     },
     {
-      title: 'Explorer',
+      title: t('footer.explore'),
       links: [
-        { label: "Vue d'ensemble", href: '/vue-ensemble' },
-        { label: 'Demandes', href: '/demandes' },
-        { label: 'Rendez-vous', href: '/rendez-vous' },
-        { label: 'Galerie flash', href: '/galerie-flash' },
-        { label: 'Portfolio', href: '/portfolio' },
+        { label: t('nav.overview'), href: '/vue-ensemble' },
+        { label: t('nav.requests'), href: '/demandes' },
+        { label: t('nav.appointments'), href: '/rendez-vous' },
+        { label: t('footer.flash'), href: '/galerie-flash' },
+        { label: t('footer.portfolio'), href: '/portfolio' },
       ],
     },
     {
-      title: 'Légal',
+      title: t('footer.legalCol'),
       links: [
-        { label: 'Confidentialité', href: APP_PRIVACY_PATH },
-        { label: "Conditions d'utilisation", href: APP_TERMS_PATH },
-        { label: 'Mentions légales', href: APP_LEGAL_PATH },
-        { label: 'Politique cookies', href: APP_COOKIES_PATH },
-        { label: 'Aide', href: '/aide' },
+        { label: t('footer.privacy'), href: APP_PRIVACY_PATH },
+        { label: t('footer.terms'), href: APP_TERMS_PATH },
+        { label: t('footer.legal'), href: APP_LEGAL_PATH },
+        { label: t('footer.cookiesPolicy'), href: APP_COOKIES_PATH },
+        { label: t('footer.help'), href: '/aide' },
       ],
     },
     {
-      title: 'Réseaux',
+      title: t('footer.socialCol'),
       links: [
         { label: 'Instagram', href: 'https://www.instagram.com/inkflowme', external: true },
-        { label: 'Contact', href: supportMailto('Contact InkFlow') },
-        { label: 'Nouveautés', href: '/quoi-de-neuf' },
-        { label: 'Installer l’app', href: '/installer' },
+        { label: t('footer.contact'), href: supportMailto('Contact InkFlow') },
+        { label: t('footer.news'), href: '/quoi-de-neuf' },
+        { label: t('footer.installApp'), href: '/installer' },
       ],
     },
   ];
@@ -147,7 +147,8 @@ export function FooterSection4({ className }: { className?: string }) {
               </h2>
               <SocialCloud className="gap-3" />
               <p className="text-xs text-white/60">
-                © {new Date().getFullYear()} InkFlow — Rouen, France. Tous droits réservés.
+                © {new Date().getFullYear()} InkFlow — {t('footer.location')}.{' '}
+                {t('footer.copyright')}
               </p>
             </div>
           </motion.div>
@@ -169,14 +170,14 @@ export function FooterSection4({ className }: { className?: string }) {
                         <FooterLinkItem link={link} />
                       </li>
                     ))}
-                    {section.title === 'Légal' ? (
+                    {section.title === t('footer.legalCol') ? (
                       <li>
                         <button
                           type="button"
                           onClick={() => openCookieSettings()}
                           className="text-left font-medium text-zinc-600 transition-colors hover:text-zinc-900"
                         >
-                          Gérer les cookies
+                          {t('footer.manageCookies')}
                         </button>
                       </li>
                     ) : null}
@@ -188,7 +189,7 @@ export function FooterSection4({ className }: { className?: string }) {
             <div className="mt-10 space-y-4 md:mt-0">
               <h3 className="text-lg font-bold text-zinc-900">{t('footer.contact')}</h3>
               <p className="text-sm text-zinc-600">
-                Une question ? Écris-nous à{' '}
+                {t('footer.contactLead')}{' '}
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
                   className="font-medium text-zinc-900 underline-offset-2 hover:underline"

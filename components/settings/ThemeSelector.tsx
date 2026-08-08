@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Palette, Sparkles, Lock, Eye, Check, X, ExternalLink, LayoutTemplate } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { VITRINE_THEMES, VITRINE_THEMES_SELECTOR, type VitrineTheme } from '../../lib/themes';
 import {
   getStudioVitrineTheme,
@@ -61,6 +62,7 @@ const PreviewModal: React.FC<{
   onApply: () => void;
   onPurchase: () => void;
 }> = ({ theme, isUnlocked, isActive, applying, purchasing, onClose, onApply, onPurchase }) => {
+  const { t } = useLanguage();
   const titleId = 'theme-preview-modal-title';
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -113,7 +115,7 @@ const PreviewModal: React.FC<{
             ref={closeBtnRef}
             type="button"
             onClick={onClose}
-            aria-label="Fermer la prévisualisation"
+            aria-label={t('dashboard.vitrine.theme.closePreview')}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] transition-all active:scale-[0.98]"
           >
             <X className="w-5 h-5" />
@@ -132,7 +134,11 @@ const PreviewModal: React.FC<{
               <div className={`h-2 rounded-full ${p.text} opacity-40 w-24`} />
             </div>
             <div className="w-full flex flex-col gap-2 mt-2">
-              {['Réserver un RDV', 'Galerie Flash', 'Portfolio'].map((_, i) => (
+              {[
+                t('dashboard.vitrine.theme.previewBook'),
+                t('dashboard.vitrine.theme.previewFlash'),
+                t('dashboard.vitrine.theme.previewPortfolio'),
+              ].map((_, i) => (
                 <div
                   key={i}
                   className={`w-full ${p.card} border ${isLight ? 'border-black/10' : 'border-white/15'} rounded-xl h-9 flex items-center px-4 gap-2`}
@@ -148,7 +154,7 @@ const PreviewModal: React.FC<{
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-3 p-4">
               <Lock className="w-10 h-10 sm:w-12 sm:h-12 text-white" aria-hidden />
               <p className="text-white font-semibold text-sm text-center">
-                Thème premium — 2,99 € (paiement unique)
+                {t('dashboard.vitrine.theme.premiumLocked')}
               </p>
             </div>
           )}
@@ -162,7 +168,7 @@ const PreviewModal: React.FC<{
             {isActive ? (
               <span className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 rounded-xl bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm font-semibold border border-emerald-500/25">
                 <Check className="w-4 h-4 shrink-0" />
-                Thème actif
+                {t('dashboard.vitrine.theme.active')}
               </span>
             ) : isPremiumLocked ? (
               <button
@@ -172,7 +178,9 @@ const PreviewModal: React.FC<{
                 className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-semibold hover:from-amber-600 hover:to-amber-700 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Sparkles className="w-4 h-4 shrink-0" />
-                {purchasing ? 'Redirection…' : 'Débloquer 2,99 €'}
+                {purchasing
+                  ? t('dashboard.vitrine.theme.redirecting')
+                  : t('dashboard.vitrine.theme.unlock')}
               </button>
             ) : (
               <button
@@ -182,7 +190,9 @@ const PreviewModal: React.FC<{
                 className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 <Check className="w-4 h-4 shrink-0" />
-                {applying ? 'Application…' : 'Appliquer ce thème'}
+                {applying
+                  ? t('dashboard.vitrine.theme.applying')
+                  : t('dashboard.vitrine.theme.apply')}
               </button>
             )}
           </div>
@@ -198,6 +208,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   publicVitrineUrl,
 }) => {
   const toast = useToast();
+  const { t } = useLanguage();
   const [currentThemeId, setCurrentThemeId] = useState<string>('light');
   const [unlockedThemes, setUnlockedThemes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,9 +259,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
       await updateStudioVitrineTheme(studioId, theme.id);
       setCurrentThemeId(theme.id);
       setPreviewTheme(null);
-      toast.success(`Thème « ${theme.name} » appliqué`);
+      toast.success(t('dashboard.vitrine.theme.applySuccess').replace('{name}', theme.name));
     } catch {
-      toast.error("Erreur lors de l'application du thème");
+      toast.error(t('dashboard.vitrine.theme.applyError'));
     } finally {
       setApplying(null);
     }
@@ -258,7 +269,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
 
   const handlePurchaseTheme = async (theme: VitrineTheme) => {
     if (!studioId || !userEmail) {
-      toast.error('Connexion requise pour acheter un thème.');
+      toast.error(t('dashboard.vitrine.theme.loginRequired'));
       return;
     }
     setPurchasing(theme.id);
@@ -267,11 +278,11 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
       if ('url' in result) {
         window.location.href = result.url;
       } else {
-        toast.error(result.error || 'Erreur lors de la création du paiement');
+        toast.error(result.error || t('dashboard.vitrine.theme.paymentError'));
         setPurchasing(null);
       }
     } catch {
-      toast.error('Erreur lors de la création du paiement');
+      toast.error(t('dashboard.vitrine.theme.paymentError'));
       setPurchasing(null);
     }
   };
@@ -297,15 +308,12 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             <span className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700">
               <Palette className="w-5 h-5 text-zinc-600 dark:text-zinc-400" aria-hidden />
             </span>
-            Thème de la vitrine
+            {t('dashboard.vitrine.theme.title')}
           </h3>
-          <p className="type-subtitle max-w-2xl">
-            Choisis un style puis applique avec aperçu en grand ; les modèles premium se débloquent
-            avec l&apos;offre correspondante.
-          </p>
+          <p className="type-subtitle max-w-2xl">{t('dashboard.vitrine.theme.desc')}</p>
 
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-500">
-            Thème actuel :{' '}
+            {t('dashboard.vitrine.theme.current')}{' '}
             <span className="font-semibold text-zinc-900 dark:text-zinc-200">
               {currentThemeName}
             </span>
@@ -319,7 +327,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] shrink-0"
           >
             <ExternalLink className="w-4 h-4 shrink-0" />
-            Voir ma vitrine
+            {t('dashboard.vitrine.theme.viewPublic')}
           </a>
         ) : null}
       </div>
@@ -363,6 +371,7 @@ const ThemeCard: React.FC<{
   onPreview: () => void;
   onApply: () => void;
 }> = ({ theme, isActive, isUnlocked, applying, onPreview, onApply }) => {
+  const { t } = useLanguage();
   const isPremiumLocked = theme.premium && !isUnlocked;
 
   return (
@@ -376,7 +385,7 @@ const ThemeCard: React.FC<{
       <button
         type="button"
         onClick={onPreview}
-        aria-label={`Agrandir l’aperçu : ${theme.name}`}
+        aria-label={t('dashboard.vitrine.theme.previewAria').replace('{name}', theme.name)}
         className="relative aspect-[4/3] w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       >
         <ThemePreviewCard theme={theme} />
@@ -394,7 +403,7 @@ const ThemeCard: React.FC<{
           <div className="absolute top-2 left-2 z-10">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white">
               <Check className="w-2.5 h-2.5" />
-              Actif
+              {t('dashboard.vitrine.theme.activeBadge')}
             </span>
           </div>
         )}
@@ -432,13 +441,13 @@ const ThemeCard: React.FC<{
             className="min-h-[44px] w-full inline-flex items-center justify-center gap-2 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
           >
             <Eye className="w-4 h-4 shrink-0" />
-            Prévisualiser
+            {t('dashboard.vitrine.theme.preview')}
           </button>
 
           {isActive ? (
             <div className="min-h-[44px] flex items-center justify-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
               <Check className="w-4 h-4 shrink-0" />
-              Déjà appliqué
+              {t('dashboard.vitrine.theme.applied')}
             </div>
           ) : isPremiumLocked ? (
             <button
@@ -447,7 +456,7 @@ const ThemeCard: React.FC<{
               className="min-h-[44px] w-full inline-flex items-center justify-center gap-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-semibold hover:from-amber-600 hover:to-amber-700 transition-all active:scale-[0.98]"
             >
               <Lock className="w-4 h-4 shrink-0" />
-              Débloquer
+              {t('dashboard.vitrine.theme.unlockShort')}
             </button>
           ) : (
             <button
@@ -457,7 +466,9 @@ const ThemeCard: React.FC<{
               className="min-h-[44px] w-full inline-flex items-center justify-center gap-2 px-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               <Check className="w-4 h-4 shrink-0" />
-              {applying ? 'Application…' : 'Appliquer'}
+              {applying
+                ? t('dashboard.vitrine.theme.applying')
+                : t('dashboard.vitrine.theme.applyShort')}
             </button>
           )}
         </div>

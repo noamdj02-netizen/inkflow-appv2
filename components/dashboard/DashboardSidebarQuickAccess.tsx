@@ -6,6 +6,8 @@ import {
   type QuickAccessItemId,
 } from '../../lib/dashboardQuickAccess';
 import { useToast } from '../../contexts/ToastContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { getQuickAccessLabel } from '../../lib/dashboardI18n';
 
 export interface DashboardSidebarQuickAccessProps {
   pins: QuickAccessItemId[];
@@ -35,6 +37,7 @@ export function DashboardSidebarQuickAccess({
   getBadge,
 }: DashboardSidebarQuickAccessProps) {
   const toast = useToast();
+  const { t } = useLanguage();
   const [listTab, setListTab] = useState<'pins' | 'recent'>('pins');
 
   const catalogMap = useMemo(() => new Map(QUICK_ACCESS_CATALOG.map((c) => [c.id, c])), []);
@@ -45,7 +48,7 @@ export function DashboardSidebarQuickAccess({
     e.stopPropagation();
     const { atMax } = onTogglePin(id);
     if (atMax) {
-      toast.error(`Maximum ${QUICK_ACCESS_MAX_PINS} raccourcis épinglés.`);
+      toast.error(t('dashboard.quickAccess.maxPins').replace('{n}', String(QUICK_ACCESS_MAX_PINS)));
     }
   };
 
@@ -54,7 +57,7 @@ export function DashboardSidebarQuickAccess({
       <div
         className="flex rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 gap-0.5 mb-1.5"
         role="tablist"
-        aria-label="Raccourcis personnalisés"
+        aria-label={t('dashboard.quickAccess.aria')}
       >
         <button
           type="button"
@@ -68,7 +71,7 @@ export function DashboardSidebarQuickAccess({
           }`}
         >
           <Pin className="h-3 w-3" aria-hidden />
-          Épinglés
+          {t('dashboard.quickAccess.pinned')}
         </button>
         <button
           type="button"
@@ -81,7 +84,7 @@ export function DashboardSidebarQuickAccess({
               : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
           }`}
         >
-          Récents
+          {t('dashboard.quickAccess.recent')}
         </button>
       </div>
 
@@ -89,8 +92,8 @@ export function DashboardSidebarQuickAccess({
         {listIds.length === 0 ? (
           <li className="px-2 py-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             {listTab === 'pins'
-              ? 'Épingle un onglet via ★ dans Récents (max 3).'
-              : 'Navigue dans le dashboard : tes derniers écrans apparaîtront ici.'}
+              ? t('dashboard.quickAccess.emptyPins')
+              : t('dashboard.quickAccess.emptyRecents')}
           </li>
         ) : (
           listIds.map((id) => {
@@ -123,7 +126,7 @@ export function DashboardSidebarQuickAccess({
                       strokeWidth={1.75}
                       aria-hidden
                     />
-                    <span className="flex-1 text-left truncate">{def.label}</span>
+                    <span className="flex-1 text-left truncate">{getQuickAccessLabel(t, id)}</span>
                     {badge != null && badge > 0 && (
                       <span className="shrink-0 rounded-md bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-white dark:bg-zinc-100 dark:text-zinc-900">
                         {badge > 9 ? '9+' : badge}

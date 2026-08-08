@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
-import { LANDING_URL, LANDING_PRICING_URL } from '../lib/urls';
+import { getLandingHomeHref, LANDING_PRICING_URL } from '../lib/urls';
 import { supportMailto } from '../lib/supportContact';
 
 interface NavbarProps {
@@ -11,9 +11,9 @@ interface NavbarProps {
 
 const navLinks = [
   { href: '/dashboard-demo', label: 'Démo' },
-  { href: `${LANDING_URL}/#features`, label: 'Fonctionnalités' },
+  { href: '/#fonctionnalites', label: 'Fonctionnalités' },
   { href: LANDING_PRICING_URL, label: 'Tarifs' },
-  { href: `${LANDING_URL}/#faq`, label: 'FAQ' },
+  { href: '/#avis', label: 'FAQ' },
   { href: '/aide', label: 'Aide' },
   { href: supportMailto('Question InkFlow'), label: 'Contact' },
 ];
@@ -59,10 +59,8 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
         <div className="flex items-center justify-between gap-3">
           {/* Logo — gauche, contraint h-8, invert pour fond blanc / normal pour fond sombre */}
           <a
-            href={LANDING_URL}
+            href={getLandingHomeHref()}
             className="flex items-center gap-2 min-w-0 shrink-0 active:opacity-80 transition-opacity"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <Logo size="sm" className={isLandingDark ? 'invert' : 'invert dark:invert-0'} />
             <span

@@ -17,6 +17,7 @@ import {
   LineChart,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { RequestsSourceFilter } from '@/lib/dashboardNavUrl';
 import { SidebarSubmenuMotion } from '@/components/motion/SidebarSubmenuMotion';
 import { DashboardSidebarNavButton } from '@/components/dashboard/DashboardSidebarNavButton';
@@ -118,9 +119,11 @@ export function DashboardProSidebar({
   canViewAdvancedStats,
   canAccessFidelite,
 }: DashboardProSidebarProps) {
+  const { t } = useLanguage();
+
   return (
     <aside
-      aria-label="Navigation principale"
+      aria-label={t('dashboard.sidebar.mainNav')}
       data-lenis-prevent
       className={`fixed lg:static inset-y-0 left-0 z-[60] w-[260px] max-w-[88vw] sm:max-w-[85vw] border-r border-border bg-sidebar flex flex-col min-h-0 transform transition-transform duration-200 ease-out motion-reduce:transition-none rounded-r-2xl lg:rounded-none shadow-sm lg:shadow-none app-shell-sidebar ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -134,7 +137,7 @@ export function DashboardProSidebar({
           <a
             href="/dashboard"
             className="flex items-center gap-3 min-w-0 group"
-            aria-label="Tableau de bord"
+            aria-label={t('dashboard.sidebar.dashboardLink')}
           >
             <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
             <div className="min-w-0">
@@ -142,7 +145,7 @@ export function DashboardProSidebar({
                 InkFlow
               </span>
               <span className="block text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
-                {user.studioName || 'Mon studio'}
+                {user.studioName || t('dashboard.sidebar.myStudio')}
               </span>
             </div>
           </a>
@@ -150,7 +153,7 @@ export function DashboardProSidebar({
             type="button"
             onClick={() => onCloseMobile()}
             className="lg:hidden min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors touch-manipulation"
-            aria-label="Fermer le menu"
+            aria-label={t('dashboard.sidebar.closeMenu')}
           >
             <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
           </button>
@@ -174,7 +177,9 @@ export function DashboardProSidebar({
         <nav className="relative z-10 flex-1 min-h-0 px-3 py-2 overflow-y-auto overscroll-contain space-y-4">
           {/* Section TABLEAUX DE BORD */}
           <div>
-            <p className="dashboardSectionTitle px-3 mb-1.5">Tableaux de bord</p>
+            <p className="dashboardSectionTitle px-3 mb-1.5">
+              {t('dashboard.sidebar.sectionDashboards')}
+            </p>
             <div className="space-y-0.5">
               {/* Vue d'ensemble */}
               <button
@@ -189,7 +194,7 @@ export function DashboardProSidebar({
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Vue d'ensemble</span>
+                <span className="flex-1 text-left">{t('dashboard.tab.overview')}</span>
               </button>
 
               {canViewAdvancedStats ? (
@@ -205,7 +210,7 @@ export function DashboardProSidebar({
                   }`}
                 >
                   <BarChart3 className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left">Statistiques</span>
+                  <span className="flex-1 text-left">{t('dashboard.tab.analytics')}</span>
                 </button>
               ) : null}
 
@@ -221,7 +226,7 @@ export function DashboardProSidebar({
                     }`}
                   >
                     <BarChart3 className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">Finance</span>
+                    <span className="flex-1 text-left">{t('dashboard.sidebar.finance')}</span>
                     <ChevronRight
                       className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.finance ? 'rotate-90' : ''}`}
                     />
@@ -240,7 +245,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'revenus' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Revenus
+                      {t('dashboard.sidebar.finance.revenus')}
                     </button>
                     <button
                       onClick={() =>
@@ -255,7 +260,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'acomptes' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Acomptes
+                      {t('dashboard.sidebar.finance.acomptes')}
                     </button>
                     <button
                       onClick={() =>
@@ -268,7 +273,7 @@ export function DashboardProSidebar({
                       className={`type-body w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg transition-all ${activeTab === 'finance' && financeView === 'pilotage' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
                     >
                       <LineChart className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                      Pilotage AE
+                      {t('dashboard.sidebar.finance.pilotage')}
                     </button>
                   </SidebarSubmenuMotion>
                 </div>
@@ -286,7 +291,7 @@ export function DashboardProSidebar({
                     }`}
                   >
                     <Calendar className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">Planning</span>
+                    <span className="flex-1 text-left">{t('dashboard.sidebar.planning')}</span>
                     <ChevronRight
                       className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.planning ? 'rotate-90' : ''}`}
                     />
@@ -305,7 +310,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'week' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Vue semaine
+                      {t('dashboard.sidebar.planning.week')}
                     </button>
                     <button
                       onClick={() =>
@@ -320,7 +325,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'month' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Vue mois
+                      {t('dashboard.sidebar.planning.month')}
                     </button>
                     <button
                       onClick={() =>
@@ -333,7 +338,7 @@ export function DashboardProSidebar({
                       className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600 flex-shrink-0" />
-                      Disponibilités
+                      {t('dashboard.sidebar.planning.availability')}
                     </button>
                   </SidebarSubmenuMotion>
                 </div>
@@ -343,7 +348,9 @@ export function DashboardProSidebar({
 
           {/* Section PAGES */}
           <div>
-            <p className="dashboardSectionTitle px-3 mb-1.5">Pages</p>
+            <p className="dashboardSectionTitle px-3 mb-1.5">
+              {t('dashboard.sidebar.sectionPages')}
+            </p>
             <div className="space-y-0.5">
               {/* Demandes avec sous-menu */}
               <div>
@@ -356,7 +363,7 @@ export function DashboardProSidebar({
                   }`}
                 >
                   <ClipboardList className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left">Demandes</span>
+                  <span className="flex-1 text-left">{t('dashboard.tab.requests')}</span>
                   {demandes.total > 0 && (
                     <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
                       {demandes.total > 99 ? '99+' : demandes.total}
@@ -381,8 +388,11 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab !== 'history' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    <span className="flex-1 text-left" title="File d’attente unifiée">
-                      File d’attente
+                    <span
+                      className="flex-1 text-left"
+                      title={t('dashboard.sidebar.requests.inbox')}
+                    >
+                      {t('dashboard.sidebar.requests.inbox')}
                     </span>
                     {demandes.total > 0 && (
                       <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
@@ -404,7 +414,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    Historique
+                    {t('dashboard.sidebar.requests.history')}
                   </button>
                 </SidebarSubmenuMotion>
               </div>
@@ -422,7 +432,7 @@ export function DashboardProSidebar({
                 }`}
               >
                 <Package className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Traçabilité</span>
+                <span className="flex-1 text-left">{t('dashboard.tab.stock')}</span>
               </button>
 
               <button
@@ -438,7 +448,7 @@ export function DashboardProSidebar({
                 }`}
               >
                 <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Messagerie</span>
+                <span className="flex-1 text-left">{t('dashboard.tab.messaging')}</span>
                 {messagingUnreadTotal > 0 && (
                   <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
                     {messagingUnreadTotal > 99 ? '99+' : messagingUnreadTotal}
@@ -455,7 +465,7 @@ export function DashboardProSidebar({
                   }`}
                 >
                   <Users className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left">Clients</span>
+                  <span className="flex-1 text-left">{t('dashboard.tab.clients')}</span>
                   <ChevronRight
                     className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.clients ? 'rotate-90' : ''}`}
                   />
@@ -474,7 +484,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'overview' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    Vue d'ensemble
+                    {t('dashboard.sidebar.clients.overview')}
                   </button>
                   <button
                     onClick={() =>
@@ -489,7 +499,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    Projets
+                    {t('dashboard.sidebar.clients.projects')}
                   </button>
                   {moduleFlags.loyalty && canAccessFidelite && (
                     <button
@@ -505,7 +515,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Fidélité
+                      {t('dashboard.sidebar.clients.loyalty')}
                     </button>
                   )}
                 </SidebarSubmenuMotion>
@@ -527,7 +537,7 @@ export function DashboardProSidebar({
                     }`}
                   >
                     <FolderOpen className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">Ma vitrine</span>
+                    <span className="flex-1 text-left">{t('dashboard.sidebar.vitrine')}</span>
                     <ChevronRight
                       className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.vitrine ? 'rotate-90' : ''}`}
                     />
@@ -547,10 +557,10 @@ export function DashboardProSidebar({
                           <span
                             className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                           />
-                          Galerie Flash
+                          {t('dashboard.sidebar.vitrine.flash')}
                         </span>
                         <span className="pl-3.5 text-[10px] text-zinc-400 dark:text-zinc-500">
-                          Flash à vendre
+                          {t('dashboard.sidebar.vitrine.flashHint')}
                         </span>
                       </button>
                     )}
@@ -568,10 +578,10 @@ export function DashboardProSidebar({
                           <span
                             className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                           />
-                          Portfolio
+                          {t('dashboard.sidebar.vitrine.portfolio')}
                         </span>
                         <span className="pl-3.5 text-[10px] text-zinc-400 dark:text-zinc-500">
-                          Réalisations passées
+                          {t('dashboard.sidebar.vitrine.portfolioHint')}
                         </span>
                       </button>
                     )}
@@ -589,7 +599,7 @@ export function DashboardProSidebar({
                         <span
                           className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                         />
-                        Personnaliser
+                        {t('dashboard.sidebar.vitrine.customize')}
                       </button>
                     )}
                     {moduleFlags.vitrine &&
@@ -600,7 +610,7 @@ export function DashboardProSidebar({
                           className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-accent transition-all text-left"
                         >
                           <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                          Voir ma vitrine
+                          {t('dashboard.sidebar.vitrine.viewPublic')}
                         </button>
                       ) : (
                         <a
@@ -610,7 +620,7 @@ export function DashboardProSidebar({
                           className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-accent transition-all"
                         >
                           <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                          Voir ma vitrine
+                          {t('dashboard.sidebar.vitrine.viewPublic')}
                         </a>
                       ))}
                   </SidebarSubmenuMotion>
@@ -630,7 +640,7 @@ export function DashboardProSidebar({
                   }`}
                 >
                   <Settings className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left">Paramètres</span>
+                  <span className="flex-1 text-left">{t('dashboard.tab.settings')}</span>
                   <ChevronRight
                     className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.settings ? 'rotate-90' : ''}`}
                   />
@@ -649,7 +659,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'home' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    Tous les paramètres
+                    {t('dashboard.sidebar.settings.all')}
                   </button>
                   <button
                     onClick={() =>
@@ -664,7 +674,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'account' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    Mon compte
+                    {t('dashboard.tab.account')}
                   </button>
                   {!isCollaboratorUser && (
                     <button
@@ -680,7 +690,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'etablissement' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Établissement
+                      {t('dashboard.tab.etablissement')}
                     </button>
                   )}
                   <button
@@ -696,7 +706,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    Abonnement
+                    {t('dashboard.sidebar.settings.billing')}
                   </button>
                   <button
                     onClick={() =>
@@ -710,7 +720,7 @@ export function DashboardProSidebar({
                     <span
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'notifications' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     />
-                    <span className="flex-1 text-left">Notifications</span>
+                    <span className="flex-1 text-left">{t('dashboard.tab.notifications')}</span>
                     {notificationsUnreadCount > 0 && (
                       <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
                         {notificationsUnreadCount > 9 ? '9+' : notificationsUnreadCount}
@@ -731,7 +741,7 @@ export function DashboardProSidebar({
                       <span
                         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                       />
-                      Vitrine
+                      {t('dashboard.sidebar.settings.vitrine')}
                     </button>
                   )}
                 </SidebarSubmenuMotion>
@@ -758,14 +768,14 @@ export function DashboardProSidebar({
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
           >
             <LifeBuoy className="w-4 h-4 flex-shrink-0" strokeWidth={1.75} />
-            <span>Signaler un bug</span>
+            <span>{t('dashboard.sidebar.reportBug')}</span>
           </a>
           <button
             onClick={() => void onLogout()}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            <span>Déconnexion</span>
+            <span>{t('dashboard.sidebar.logout')}</span>
           </button>
         </div>
       </SidebarFooter>

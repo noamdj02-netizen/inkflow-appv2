@@ -66,6 +66,7 @@ import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
 import { useDashboardQuickAccess } from '../../hooks/useDashboardQuickAccess';
+import { useDashboardI18n } from '../../hooks/useDashboardI18n';
 import type { QuickAccessItemId } from '../../lib/dashboardQuickAccess';
 import {
   parseDashboardNavSearch,
@@ -320,141 +321,9 @@ const LazyCalendarSettings = lazy(() =>
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 
-// MVP: Core tabs
-const tabs: {
-  id: TabId | 'referral';
-  label: string;
-  icon: React.ReactNode;
-  badge?: 'pending';
-  href?: string;
-}[] = [
-  { id: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard {...iconProps} /> },
-  { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> },
-  { id: 'requests', label: 'Demandes', icon: <ClipboardList {...iconProps} />, badge: 'pending' },
-  { id: 'stock', label: 'Traçabilité', icon: <Package {...iconProps} /> },
-  { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
-  { id: 'flash', label: 'Galerie Flash', icon: <Zap {...iconProps} /> },
-  { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
-  { id: 'messaging', label: 'Messagerie', icon: <Inbox {...iconProps} /> },
-  { id: 'portfolio', label: 'Portfolio', icon: <LayoutGrid {...iconProps} /> },
-  { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
-  // { id: 'referral', label: 'Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
-  { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
-];
-
-const SETTINGS_TAB_META: Record<
-  SettingsTabId,
-  { label: string; Icon: LucideIcon; description: string }
-> = {
-  home: {
-    label: 'Paramètres',
-    Icon: Settings,
-    description: "Vue d'ensemble de tous les paramètres.",
-  },
-  general: {
-    label: 'Général',
-    Icon: Settings,
-    description: 'Fiche studio, liens publics, carte de découverte, export et notifications.',
-  },
-  modules: {
-    label: 'Modules',
-    Icon: PanelsTopLeft,
-    description:
-      'Activez ou masquez les sections du menu (finance, planning, vitrine, fidélité, etc.) pour adapter l’interface à votre studio.',
-  },
-  payments: {
-    label: 'Paiements',
-    Icon: CreditCard,
-    description:
-      'Connexion Stripe, acomptes, liens de paiement et règles financières liées aux réservations.',
-  },
-  finance_display: {
-    label: 'Affichage & fiscalité (estimations)',
-    Icon: Percent,
-    description:
-      'Même contenu que Finance → Pilotage : base HT/TTC, TVA, pilotage AE et opt-in comparateur (raccourci paramètres).',
-  },
-  billing: {
-    label: 'Abonnement',
-    Icon: Crown,
-    description:
-      'Formule InkFlow, période d’essai, renouvellement et limites incluses dans votre plan (clients, stockage, etc.).',
-  },
-  care: {
-    label: 'Soins post-tattoo',
-    Icon: Heart,
-    description:
-      'Fiches de soins et messages automatiques pour accompagner vos clients après la séance.',
-  },
-  consent: {
-    label: 'Consentement',
-    Icon: FileCheck,
-    description:
-      'Modèles de formulaires de consentement : textes, champs et documents adaptés à votre pratique.',
-  },
-  availability: {
-    label: 'Disponibilités',
-    Icon: Clock,
-    description:
-      'Créneaux ouverts, durées de séance et règles pour les prises de rendez-vous en ligne.',
-  },
-  calendar: {
-    label: 'Calendrier',
-    Icon: Calendar,
-    description:
-      'Synchronisation agenda (Google), créneaux bloqués et comportement des rendez-vous importés.',
-  },
-  vitrine: {
-    label: 'Page vitrine',
-    Icon: Globe,
-    description:
-      'Thème visuel, textes, médias, sections et lien public : tout ce que voient les visiteurs avant de réserver.',
-  },
-  waitlist: {
-    label: 'Liste d’attente',
-    Icon: ListOrdered,
-    description: 'File d’attente des demandes, notifications et conversion en rendez-vous.',
-  },
-  loyalty: {
-    label: 'Fidélité',
-    Icon: Star,
-    description: 'Points, paliers et récompenses pour fidéliser vos clients dans le temps.',
-  },
-  messagerie: {
-    label: 'Messagerie',
-    Icon: MessageSquare,
-    description:
-      'Connexion Instagram / messages : centralisez les échanges avec vos prospects et clients.',
-  },
-  account: {
-    label: 'Mon compte',
-    Icon: User,
-    description: 'Profil, identité, avatar et préférences personnelles du tatoueur.',
-  },
-  etablissement: {
-    label: 'Établissement',
-    Icon: Building2,
-    description: 'Studio, SIRET, collaborateurs et fiche Google Business.',
-  },
-};
-
-const SETTINGS_MAIN_TABS: { id: SettingsTabId; label: string }[] = [
-  { id: 'account', label: 'Mon compte' },
-  { id: 'etablissement', label: 'Établissement' },
-  { id: 'general', label: 'Général' },
-  { id: 'modules', label: 'Modules' },
-  { id: 'payments', label: 'Paiements' },
-  { id: 'finance_display', label: 'Fiscalité (estim.)' },
-  { id: 'billing', label: 'Abonnement' },
-  { id: 'care', label: 'Soins post-tattoo' },
-  { id: 'consent', label: 'Consentement' },
-  { id: 'availability', label: 'Disponibilités' },
-  { id: 'calendar', label: 'Calendrier' },
-  { id: 'vitrine', label: 'Page vitrine' },
-];
-
 export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
+  const { t, lang, settingsTabMeta, settingsMainTabs, getTabHero } = useDashboardI18n();
   const { resolvedTheme } = useTheme();
   const toast = useToast();
   const googleBusinessOAuthUi = isGoogleBusinessOAuthUiEnabled();
@@ -580,6 +449,67 @@ export const DashboardPro: React.FC = () => {
   }, [isInkflowProShell]);
   const { privacyMode, togglePrivacyMode } = useStudioPrivacy();
 
+  const mobileTabs = useMemo(
+    () =>
+      [
+        {
+          id: 'overview' as const,
+          label: t('dashboard.tab.overview'),
+          icon: <LayoutDashboard {...iconProps} />,
+        },
+        {
+          id: 'analytics' as const,
+          label: t('dashboard.tab.analytics'),
+          icon: <BarChart3 {...iconProps} />,
+        },
+        {
+          id: 'requests' as const,
+          label: t('dashboard.tab.requests'),
+          icon: <ClipboardList {...iconProps} />,
+          badge: 'pending' as const,
+        },
+        { id: 'stock' as const, label: t('dashboard.tab.stock'), icon: <Package {...iconProps} /> },
+        {
+          id: 'appointments' as const,
+          label: t('dashboard.tab.appointments'),
+          icon: <Calendar {...iconProps} />,
+        },
+        { id: 'flash' as const, label: t('dashboard.tab.flash'), icon: <Zap {...iconProps} /> },
+        {
+          id: 'clients' as const,
+          label: t('dashboard.tab.clients'),
+          icon: <Users {...iconProps} />,
+        },
+        {
+          id: 'messaging' as const,
+          label: t('dashboard.tab.messaging'),
+          icon: <Inbox {...iconProps} />,
+        },
+        {
+          id: 'portfolio' as const,
+          label: t('dashboard.tab.portfolio'),
+          icon: <LayoutGrid {...iconProps} />,
+        },
+        {
+          id: 'finance' as const,
+          label: t('dashboard.tab.finance'),
+          icon: <Wallet {...iconProps} />,
+        },
+        {
+          id: 'settings' as const,
+          label: t('dashboard.tab.settings'),
+          icon: <Settings {...iconProps} />,
+        },
+      ] as {
+        id: TabId | 'referral';
+        label: string;
+        icon: React.ReactNode;
+        badge?: 'pending';
+        href?: string;
+      }[],
+    [t, lang]
+  );
+
   const helpContext: InkflowHelpContext = useMemo(() => {
     const map: Partial<Record<TabId, InkflowHelpContext>> = {
       overview: 'overview',
@@ -643,124 +573,28 @@ export const DashboardPro: React.FC = () => {
   }, [dashboardPanelKey]);
 
   /** Bandeau héros (titre + accroche + optionnellement couverture vitrine). Vue d’ensemble : md+ seulement (mobile : hero iOS dans l’onglet). */
-  const tabHeroModel = useMemo((): { title: string; description: string } | null => {
-    if (activeTab === 'overview') {
-      return {
-        title: 'Vue d’ensemble',
-        description:
-          'Pilotage du jour : indicateurs, synthèse agenda, raccourcis et demandes. Planning → vues semaine/mois pour le calendrier détaillé.',
-      };
-    }
-    switch (activeTab) {
-      case 'analytics':
-        return {
-          title: 'Statistiques',
-          description: 'Indicateurs, tendances et synthèse de votre activité tatouage.',
-        };
-      case 'requests': {
-        const bySub: Record<'inbox' | 'history', string> = {
-          inbox:
-            requestsSourceFilter === 'agenda'
-              ? 'Créneaux agenda en attente de validation.'
-              : requestsSourceFilter === 'book'
-                ? 'Demandes depuis la page book (/book) en attente de réponse.'
-                : requestsSourceFilter === 'brief'
-                  ? 'Briefs « sans date » à lire et traiter.'
-                  : 'File d’attente : tout ce qui attend une action, filtrable par source.',
-          history: 'Historique des demandes traitées ou archivées.',
-        };
-        return { title: 'Demandes', description: bySub[requestsSubTab] };
-      }
-      case 'appointments':
-        return {
-          title: 'Rendez-vous',
-          description:
-            planningView === 'month'
-              ? 'Vue mensuelle : repérez d’un coup d’œil la charge et les disponibilités.'
-              : 'Votre semaine : planifiez, déplacez et validez les séances.',
-        };
-      case 'flash':
-        return {
-          title: 'Galerie Flash',
-          description: 'Créez, organisez et mettez en avant vos flashs sur la vitrine.',
-        };
-      case 'clients':
-        if (clientsView === 'projects') {
-          return {
-            title: 'Projets',
-            description: 'Suivez les projets tatouage par client et par avancement.',
-          };
-        }
-        if (clientsView === 'loyalty') {
-          return {
-            title: 'Fidélité',
-            description: 'Points, paliers et campagnes de fidélisation.',
-          };
-        }
-        return {
-          title: 'Clients',
-          description: 'Carnet clients, historique et accès rapide aux fiches.',
-        };
-      case 'messaging':
-        return {
-          title: 'Suivi client',
-          description:
-            'Conversations, relances et historique des échanges avec vos clients avant et après la séance.',
-        };
-      case 'portfolio':
-        return {
-          title: 'Portfolio',
-          description: 'Médias et réalisations affichés sur votre page publique.',
-        };
-      case 'stock':
-        return {
-          title: 'Traçabilité',
-          description:
-            'Consommables, comparatif fournisseurs, mouvements et traçabilité (QR / lots) pour ton activité.',
-        };
-      case 'finance': {
-        const byFin: Record<typeof financeView, string> = {
-          revenus: 'Revenus, encaissements et tendance globale.',
-          acomptes: 'Acomptes reçus, en attente et relances.',
-          pilotage:
-            'Pilotage auto-entrepreneur : réglages HT/TTC, plafond, charges, démarches (non comptable).',
-        };
-        return { title: 'Finance', description: byFin[financeView] };
-      }
-      case 'settings': {
-        const meta = SETTINGS_TAB_META[settingsTab];
-        return { title: meta.label, description: meta.description };
-      }
-      case 'notifications':
-        return {
-          title: 'Notifications',
-          description: 'Alertes studio, rappels et activité récente sur votre compte.',
-        };
-      case 'account':
-        return {
-          title: 'Mon compte',
-          description: 'Profil, identité visuelle compte et préférences de connexion.',
-        };
-      case 'etablissement':
-        return {
-          title: 'Établissement',
-          description: 'Paramètres liés à votre structure et à l’équipe.',
-        };
-      default:
-        return {
-          title: tabs.find((t) => t.id === activeTab)?.label ?? 'Tableau de bord',
-          description: 'Espace pro InkFlow.',
-        };
-    }
-  }, [
-    activeTab,
-    settingsTab,
-    clientsView,
-    financeView,
-    planningView,
-    requestsSubTab,
-    requestsSourceFilter,
-  ]);
+  const tabHeroModel = useMemo(
+    (): { title: string; description: string } | null =>
+      getTabHero({
+        activeTab,
+        settingsTab,
+        clientsView,
+        financeView,
+        planningView,
+        requestsSubTab,
+        requestsSourceFilter,
+      }),
+    [
+      getTabHero,
+      activeTab,
+      settingsTab,
+      clientsView,
+      financeView,
+      planningView,
+      requestsSubTab,
+      requestsSourceFilter,
+    ]
+  );
 
   /** Mobile : pas de hero dupliqué — Vue d’ensemble, Demandes et Clients ont leur Card in-page. */
   const tabHeroHiddenOnMobile =
@@ -1060,7 +894,7 @@ export const DashboardPro: React.FC = () => {
   });
 
   const visibleSettingsTabs = useMemo(() => {
-    return SETTINGS_MAIN_TABS.filter((tab) => {
+    return settingsMainTabs.filter((tab) => {
       if (tab.id === 'etablissement' && isCollaboratorUser) return false;
       if (
         isCollaboratorUser &&
@@ -1074,7 +908,7 @@ export const DashboardPro: React.FC = () => {
       if (tab.id === 'vitrine') return moduleFlags.vitrine;
       return true;
     });
-  }, [moduleFlags, isCollaboratorUser]);
+  }, [settingsMainTabs, moduleFlags, isCollaboratorUser]);
 
   /** Si le compte est restreint (essai expiré), on redirige vers Abonnement — sauf si `allowWhenRestricted` (abonnement, page vitrine / personnalisation). */
   const handleSidebarNav = useCallback(
@@ -1085,14 +919,14 @@ export const DashboardPro: React.FC = () => {
         setSidebarOpen(false);
         toast.info(
           subscriptionStatus === 'suspended'
-            ? 'Paiement refusé — mettez à jour votre carte ou votre moyen de paiement dans Facturation pour retrouver l’accès.'
-            : 'Abonnez-vous pour accéder à cette section'
+            ? t('dashboard.restricted.payment')
+            : t('dashboard.restricted.subscribe')
         );
         return;
       }
       action();
     },
-    [isRestricted, subscriptionStatus, toast]
+    [isRestricted, subscriptionStatus, toast, t]
   );
 
   const handleQuickAccessNavigate = useCallback(
@@ -3037,7 +2871,7 @@ export const DashboardPro: React.FC = () => {
                             InkFlow
                           </span>
                           <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                            Accueil
+                            {t('dashboard.header.home')}
                           </span>
                         </div>
                       ) : (
@@ -3046,7 +2880,7 @@ export const DashboardPro: React.FC = () => {
                             InkFlow
                           </span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 truncate">
-                            Accueil
+                            {t('dashboard.header.home')}
                           </span>
                         </div>
                       )}
@@ -3059,14 +2893,14 @@ export const DashboardPro: React.FC = () => {
                   <h2 className="text-base sm:text-xl font-semibold truncate text-zinc-900 dark:text-white min-w-0 pr-1">
                     {tabHeroModel?.title ??
                       (activeTab === 'settings' && settingsTab === 'account'
-                        ? 'Mon compte'
+                        ? t('dashboard.tab.account')
                         : activeTab === 'settings' && settingsTab === 'etablissement'
-                          ? 'Établissement'
+                          ? t('dashboard.tab.etablissement')
                           : activeTab === 'clients' && clientsView === 'loyalty'
-                            ? 'Fidélité'
+                            ? t('dashboard.sidebar.clients.loyalty')
                             : activeTab === 'clients' && clientsView === 'projects'
-                              ? 'Projets'
-                              : tabs.find((t) => t.id === activeTab)?.label)}
+                              ? t('dashboard.sidebar.clients.projects')
+                              : mobileTabs.find((tab) => tab.id === activeTab)?.label)}
                   </h2>
                 )}
               </div>
@@ -3084,7 +2918,7 @@ export const DashboardPro: React.FC = () => {
                     aria-hidden
                   />
                   <span className="text-sm text-zinc-600 dark:text-zinc-300 flex-1 min-w-0 truncate">
-                    Recherche rapide…
+                    {t('dashboard.header.search')}
                   </span>
                   <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-200/90 dark:bg-zinc-800/90 rounded border border-zinc-300/80 dark:border-zinc-600/80 flex-shrink-0">
                     ⌘K
@@ -3907,8 +3741,8 @@ export const DashboardPro: React.FC = () => {
                                     tabs={visibleSettingsTabs.map((tab) => ({
                                       id: tab.id,
                                       label: tab.label,
-                                      description: SETTINGS_TAB_META[tab.id].description,
-                                      Icon: SETTINGS_TAB_META[tab.id].Icon,
+                                      description: settingsTabMeta[tab.id].description,
+                                      Icon: settingsTabMeta[tab.id].Icon,
                                     }))}
                                     activeId={settingsTab}
                                     onChange={(id) => setSettingsTab(id as SettingsTabId)}
@@ -3936,7 +3770,7 @@ export const DashboardPro: React.FC = () => {
                                     aria-label="Sections des paramètres"
                                   >
                                     {visibleSettingsTabs.map((tab) => {
-                                      const { Icon } = SETTINGS_TAB_META[tab.id];
+                                      const { Icon } = settingsTabMeta[tab.id];
                                       const active = settingsTab === tab.id;
                                       return (
                                         <button
@@ -3945,7 +3779,7 @@ export const DashboardPro: React.FC = () => {
                                           role="tab"
                                           aria-selected={active}
                                           onClick={() => setSettingsTab(tab.id)}
-                                          title={SETTINGS_TAB_META[tab.id].description}
+                                          title={settingsTabMeta[tab.id].description}
                                           className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 min-h-[44px] active:scale-[0.98] ${
                                             active
                                               ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
@@ -4033,7 +3867,7 @@ export const DashboardPro: React.FC = () => {
                                     <span className="text-zinc-300 dark:text-zinc-600">/</span>
                                     <span className="text-sm font-semibold text-zinc-900 dark:text-white">
                                       {settingsTab !== 'home'
-                                        ? (SETTINGS_TAB_META[settingsTab]?.label ?? '')
+                                        ? (settingsTabMeta[settingsTab]?.label ?? '')
                                         : ''}
                                     </span>
                                   </div>
@@ -4129,7 +3963,7 @@ export const DashboardPro: React.FC = () => {
                                               </div>
                                               <div className={cn(dashboardListPanel)}>
                                                 {visibleItems.map((tabId) => {
-                                                  const meta = SETTINGS_TAB_META[tabId];
+                                                  const meta = settingsTabMeta[tabId];
                                                   const Icon = meta.Icon;
                                                   return (
                                                     <button
@@ -4176,18 +4010,20 @@ export const DashboardPro: React.FC = () => {
                                           id="settings-general-identity"
                                           className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
                                         >
-                                          Identité & fiche
+                                          {t('dashboard.settings.general.identityTitle')}
                                         </h2>
                                         <p className="type-body text-muted-foreground mt-1">
-                                          Nom, email, SIRET et photo affichés sur votre vitrine.
+                                          {t('dashboard.settings.general.identityDesc')}
                                         </p>
                                       </div>
                                       {/* Carte Profil */}
                                       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                                         <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                                          <h3 className="type-heading-sm">Profil du studio</h3>
+                                          <h3 className="type-heading-sm">
+                                            {t('dashboard.settings.general.profileTitle')}
+                                          </h3>
                                           <p className="type-body text-muted-foreground mt-0.5">
-                                            Informations affichées sur votre page publique
+                                            {t('dashboard.settings.general.profileDesc')}
                                           </p>
                                         </div>
                                         <div className="p-6 space-y-6">
@@ -4214,18 +4050,17 @@ export const DashboardPro: React.FC = () => {
                                                 type="button"
                                                 onClick={() => avatarInputRef.current?.click()}
                                                 className="absolute -bottom-2 -right-2 w-9 h-9 bg-blue-600 dark:bg-blue-500 text-white rounded-xl flex items-center justify-center shadow-lg hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
-                                                title="Changer la photo"
+                                                title={t('dashboard.settings.general.changePhoto')}
                                               >
                                                 <Camera className="w-4 h-4" />
                                               </button>
                                             </div>
                                             <div className="flex-1 min-w-0 pt-1">
                                               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                                Photo de profil
+                                                {t('dashboard.settings.general.profilePhoto')}
                                               </p>
                                               <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                                                Cette image apparaîtra sur votre page vitrine et
-                                                dans vos communications.
+                                                {t('dashboard.settings.general.profilePhotoDesc')}
                                               </p>
                                               <div className="flex items-center gap-2">
                                                 <button
@@ -4235,10 +4070,10 @@ export const DashboardPro: React.FC = () => {
                                                   className="px-4 py-2 text-sm font-medium bg-blue-600 text-white dark:bg-blue-500 dark:hover:bg-blue-400 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
                                                 >
                                                   {avatarUploading
-                                                    ? 'Upload...'
+                                                    ? t('dashboard.settings.general.uploading')
                                                     : user?.avatar
-                                                      ? 'Modifier'
-                                                      : 'Ajouter'}
+                                                      ? t('dashboard.settings.general.edit')
+                                                      : t('dashboard.settings.general.add')}
                                                 </button>
                                                 {user?.avatar && (
                                                   <button
@@ -4259,7 +4094,7 @@ export const DashboardPro: React.FC = () => {
                                           {/* Nom du studio */}
                                           <div className="space-y-2">
                                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                              Nom du studio
+                                              {t('dashboard.settings.general.studioName')}
                                             </label>
                                             <input
                                               type="text"
@@ -4269,14 +4104,16 @@ export const DashboardPro: React.FC = () => {
                                                 setGeneralSaved(false);
                                               }}
                                               className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                                              placeholder="Mon studio de tatouage"
+                                              placeholder={t(
+                                                'dashboard.settings.general.studioNamePh'
+                                              )}
                                             />
                                           </div>
 
                                           {/* Email */}
                                           <div className="space-y-2">
                                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                              Email
+                                              {t('dashboard.settings.general.email')}
                                             </label>
                                             <input
                                               type="email"
@@ -4289,15 +4126,14 @@ export const DashboardPro: React.FC = () => {
                                               placeholder="contact@example.com"
                                             />
                                             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                              Cet email sera utilisé pour les notifications et la
-                                              facturation.
+                                              {t('dashboard.settings.general.emailHint')}
                                             </p>
                                           </div>
 
                                           {/* SIRET */}
                                           <div className="space-y-2">
                                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                              SIRET
+                                              {t('dashboard.settings.general.siret')}
                                             </label>
                                             <input
                                               type="text"
@@ -4315,8 +4151,7 @@ export const DashboardPro: React.FC = () => {
                                               placeholder="123 456 789 00012"
                                             />
                                             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                              Obligatoire pour la facturation et les mentions
-                                              légales sur votre vitrine.
+                                              {t('dashboard.settings.general.siretHint')}
                                             </p>
                                           </div>
                                           {/* Bouton sauvegarder */}
@@ -4407,7 +4242,7 @@ export const DashboardPro: React.FC = () => {
                                                       d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                                                     />
                                                   </svg>
-                                                  Enregistrement...
+                                                  {t('dashboard.settings.general.saving')}
                                                 </span>
                                               ) : generalSaved ? (
                                                 <span className="inline-flex items-center gap-2">
@@ -4416,10 +4251,10 @@ export const DashboardPro: React.FC = () => {
                                                     strokeWidth={2.5}
                                                     aria-hidden
                                                   />
-                                                  Enregistré
+                                                  {t('dashboard.settings.general.saved')}
                                                 </span>
                                               ) : (
-                                                'Enregistrer les modifications'
+                                                t('dashboard.settings.general.saveChanges')
                                               )}
                                             </button>
                                           </div>
@@ -4436,10 +4271,10 @@ export const DashboardPro: React.FC = () => {
                                           id="settings-general-links"
                                           className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
                                         >
-                                          Lien public & URL
+                                          {t('dashboard.settings.general.publicUrlTitle')}
                                         </h2>
                                         <p className="type-body text-muted-foreground mt-1">
-                                          Vitrine et adresse web du studio.
+                                          {t('dashboard.settings.general.publicUrlDesc')}
                                         </p>
                                       </div>
                                       <div className="space-y-6">
@@ -4471,15 +4306,10 @@ export const DashboardPro: React.FC = () => {
                                           id="settings-general-discovery"
                                           className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
                                         >
-                                          Carte & découverte
+                                          {t('dashboard.settings.general.discoveryTitle')}
                                         </h2>
                                         <p className="type-body text-muted-foreground mt-1">
-                                          Apparition sur la carte « à proximité » dans l&apos;app
-                                          client. Les avis Google se règlent dans{' '}
-                                          <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                                            Établissement
-                                          </span>
-                                          .
+                                          {t('dashboard.settings.general.discoveryDescLong')}
                                         </p>
                                       </div>
                                       {studioId && (

@@ -28,7 +28,7 @@ const stagger = {
 };
 
 export const EnhanceAIHero: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const reduceMotion = useReducedMotion();
 
   const features = [t('hero.feature1'), t('hero.feature2'), t('hero.feature3')];
@@ -78,21 +78,23 @@ export const EnhanceAIHero: React.FC = () => {
               InkFlow
             </span>
             <span className="h-1 w-1 rounded-full bg-emerald-400" aria-hidden />
-            <span className="text-white/75">Fait pour les tatoueurs indépendants en France</span>
+            <span className="text-white/75">{t('hero.badgeAudience')}</span>
           </motion.div>
 
           <motion.div variants={fadeUp} custom={1}>
             <h1 className="font-hero-title max-w-[14ch] text-left text-[2.35rem] font-extrabold leading-[1.02] tracking-tighter text-white sm:text-5xl lg:text-[3.35rem] xl:text-[3.65rem]">
               <BlurText
                 as="span"
-                text="Les demandes Insta"
+                key={`${lang}-line1`}
+                text={t('hero.titleLine1')}
                 animateOnMount
                 delay={90}
                 className="max-w-[14ch] text-left text-white"
               />
               <BlurText
                 as="span"
-                text="qui deviennent des RDV."
+                key={`${lang}-line2`}
+                text={t('hero.titleLine2')}
                 animateOnMount
                 delay={70}
                 className="block max-w-[14ch] text-left text-zinc-300"
@@ -105,8 +107,7 @@ export const EnhanceAIHero: React.FC = () => {
             custom={2}
             className="mt-5 max-w-[52ch] text-left text-base leading-relaxed text-zinc-300 sm:text-lg"
           >
-            Tu qualifies en deux clics, l&apos;acompte part sur Stripe, le créneau se bloque dans
-            ton agenda. Moins de DM, plus de temps à la machine.
+            {t('hero.subtitleV2')}
           </motion.p>
 
           <motion.div
@@ -148,7 +149,7 @@ export const EnhanceAIHero: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              Essayer gratuitement
+              {t('hero.ctaTrial')}
               <ArrowRight
                 className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
                 strokeWidth={2}
@@ -160,7 +161,7 @@ export const EnhanceAIHero: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              Voir une démo
+              {t('hero.ctaDemoShort')}
             </motion.a>
           </motion.div>
 
@@ -175,11 +176,11 @@ export const EnhanceAIHero: React.FC = () => {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={2.5} />
-              Sans carte
+              {t('hero.noCard')}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={2.5} />
-              Annulation libre
+              {t('hero.cancelFree')}
             </span>
           </motion.p>
         </motion.div>

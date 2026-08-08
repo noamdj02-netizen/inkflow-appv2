@@ -30,6 +30,7 @@ import { getVitrineShareUrl } from '../../lib/urls';
 import { ThemeSelector } from './ThemeSelector';
 import { ImageUploadField } from '../ui/ImageUploadField';
 import { useToast } from '../../contexts/ToastContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import type { VitrineData, VitrineService, VitrineWhyChooseUs } from '../../types/vitrine';
 import {
@@ -40,16 +41,6 @@ import {
 } from '../../lib/vitrineStorage';
 import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
 
-const ICON_OPTIONS = [
-  { value: 'sparkles', label: 'Étincelles' },
-  { value: 'award', label: 'Trophée' },
-  { value: 'star', label: 'Étoile' },
-  { value: 'camera', label: 'Appareil photo' },
-  { value: 'shield', label: 'Bouclier' },
-  { value: 'heart', label: 'Cœur' },
-  { value: 'users', label: 'Utilisateurs' },
-];
-
 const DAYS = [
   'monday',
   'tuesday',
@@ -59,15 +50,6 @@ const DAYS = [
   'saturday',
   'sunday',
 ] as const;
-const DAY_LABELS: Record<string, string> = {
-  monday: 'Lundi',
-  tuesday: 'Mardi',
-  wednesday: 'Mercredi',
-  thursday: 'Jeudi',
-  friday: 'Vendredi',
-  saturday: 'Samedi',
-  sunday: 'Dimanche',
-};
 
 interface VitrineSettingsProps {
   studioName: string;
@@ -108,6 +90,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
   onLoadGoogleBusinessLocations,
 }) => {
   const toast = useToast();
+  const { t, lang } = useLanguage();
   const slug =
     studioSlugFromDb != null && studioSlugFromDb !== ''
       ? studioSlugFromDb
@@ -177,6 +160,23 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
     [data.testimonials]
   );
 
+  const iconOptions = useMemo(
+    () =>
+      (['sparkles', 'award', 'star', 'camera', 'shield', 'heart', 'users'] as const).map(
+        (value) => ({
+          value,
+          label: t(`dashboard.vitrine.icon.${value}`),
+        })
+      ),
+    [t, lang]
+  );
+
+  const dayLabels = useMemo(
+    (): Record<string, string> =>
+      Object.fromEntries(DAYS.map((day) => [day, t(`dashboard.vitrine.day.${day}`)])),
+    [t, lang]
+  );
+
   const update = <K extends keyof VitrineData>(key: K, value: VitrineData[K]) => {
     dirtyRef.current = true;
     setData((prev) => ({ ...prev, [key]: value }));
@@ -193,12 +193,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
     try {
       if (userEmail && studioName) {
         await saveVitrineDataAsync(slug, latestData, userEmail, studioName);
-        toast.success('Sauvegardé !');
+        toast.success(t('dashboard.vitrine.page.saveSuccess'));
       } else {
-        toast.success('Sauvegardé !');
+        toast.success(t('dashboard.vitrine.page.saveSuccess'));
       }
     } catch {
-      toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
+      toast.warning(t('dashboard.vitrine.page.saveLocalWarning'));
     } finally {
       setManualSaving(false);
     }
@@ -206,19 +206,23 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
 
   const sections = useMemo(
     (): { id: string; label: string; icon: LucideIcon }[] => [
-      { id: 'identity', label: 'Identité & Présentation', icon: Store },
-      { id: 'contact', label: 'Contact & Réseaux', icon: Phone },
-      { id: 'stats', label: 'Statistiques', icon: BarChart3 },
-      { id: 'services', label: 'Services', icon: Briefcase },
-      { id: 'artists', label: 'Artistes', icon: Users },
-      { id: 'portfolio', label: 'Portfolio', icon: Images },
-      { id: 'flash', label: 'Flash', icon: Zap },
-      { id: 'testimonials', label: 'Avis clients', icon: MessageSquare },
-      { id: 'faq', label: 'FAQ', icon: HelpCircle },
-      { id: 'why', label: 'Pourquoi nous', icon: Sparkles },
-      { id: 'hours', label: 'Horaires', icon: Clock },
+      { id: 'identity', label: t('dashboard.vitrine.section.identity'), icon: Store },
+      { id: 'contact', label: t('dashboard.vitrine.section.contact'), icon: Phone },
+      { id: 'stats', label: t('dashboard.vitrine.section.stats'), icon: BarChart3 },
+      { id: 'services', label: t('dashboard.vitrine.section.services'), icon: Briefcase },
+      { id: 'artists', label: t('dashboard.vitrine.section.artists'), icon: Users },
+      { id: 'portfolio', label: t('dashboard.vitrine.section.portfolio'), icon: Images },
+      { id: 'flash', label: t('dashboard.vitrine.section.flash'), icon: Zap },
+      {
+        id: 'testimonials',
+        label: t('dashboard.vitrine.section.testimonials'),
+        icon: MessageSquare,
+      },
+      { id: 'faq', label: t('dashboard.vitrine.section.faq'), icon: HelpCircle },
+      { id: 'why', label: t('dashboard.vitrine.section.why'), icon: Sparkles },
+      { id: 'hours', label: t('dashboard.vitrine.section.hours'), icon: Clock },
     ],
-    []
+    [t, lang]
   );
 
   const sectionIndex = sections.findIndex((s) => s.id === activeSection);
@@ -245,8 +249,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
       />
       {slugConflict && (
         <p className="text-xs text-zinc-600 dark:text-zinc-400 rounded-lg border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
-          Ce nom de studio était déjà pris — l'URL dans le bloc « Lien de votre vitrine » est votre
-          lien unique.
+          {t('dashboard.vitrine.page.slugConflict')}
         </p>
       )}
       {studioId && (
@@ -258,10 +261,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
       )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 space-y-1">
-          <h2 className="type-heading-sm sm:text-xl">Personnaliser votre page vitrine</h2>
+          <h2 className="type-heading-sm sm:text-xl">{t('dashboard.vitrine.page.title')}</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xl leading-snug">
-            {sections.length} sections au total — la sauvegarde est automatique. Utilisez le bouton
-            pour forcer une synchro immédiate.
+            {t('dashboard.vitrine.page.desc').replace('{n}', String(sections.length))}
           </p>
         </div>
         <button
@@ -271,16 +273,16 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
           className="flex items-center justify-center gap-2 min-h-[44px] px-5 sm:px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 w-full sm:w-auto shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-[0.98] motion-reduce:active:scale-100"
         >
           {manualSaving || saving ? (
-            'Enregistrement...'
+            t('dashboard.vitrine.page.saving')
           ) : saved ? (
             <>
               <Check className="w-5 h-5 shrink-0" aria-hidden />
-              Enregistré
+              {t('dashboard.vitrine.page.saved')}
             </>
           ) : (
             <>
               <Save className="w-5 h-5 shrink-0" aria-hidden />
-              Enregistrer
+              {t('dashboard.vitrine.page.save')}
             </>
           )}
         </button>
@@ -288,13 +290,13 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
 
       <div className="relative border-b border-zinc-200/80 dark:border-zinc-800 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
         <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2 sm:hidden">
-          Sections ({sections.length})
+          {t('dashboard.vitrine.page.sectionsMobile').replace('{n}', String(sections.length))}
         </p>
         <div
           className="flex gap-2 overflow-x-auto flex-nowrap scrollbar-hide snap-x snap-mandatory scroll-px-4 sm:scroll-px-0 pb-1 -mb-1 touch-pan-x"
           style={{ WebkitOverflowScrolling: 'touch' }}
           role="tablist"
-          aria-label="Blocs de la vitrine"
+          aria-label={t('dashboard.vitrine.page.sectionsTablist')}
         >
           {sections.map(({ id, label, icon: Icon }) => (
             <button
@@ -324,7 +326,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
           ))}
         </div>
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">
-          Section {safeSectionIndex + 1} sur {sections.length}
+          {t('dashboard.vitrine.page.sectionOf')
+            .replace('{current}', String(safeSectionIndex + 1))
+            .replace('{total}', String(sections.length))}
           <span className="text-zinc-400 dark:text-zinc-500"> · </span>
           <span className="font-medium text-zinc-600 dark:text-zinc-300">
             {sections[safeSectionIndex]?.label}
@@ -340,10 +344,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
       >
         {activeSection === 'identity' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Identité du studio</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.identity.title')}</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Nom du studio</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.identity.studioName')}
+                </label>
                 <input
                   type="text"
                   value={data.name}
@@ -352,18 +358,22 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Slogan / Tagline</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.identity.tagline')}
+                </label>
                 <input
                   type="text"
                   value={data.tagline}
                   onChange={(e) => update('tagline', e.target.value)}
                   className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  placeholder="L'art du tatouage depuis 2015"
+                  placeholder={t('dashboard.vitrine.identity.taglinePh')}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2">Description</label>
+              <label className="block text-sm font-semibold mb-2">
+                {t('dashboard.vitrine.common.description')}
+              </label>
               <textarea
                 value={data.description}
                 onChange={(e) => update('description', e.target.value)}
@@ -373,14 +383,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
             </div>
             <div className="space-y-6">
               <ImageUploadField
-                label="Logo / Avatar"
+                label={t('dashboard.vitrine.identity.logo')}
                 value={data.avatar}
                 onChange={(v) => update('avatar', v)}
                 shape="round"
                 previewSize="md"
               />
               <ImageUploadField
-                label="Image de couverture"
+                label={t('dashboard.vitrine.identity.cover')}
                 value={data.coverImage}
                 onChange={(v) => update('coverImage', v)}
                 shape="cover"
@@ -392,9 +402,11 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
 
         {activeSection === 'contact' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Coordonnées</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.contact.title')}</h3>
             <div>
-              <label className="block text-sm font-semibold mb-2">Adresse</label>
+              <label className="block text-sm font-semibold mb-2">
+                {t('dashboard.vitrine.common.address')}
+              </label>
               <input
                 type="text"
                 value={data.address}
@@ -404,7 +416,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Téléphone</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.common.phone')}
+                </label>
                 <input
                   type="tel"
                   value={data.phone}
@@ -413,7 +427,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Email</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.common.email')}
+                </label>
                 <input
                   type="email"
                   value={data.email}
@@ -424,17 +440,21 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
             </div>
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Instagram</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.contact.instagram')}
+                </label>
                 <input
                   type="text"
                   value={data.instagram}
                   onChange={(e) => update('instagram', e.target.value)}
                   className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  placeholder="@votrestudio"
+                  placeholder={t('dashboard.vitrine.contact.instagramPh')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Facebook</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.contact.facebook')}
+                </label>
                 <input
                   type="text"
                   value={data.facebook}
@@ -443,13 +463,15 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Site web</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.contact.website')}
+                </label>
                 <input
                   type="text"
                   value={data.website}
                   onChange={(e) => update('website', e.target.value)}
                   className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  placeholder="www.exemple.fr"
+                  placeholder={t('dashboard.vitrine.contact.websitePh')}
                 />
               </div>
             </div>
@@ -459,7 +481,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
         {activeSection === 'stats' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg">Statistiques (affichées sur la vitrine)</h3>
+              <h3 className="font-bold text-lg">{t('dashboard.vitrine.stats.title')}</h3>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -467,16 +489,19 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   onChange={(e) => update('showStatsBanner', e.target.checked)}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm font-medium">Afficher la bannière statistiques</span>
+                <span className="text-sm font-medium">
+                  {t('dashboard.vitrine.stats.showBanner')}
+                </span>
               </label>
             </div>
             <p className="text-sm text-[var(--text-tertiary)]">
-              Décochez pour masquer entièrement la section (Tatouages réalisés, Satisfaction, etc.)
-              sur votre page vitrine.
+              {t('dashboard.vitrine.stats.hideHint')}
             </p>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Note (ex: 4.9)</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.stats.rating')}
+                </label>
                 <input
                   type="number"
                   step="0.1"
@@ -486,7 +511,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Nombre d'avis</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.stats.reviewCount')}
+                </label>
                 <input
                   type="number"
                   value={data.reviewCount}
@@ -495,7 +522,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Années d'expérience</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.stats.years')}
+                </label>
                 <input
                   type="number"
                   value={data.yearsExperience}
@@ -504,7 +533,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Tatouages réalisés</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.stats.tattoos')}
+                </label>
                 <input
                   type="number"
                   value={data.totalTattoos}
@@ -513,7 +544,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Taux satisfaction %</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.stats.satisfaction')}
+                </label>
                 <input
                   type="number"
                   value={data.satisfactionRate}
@@ -522,7 +555,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Clients fidèles %</label>
+                <label className="block text-sm font-semibold mb-2">
+                  {t('dashboard.vitrine.stats.repeat')}
+                </label>
                 <input
                   type="number"
                   value={data.repeatClients}
@@ -539,11 +574,10 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)]">
               <div>
                 <p className="font-semibold text-[var(--text-primary)]">
-                  Section « Nos services » sur la vitrine
+                  {t('dashboard.vitrine.services.toggleTitle')}
                 </p>
                 <p className="text-sm text-[var(--text-tertiary)] mt-1">
-                  Décochez pour masquer la section sur votre page publique. Vous pouvez toujours
-                  modifier le contenu ci-dessous.
+                  {t('dashboard.vitrine.services.toggleDesc')}
                 </p>
               </div>
               <label className="flex items-center gap-2 cursor-pointer shrink-0">
@@ -554,18 +588,20 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   className="w-4 h-4 rounded"
                 />
                 <span className="text-sm font-medium text-[var(--text-primary)]">
-                  Afficher la section
+                  {t('dashboard.vitrine.common.showSection')}
                 </span>
               </label>
             </div>
-            <h3 className="font-bold text-lg">Contenu des offres</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.services.contentTitle')}</h3>
             {data.services.map((service, idx) => (
               <div
                 key={idx}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Service {idx + 1}</span>
+                  <span className="font-semibold">
+                    {t('dashboard.vitrine.common.service').replace('{n}', String(idx + 1))}
+                  </span>
                   <button
                     onClick={() =>
                       update(
@@ -586,7 +622,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       s[idx] = { ...s[idx], name: e.target.value };
                       update('services', s);
                     }}
-                    placeholder="Nom"
+                    placeholder={t('dashboard.vitrine.common.name')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -596,7 +632,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       s[idx] = { ...s[idx], price: e.target.value };
                       update('services', s);
                     }}
-                    placeholder="Prix (ex: À partir de 150€)"
+                    placeholder={t('dashboard.vitrine.services.pricePh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
@@ -607,7 +643,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     s[idx] = { ...s[idx], duration: e.target.value };
                     update('services', s);
                   }}
-                  placeholder="Durée (ex: 2-4h)"
+                  placeholder={t('dashboard.vitrine.services.durationPh')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
                 <textarea
@@ -617,7 +653,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     s[idx] = { ...s[idx], description: e.target.value };
                     update('services', s);
                   }}
-                  placeholder="Description"
+                  placeholder={t('dashboard.vitrine.common.description')}
                   rows={2}
                   className="w-full px-4 py-2 border rounded-lg resize-none"
                 />
@@ -630,7 +666,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   }}
                   className="px-4 py-2 border rounded-lg"
                 >
-                  {ICON_OPTIONS.map((o) => (
+                  {iconOptions.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
@@ -649,7 +685,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     };
                     update('services', s);
                   }}
-                  placeholder="Avantages (séparés par des virgules)"
+                  placeholder={t('dashboard.vitrine.services.featuresPh')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
               </div>
@@ -670,21 +706,23 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               }
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter un service
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addService')}
             </button>
           </div>
         )}
 
         {activeSection === 'artists' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Artistes</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.artists.title')}</h3>
             {data.artists.map((artist, idx) => (
               <div
                 key={idx}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Artiste {idx + 1}</span>
+                  <span className="font-semibold">
+                    {t('dashboard.vitrine.common.artist').replace('{n}', String(idx + 1))}
+                  </span>
                   <button
                     onClick={() =>
                       update(
@@ -705,7 +743,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       a[idx] = { ...a[idx], name: e.target.value };
                       update('artists', a);
                     }}
-                    placeholder="Nom"
+                    placeholder={t('dashboard.vitrine.common.name')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -715,12 +753,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       a[idx] = { ...a[idx], role: e.target.value };
                       update('artists', a);
                     }}
-                    placeholder="Rôle"
+                    placeholder={t('dashboard.vitrine.common.role')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
                 <ImageUploadField
-                  label="Photo de l'artiste"
+                  label={t('dashboard.vitrine.artists.photo')}
                   value={artist.avatar}
                   onChange={(v) => {
                     const a = [...data.artists];
@@ -737,7 +775,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     a[idx] = { ...a[idx], experience: e.target.value };
                     update('artists', a);
                   }}
-                  placeholder="Expérience (ex: 12 ans)"
+                  placeholder={t('dashboard.vitrine.artists.experiencePh')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
                 <textarea
@@ -747,7 +785,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     a[idx] = { ...a[idx], bio: e.target.value };
                     update('artists', a);
                   }}
-                  placeholder="Biographie"
+                  placeholder={t('dashboard.vitrine.artists.bioPh')}
                   rows={2}
                   className="w-full px-4 py-2 border rounded-lg resize-none"
                 />
@@ -759,7 +797,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       a[idx] = { ...a[idx], instagram: e.target.value };
                       update('artists', a);
                     }}
-                    placeholder="Instagram"
+                    placeholder={t('dashboard.vitrine.contact.instagram')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -770,7 +808,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       a[idx] = { ...a[idx], portfolio: parseInt(e.target.value) || 0 };
                       update('artists', a);
                     }}
-                    placeholder="Portfolio (nombre)"
+                    placeholder={t('dashboard.vitrine.artists.portfolioCountPh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
@@ -787,7 +825,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     };
                     update('artists', a);
                   }}
-                  placeholder="Spécialités (séparées par des virgules)"
+                  placeholder={t('dashboard.vitrine.artists.specialtiesPh')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
               </div>
@@ -810,21 +848,21 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               }
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter un artiste
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addArtist')}
             </button>
           </div>
         )}
 
         {activeSection === 'portfolio' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Portfolio</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.portfolio.title')}</h3>
             {data.portfolio.map((item, idx) => (
               <div
                 key={idx}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
               >
                 <ImageUploadField
-                  label="Photo portfolio"
+                  label={t('dashboard.vitrine.portfolio.photo')}
                   value={item.url}
                   onChange={(v) => {
                     const p = [...data.portfolio];
@@ -841,7 +879,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       p[idx] = { ...p[idx], category: e.target.value };
                       update('portfolio', p);
                     }}
-                    placeholder="Catégorie"
+                    placeholder={t('dashboard.vitrine.common.category')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -851,7 +889,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       p[idx] = { ...p[idx], artist: e.target.value };
                       update('portfolio', p);
                     }}
-                    placeholder="Artiste"
+                    placeholder={t('dashboard.vitrine.portfolio.artistPh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -861,7 +899,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       p[idx] = { ...p[idx], description: e.target.value };
                       update('portfolio', p);
                     }}
-                    placeholder="Description"
+                    placeholder={t('dashboard.vitrine.common.description')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -872,7 +910,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       p[idx] = { ...p[idx], likes: parseInt(e.target.value) || 0 };
                       update('portfolio', p);
                     }}
-                    placeholder="Likes"
+                    placeholder={t('dashboard.vitrine.portfolio.likesPh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
@@ -900,21 +938,24 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               }
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter une photo
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addPhoto')}
             </button>
           </div>
         )}
 
         {activeSection === 'flash' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Flash disponibles</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.flash.title')}</h3>
             {data.flashDesigns.map((flash, idx) => (
               <div
                 key={flash.id}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">{flash.title || `Flash ${idx + 1}`}</span>
+                  <span className="font-semibold">
+                    {flash.title ||
+                      t('dashboard.vitrine.common.flash').replace('{n}', String(idx + 1))}
+                  </span>
                   <button
                     onClick={() =>
                       update(
@@ -935,12 +976,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       f[idx] = { ...f[idx], title: e.target.value };
                       update('flashDesigns', f);
                     }}
-                    placeholder="Titre"
+                    placeholder={t('dashboard.vitrine.common.title')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
                 <ImageUploadField
-                  label="Image du flash"
+                  label={t('dashboard.vitrine.flash.image')}
                   value={flash.imageUrl}
                   onChange={(v) => {
                     const f = [...data.flashDesigns];
@@ -958,7 +999,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       f[idx] = { ...f[idx], price: parseInt(e.target.value) || 0 };
                       update('flashDesigns', f);
                     }}
-                    placeholder="Prix (€)"
+                    placeholder={t('dashboard.vitrine.flash.pricePh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -969,7 +1010,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       f[idx] = { ...f[idx], duration: parseInt(e.target.value) || 0 };
                       update('flashDesigns', f);
                     }}
-                    placeholder="Durée (min)"
+                    placeholder={t('dashboard.vitrine.flash.durationPh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
@@ -981,7 +1022,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       f[idx] = { ...f[idx], style: e.target.value };
                       update('flashDesigns', f);
                     }}
-                    placeholder="Style"
+                    placeholder={t('dashboard.vitrine.flash.stylePh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
@@ -991,7 +1032,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       f[idx] = { ...f[idx], size: e.target.value };
                       update('flashDesigns', f);
                     }}
-                    placeholder="Taille"
+                    placeholder={t('dashboard.vitrine.flash.sizePh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
@@ -1002,7 +1043,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     f[idx] = { ...f[idx], description: e.target.value };
                     update('flashDesigns', f);
                   }}
-                  placeholder="Description"
+                  placeholder={t('dashboard.vitrine.common.description')}
                   rows={2}
                   className="w-full px-4 py-2 border rounded-lg resize-none"
                 />
@@ -1019,7 +1060,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     };
                     update('flashDesigns', f);
                   }}
-                  placeholder="Emplacements (séparés par des virgules)"
+                  placeholder={t('dashboard.vitrine.flash.placementsPh')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
                 <label className="flex items-center gap-2">
@@ -1032,7 +1073,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       update('flashDesigns', f);
                     }}
                   />
-                  <span className="text-sm font-medium">Disponible</span>
+                  <span className="text-sm font-medium">
+                    {t('dashboard.vitrine.common.available')}
+                  </span>
                 </label>
               </div>
             ))}
@@ -1056,14 +1099,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               }
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter un flash
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addFlash')}
             </button>
           </div>
         )}
 
         {activeSection === 'testimonials' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Avis clients</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.testimonials.title')}</h3>
 
             {/* Avis Google : OAuth Business Profile (optionnel) ou Place ID + témoignages */}
             <div className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] space-y-3">
@@ -1092,21 +1135,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   />
                 </svg>
                 <label className="block text-sm font-semibold text-[var(--text-primary)]">
-                  Avis Google
+                  {t('dashboard.vitrine.testimonials.google')}
                 </label>
               </div>
 
               {!showGoogleBusinessOAuth ? (
                 <div className="space-y-3">
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Parcours recommandé tant que le projet Google Cloud n’est pas approuvé pour
-                    l’API Business Profile : liez votre fiche via l’URL Maps ou le{' '}
-                    <strong className="text-zinc-700 dark:text-zinc-300">Place ID</strong> dans{' '}
-                    <strong className="text-zinc-700 dark:text-zinc-300">
-                      Paramètres → Établissement
-                    </strong>{' '}
-                    (avis publics via Google Places), puis complétez avec les témoignages manuels
-                    ci-dessous.
+                    {t('dashboard.vitrine.testimonials.googleFallback')}
                   </p>
                   <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 px-3 py-2.5">
                     <Info
@@ -1114,27 +1150,17 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       aria-hidden
                     />
                     <div className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed space-y-1.5">
-                      <p>
-                        La connexion « compte Google Business » (tous les avis, API Account
-                        Management) est désactivée côté app. Pour la réactiver après validation
-                        Google : variable{' '}
-                        <code className="font-mono text-[10px] text-zinc-800 dark:text-zinc-200">
-                          VITE_GOOGLE_BUSINESS_OAUTH_ENABLED=true
-                        </code>{' '}
-                        sur Vercel ou dans <code className="font-mono text-[10px]">.env.local</code>
-                        .
-                      </p>
+                      <p>{t('dashboard.vitrine.testimonials.oauthDisabled')}</p>
                     </div>
                   </div>
                   {googleBusinessConnected && (
                     <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">
-                          Compte encore lié côté serveur
+                          {t('dashboard.vitrine.testimonials.stillLinked')}
                         </p>
                         <p className="text-[11px] text-amber-500/90 dark:text-amber-400/90 mt-0.5">
-                          La synchro OAuth n’est pas utilisée avec la config actuelle. Déconnectez
-                          pour nettoyer, ou activez l’OAuth comme ci-dessus.
+                          {t('dashboard.vitrine.testimonials.stillLinkedHint')}
                         </p>
                       </div>
                       <button
@@ -1144,9 +1170,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                           setDisconnectingBusiness(true);
                           try {
                             await onDisconnectGoogleBusiness();
-                            toast.success('Compte Google déconnecté');
+                            toast.success(t('dashboard.vitrine.testimonials.disconnectSuccess'));
                           } catch {
-                            toast.error('Impossible de déconnecter');
+                            toast.error(t('dashboard.vitrine.testimonials.disconnectError'));
                           } finally {
                             setDisconnectingBusiness(false);
                           }
@@ -1159,7 +1185,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                         ) : (
                           <Link2Off className="w-3.5 h-3.5" />
                         )}
-                        Déconnecter
+                        {t('dashboard.vitrine.common.disconnect')}
                       </button>
                     </div>
                   )}
@@ -1167,8 +1193,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               ) : (
                 <>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Connectez votre compte Google Business pour afficher vos avis Google sur la
-                    vitrine (API Google, soumise à quotas et validation Cloud).
+                    {t('dashboard.vitrine.testimonials.googleDesc')}
                   </p>
                   {googleBusinessConnected ? (
                     <div className="space-y-3">
@@ -1200,11 +1225,11 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-[var(--text-primary)]">
-                                Google Business
+                                {t('dashboard.vitrine.testimonials.googleBusiness')}
                               </span>
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                                Connecté
+                                {t('dashboard.vitrine.common.connected')}
                               </span>
                             </div>
                             {googleBusinessLocationName ? (
@@ -1219,7 +1244,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                               </p>
                             ) : (
                               <p className="text-[11px] text-amber-400 mt-0.5">
-                                Choisissez une fiche ci-dessous
+                                {t('dashboard.vitrine.testimonials.pickLocation')}
                               </p>
                             )}
                           </div>
@@ -1231,9 +1256,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                             setDisconnectingBusiness(true);
                             try {
                               await onDisconnectGoogleBusiness();
-                              toast.success('Compte Google déconnecté');
+                              toast.success(t('dashboard.vitrine.testimonials.disconnectSuccess'));
                             } catch {
-                              toast.error('Impossible de déconnecter');
+                              toast.error(t('dashboard.vitrine.testimonials.disconnectError'));
                             } finally {
                               setDisconnectingBusiness(false);
                             }
@@ -1246,27 +1271,28 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                           ) : (
                             <Link2Off className="w-3.5 h-3.5" />
                           )}
-                          Déconnecter
+                          {t('dashboard.vitrine.common.disconnect')}
                         </button>
                       </div>
 
                       {googleBusinessNeedsLocationSelection && (
                         <div>
                           <p className="text-xs text-zinc-400 mb-2">
-                            Quelle fiche correspond à votre vitrine ?
+                            {t('dashboard.vitrine.testimonials.whichLocation')}
                           </p>
                           {loadingGoogleBusinessLocations ? (
                             <div className="flex items-center gap-2 text-xs text-zinc-400">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Chargement…
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />{' '}
+                              {t('dashboard.vitrine.common.loading')}
                             </div>
                           ) : googleBusinessLocations.length === 0 ? (
                             <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 space-y-3">
                               <p className="text-sm font-medium text-[var(--text-primary)]">
-                                Aucune fiche trouvée
+                                {t('dashboard.vitrine.testimonials.noLocation')}
                               </p>
                               <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                                 {googleBusinessLocationsHint ||
-                                  'Si votre établissement est bien sur Google Maps, vérifiez que vous avez connecté le bon compte Google, ou renseignez un Place ID dans Paramètres > Établissement.'}
+                                  t('dashboard.vitrine.testimonials.noLocationHint')}
                               </p>
                               {onLoadGoogleBusinessLocations && (
                                 <button
@@ -1276,7 +1302,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                                   className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-zinc-800/50 disabled:opacity-50 transition-all active:scale-[0.98]"
                                 >
                                   <RefreshCw className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                                  Rafraîchir la liste
+                                  {t('dashboard.vitrine.common.refreshList')}
                                 </button>
                               )}
                             </div>
@@ -1293,7 +1319,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                                         const msg =
                                           e instanceof Error
                                             ? e.message
-                                            : 'Enregistrement impossible';
+                                            : t('dashboard.vitrine.testimonials.saveError');
                                         toast.error(
                                           msg.length > 160 ? `${msg.slice(0, 157)}…` : msg
                                         );
@@ -1325,7 +1351,8 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                           await onConnectGoogleBusiness();
                         } catch (err) {
                           toast.error(
-                            (err as Error).message || 'Impossible de lancer la connexion'
+                            (err as Error).message ||
+                              t('dashboard.vitrine.testimonials.connectError')
                           );
                           setConnectingBusiness(false);
                         }
@@ -1335,11 +1362,13 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     >
                       {connectingBusiness ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" /> Connexion…
+                          <Loader2 className="w-4 h-4 animate-spin" />{' '}
+                          {t('dashboard.vitrine.common.connecting')}
                         </>
                       ) : (
                         <>
-                          <Link2 className="w-4 h-4" /> Connecter Google Business
+                          <Link2 className="w-4 h-4" />{' '}
+                          {t('dashboard.vitrine.testimonials.connectGoogle')}
                         </>
                       )}
                     </button>
@@ -1347,13 +1376,16 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 </>
               )}
             </div>
-            {testimonials.map((t, idx) => (
+            {testimonials.map((review, idx) => (
               <div
                 key={idx}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">{t.name || `Avis ${idx + 1}`}</span>
+                  <span className="font-semibold">
+                    {review.name ||
+                      t('dashboard.vitrine.common.review').replace('{n}', String(idx + 1))}
+                  </span>
                   <button
                     onClick={() =>
                       update(
@@ -1368,53 +1400,53 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <input
-                    value={t.name}
+                    value={review.name}
                     onChange={(e) => {
                       const x = [...testimonials];
                       x[idx] = { ...x[idx], name: e.target.value };
                       update('testimonials', x);
                     }}
-                    placeholder="Nom"
+                    placeholder={t('dashboard.vitrine.common.name')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <input
                     type="number"
                     min={1}
                     max={5}
-                    value={t.rating}
+                    value={review.rating}
                     onChange={(e) => {
                       const x = [...testimonials];
                       x[idx] = { ...x[idx], rating: parseInt(e.target.value) || 5 };
                       update('testimonials', x);
                     }}
-                    placeholder="Note (1-5)"
+                    placeholder={t('dashboard.vitrine.testimonials.ratingPh')}
                     className="px-4 py-2 border rounded-lg"
                   />
                 </div>
                 <input
-                  value={t.date}
+                  value={review.date}
                   onChange={(e) => {
                     const x = [...testimonials];
                     x[idx] = { ...x[idx], date: e.target.value };
                     update('testimonials', x);
                   }}
-                  placeholder="Date (ex: Il y a 2 jours)"
+                  placeholder={t('dashboard.vitrine.testimonials.datePh')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
                 <textarea
-                  value={t.text}
+                  value={review.text}
                   onChange={(e) => {
                     const x = [...testimonials];
                     x[idx] = { ...x[idx], text: e.target.value };
                     update('testimonials', x);
                   }}
-                  placeholder="Témoignage"
+                  placeholder={t('dashboard.vitrine.testimonials.textPh')}
                   rows={3}
                   className="w-full px-4 py-2 border rounded-lg resize-none"
                 />
                 <ImageUploadField
-                  label="Photo du client"
-                  value={t.avatar}
+                  label={t('dashboard.vitrine.testimonials.clientPhoto')}
+                  value={review.avatar}
                   onChange={(v) => {
                     const x = [...testimonials];
                     x[idx] = { ...x[idx], avatar: v };
@@ -1424,29 +1456,33 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   previewSize="sm"
                 />
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Tatouage réalisé</label>
+                  <label className="block text-sm font-semibold mb-2">
+                    {t('dashboard.vitrine.testimonials.tattoo')}
+                  </label>
                   <input
-                    value={t.tattoo}
+                    value={review.tattoo}
                     onChange={(e) => {
                       const x = [...testimonials];
                       x[idx] = { ...x[idx], tattoo: e.target.value };
                       update('testimonials', x);
                     }}
-                    placeholder="Ex: Fleurs sur avant-bras"
+                    placeholder={t('dashboard.vitrine.testimonials.tattooPh')}
                     className="w-full px-4 py-2 border rounded-lg"
                   />
                 </div>
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={t.verified}
+                    checked={review.verified}
                     onChange={(e) => {
                       const x = [...testimonials];
                       x[idx] = { ...x[idx], verified: e.target.checked };
                       update('testimonials', x);
                     }}
                   />
-                  <span className="text-sm font-medium">Avis vérifié</span>
+                  <span className="text-sm font-medium">
+                    {t('dashboard.vitrine.testimonials.verified')}
+                  </span>
                 </label>
               </div>
             ))}
@@ -1467,14 +1503,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               }
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter un avis
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addReview')}
             </button>
           </div>
         )}
 
         {activeSection === 'faq' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Questions fréquentes</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.faq.title')}</h3>
             {data.faqs.map((faq, idx) => (
               <div
                 key={idx}
@@ -1482,7 +1518,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               >
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-sm text-[var(--text-secondary)]">
-                    FAQ {idx + 1}
+                    {t('dashboard.vitrine.common.faq').replace('{n}', String(idx + 1))}
                   </span>
                   <button
                     onClick={() =>
@@ -1503,7 +1539,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     f[idx] = { ...f[idx], q: e.target.value };
                     update('faqs', f);
                   }}
-                  placeholder="Question"
+                  placeholder={t('dashboard.vitrine.common.question')}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
                 <textarea
@@ -1513,7 +1549,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     f[idx] = { ...f[idx], a: e.target.value };
                     update('faqs', f);
                   }}
-                  placeholder="Réponse"
+                  placeholder={t('dashboard.vitrine.common.answer')}
                   rows={3}
                   className="w-full px-4 py-2 border rounded-lg resize-none"
                 />
@@ -1523,21 +1559,24 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               onClick={() => update('faqs', [...data.faqs, { q: '', a: '' }])}
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter une question
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addFaq')}
             </button>
           </div>
         )}
 
         {activeSection === 'why' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Pourquoi nous choisir</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.why.title')}</h3>
             {data.whyChooseUs.map((item, idx) => (
               <div
                 key={idx}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">{item.title || `Point ${idx + 1}`}</span>
+                  <span className="font-semibold">
+                    {item.title ||
+                      t('dashboard.vitrine.common.point').replace('{n}', String(idx + 1))}
+                  </span>
                   <button
                     onClick={() =>
                       update(
@@ -1558,7 +1597,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                       w[idx] = { ...w[idx], title: e.target.value };
                       update('whyChooseUs', w);
                     }}
-                    placeholder="Titre"
+                    placeholder={t('dashboard.vitrine.common.title')}
                     className="px-4 py-2 border rounded-lg"
                   />
                   <select
@@ -1570,7 +1609,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     }}
                     className="px-4 py-2 border rounded-lg"
                   >
-                    {ICON_OPTIONS.map((o) => (
+                    {iconOptions.map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>
@@ -1584,7 +1623,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     w[idx] = { ...w[idx], description: e.target.value };
                     update('whyChooseUs', w);
                   }}
-                  placeholder="Description"
+                  placeholder={t('dashboard.vitrine.common.description')}
                   rows={2}
                   className="w-full px-4 py-2 border rounded-lg resize-none"
                 />
@@ -1599,14 +1638,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               }
               className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]"
             >
-              <Plus className="w-4 h-4" /> Ajouter un point
+              <Plus className="w-4 h-4" /> {t('dashboard.vitrine.common.addPoint')}
             </button>
           </div>
         )}
 
         {activeSection === 'hours' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Horaires d'ouverture</h3>
+            <h3 className="font-bold text-lg">{t('dashboard.vitrine.hours.title')}</h3>
             {DAYS.map((day) => {
               const h = data.openingHours[day] || { open: '10:00', close: '19:00', closed: false };
               return (
@@ -1614,7 +1653,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   key={day}
                   className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 >
-                  <span className="font-semibold w-28">{DAY_LABELS[day]}</span>
+                  <span className="font-semibold w-28">{dayLabels[day]}</span>
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -1625,7 +1664,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                         update('openingHours', oh);
                       }}
                     />
-                    <span className="text-sm">Fermé</span>
+                    <span className="text-sm">{t('dashboard.vitrine.common.closed')}</span>
                   </label>
                   {!h.closed && (
                     <div className="flex gap-2 items-center">
@@ -1674,7 +1713,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               className="inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-zinc-50 dark:hover:bg-zinc-800/60 disabled:opacity-35 disabled:cursor-not-allowed transition-colors active:scale-[0.98] motion-reduce:active:scale-100"
             >
               <ChevronLeft className="w-4 h-4 shrink-0" aria-hidden />
-              Précédent
+              {t('dashboard.vitrine.page.prev')}
             </button>
             <button
               type="button"
@@ -1682,7 +1721,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
               onClick={() => setActiveSection(sections[safeSectionIndex + 1].id)}
               className="inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-35 disabled:cursor-not-allowed transition-colors active:scale-[0.98] motion-reduce:active:scale-100"
             >
-              Suivant
+              {t('dashboard.vitrine.page.next')}
               <ChevronRight className="w-4 h-4 shrink-0" aria-hidden />
             </button>
           </div>
@@ -1696,12 +1735,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors ${manualSaving || saving ? 'bg-[var(--border)] text-[var(--text-tertiary)] cursor-not-allowed pointer-events-none' : 'bg-blue-600 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 text-white'}`}
         title={
           manualSaving || saving
-            ? "Attendez la fin de l'enregistrement"
-            : 'Ouvrir la page vitrine dans un nouvel onglet'
+            ? t('dashboard.vitrine.page.previewWait')
+            : t('dashboard.vitrine.page.previewTitle')
         }
       >
         <ExternalLink className="w-5 h-5" />
-        Prévisualiser la vitrine
+        {t('dashboard.vitrine.page.preview')}
       </a>
     </div>
   );

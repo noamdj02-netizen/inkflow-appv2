@@ -2,13 +2,14 @@
  * SignupForm — friction réduite (OAuth en premier, email avant le reste, bascules mdp)
  * Parrainage : champ optionnel (pré-rempli depuis ?ref=)
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Mail, Lock, User, Building2, Gift, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { AppleSignInButton } from '../AppleSignInButton';
-import { signupSchema } from '../../lib/authValidation';
-import { getAuthErrorMessage } from './LoginForm';
+import { getSignupSchema } from '../../lib/authValidation';
+import { getAuthErrorMessage } from '../../lib/authErrors';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL, getPostSignupDashboardPath } from '../../lib/urls';
 import { supabase } from '../../lib/supabase';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
@@ -27,6 +28,8 @@ const inputReferralActive =
   'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all font-mono tracking-wider';
 
 export const SignupForm: React.FC = () => {
+  const { t } = useLanguage();
+  const signupSchema = useMemo(() => getSignupSchema(t), [t]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -82,7 +85,7 @@ export const SignupForm: React.FC = () => {
       confirmPassword: formData.confirmPassword,
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Vérifiez les champs');
+      setError(parsed.error.issues[0]?.message ?? t('auth.checkFields'));
       return;
     }
     setLoading(true);
@@ -123,7 +126,7 @@ export const SignupForm: React.FC = () => {
       await new Promise((r) => setTimeout(r, 150));
       window.location.assign(postAuthPath);
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -151,13 +154,13 @@ export const SignupForm: React.FC = () => {
                   markJustSignedUp();
                   await loginWithGoogle();
                 } catch (err) {
-                  setError(getAuthErrorMessage(err));
+                  setError(getAuthErrorMessage(err, t));
                 } finally {
                   setGoogleLoading(false);
                 }
               }}
               disabled={loading || googleLoading || appleLoading}
-              label={googleLoading ? 'Redirection…' : "S'inscrire avec Google"}
+              label={googleLoading ? t('auth.redirecting') : t('auth.signup.oauthGoogle')}
             />
           )}
           {isAppleAuthEnabled && (
@@ -177,13 +180,13 @@ export const SignupForm: React.FC = () => {
                   markJustSignedUp();
                   await loginWithApple();
                 } catch (err) {
-                  setError(getAuthErrorMessage(err));
+                  setError(getAuthErrorMessage(err, t));
                 } finally {
                   setAppleLoading(false);
                 }
               }}
               disabled={loading || googleLoading || appleLoading}
-              label={appleLoading ? 'Redirection…' : "S'inscrire avec Apple"}
+              label={appleLoading ? t('auth.redirecting') : t('auth.signup.oauthApple')}
             />
           )}
         </div>
@@ -193,7 +196,7 @@ export const SignupForm: React.FC = () => {
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="px-4 bg-white dark:bg-black text-zinc-500 dark:text-zinc-400">
-              ou avec votre e-mail
+              {t('auth.signup.oauthEmail')}
             </span>
           </div>
         </div>
@@ -212,9 +215,7 @@ export const SignupForm: React.FC = () => {
             aria-hidden
           />
           <p className="text-sm text-emerald-900 dark:text-emerald-100">
-            Invitation pour rejoindre l&apos;équipe de{' '}
-            <span className="font-semibold">{inviteStudioLabel}</span>. Finalisez votre compte avec
-            l&apos;adresse email indiquée ci-dessous.
+            {t('auth.signup.invite').replace('{studio}', inviteStudioLabel)}
           </p>
         </div>
       )}
@@ -246,7 +247,7 @@ export const SignupForm: React.FC = () => {
             </svg>
           </div>
           <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-            Compte créé ! Redirection…
+            {t('auth.signup.success')}
           </p>
         </div>
       )}
@@ -258,7 +259,7 @@ export const SignupForm: React.FC = () => {
           htmlFor="signup-email"
           className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
         >
-          E-mail professionnel
+          {t('auth.signup.emailLabel')}
         </label>
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
@@ -273,7 +274,7 @@ export const SignupForm: React.FC = () => {
             value={formData.email}
             onChange={handleChange}
             className={inputBase}
-            placeholder="vous@exemple.com"
+            placeholder={t('auth.emailPlaceholder')}
             required
             autoComplete="email"
             disabled={loading}
@@ -286,7 +287,7 @@ export const SignupForm: React.FC = () => {
           htmlFor="signup-name"
           className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
         >
-          Nom complet
+          {t('auth.signup.nameLabel')}
         </label>
         <div className="relative">
           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
@@ -297,7 +298,7 @@ export const SignupForm: React.FC = () => {
             value={formData.name}
             onChange={handleChange}
             className={inputBase}
-            placeholder="Alexandre Martin"
+            placeholder={t('auth.signup.namePlaceholder')}
             required
             autoComplete="name"
             disabled={loading}
@@ -310,7 +311,7 @@ export const SignupForm: React.FC = () => {
           htmlFor="signup-studioName"
           className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
         >
-          Nom du studio
+          {t('auth.signup.studioLabel')}
         </label>
         <div className="relative">
           <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
@@ -321,14 +322,14 @@ export const SignupForm: React.FC = () => {
             value={formData.studioName}
             onChange={handleChange}
             className={inputBase}
-            placeholder="Ink & Art Studio"
+            placeholder={t('auth.signup.studioPlaceholder')}
             required
             autoComplete="organization"
             disabled={loading}
           />
         </div>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5">
-          Visible sur votre page vitrine — modifiable plus tard.
+          {t('auth.signup.studioHint')}
         </p>
       </div>
 
@@ -337,7 +338,7 @@ export const SignupForm: React.FC = () => {
           htmlFor="signup-password"
           className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
         >
-          Mot de passe
+          {t('auth.signup.passwordLabel')}
         </label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
@@ -348,7 +349,7 @@ export const SignupForm: React.FC = () => {
             value={formData.password}
             onChange={handleChange}
             className={inputPasswordWithToggle}
-            placeholder="Au moins 6 caractères"
+            placeholder={t('auth.signup.passwordPlaceholder')}
             required
             autoComplete="new-password"
             disabled={loading}
@@ -358,13 +359,13 @@ export const SignupForm: React.FC = () => {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             className="absolute right-1 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl"
-            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
         <p id="signup-password-hint" className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5">
-          Minimum 6 caractères — lettres et chiffres recommandés.
+          {t('auth.signup.passwordHint')}
         </p>
       </div>
 
@@ -373,7 +374,7 @@ export const SignupForm: React.FC = () => {
           htmlFor="signup-confirmPassword"
           className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
         >
-          Confirmer le mot de passe
+          {t('auth.signup.confirmLabel')}
         </label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
@@ -384,7 +385,7 @@ export const SignupForm: React.FC = () => {
             value={formData.confirmPassword}
             onChange={handleChange}
             className={inputPasswordWithToggle}
-            placeholder="Saisissez le même mot de passe"
+            placeholder={t('auth.signup.confirmPlaceholder')}
             required
             autoComplete="new-password"
             disabled={loading}
@@ -394,7 +395,7 @@ export const SignupForm: React.FC = () => {
             onClick={() => setShowConfirmPassword((v) => !v)}
             className="absolute right-1 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl"
             aria-label={
-              showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'
+              showConfirmPassword ? t('auth.signup.hideConfirm') : t('auth.signup.showConfirm')
             }
           >
             {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -407,8 +408,10 @@ export const SignupForm: React.FC = () => {
           htmlFor="signup-referralCode"
           className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
         >
-          Code de parrainage{' '}
-          <span className="font-normal text-zinc-500 dark:text-zinc-400">(optionnel)</span>
+          {t('auth.signup.referralLabel')}{' '}
+          <span className="font-normal text-zinc-500 dark:text-zinc-400">
+            {t('auth.signup.optional')}
+          </span>
         </label>
         <div className="relative">
           <Gift
@@ -421,7 +424,7 @@ export const SignupForm: React.FC = () => {
             value={formData.referralCode}
             onChange={handleChange}
             className={formData.referralCode ? inputReferralActive : inputBase}
-            placeholder="Ex. ABC123"
+            placeholder={t('auth.signup.referralPlaceholder')}
             autoComplete="off"
             disabled={loading}
             maxLength={10}
@@ -440,23 +443,23 @@ export const SignupForm: React.FC = () => {
           disabled={loading}
         />
         <span className="text-sm text-zinc-600 dark:text-zinc-400 leading-snug">
-          J&apos;accepte les{' '}
+          {t('auth.signup.termsPrefix')}{' '}
           <a
             href={LANDING_TERMS_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
           >
-            conditions d&apos;utilisation
+            {t('auth.signup.termsLink')}
           </a>{' '}
-          et la{' '}
+          {t('auth.signup.and')}{' '}
           <a
             href={LANDING_PRIVACY_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
           >
-            politique de confidentialité
+            {t('auth.signup.privacyLink')}
           </a>
           .
         </span>
@@ -470,10 +473,10 @@ export const SignupForm: React.FC = () => {
         {loading ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            Création du compte…
+            {t('auth.signup.submitting')}
           </>
         ) : (
-          "Commencer l'essai gratuit"
+          t('auth.signup.submit')
         )}
       </button>
     </form>

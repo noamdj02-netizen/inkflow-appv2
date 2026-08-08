@@ -1,7 +1,6 @@
 /**
- * URLs centralisées pour la navigation entre la landing (Framer) et l'app.
- * Landing : https://ink-flow.me (Framer)
- * App : https://app.ink-flow.me ou inkdlow.vercel.app
+ * URLs centralisées — landing marketing et app SPA sur le même déploiement Vite.
+ * Accueil marketing : `/` (localhost en dev, app.ink-flow.me en prod).
  *
  * Espace client (`/discover`, requêtes `?tab=`) : chemins et onglets dans
  * `lib/clientDashboardRoutes.ts` — `pathForClientDashboardTab`, `PATH_CLIENT_DASHBOARD`.
@@ -11,10 +10,31 @@
 import { CLIENT_ACCOUNT_HUB_PATH } from './clientOnboardingGate';
 import { isInkflowProShellClient } from './nativeWebShell';
 
-export const LANDING_URL = 'https://ink-flow.me';
 export const APP_URL = 'https://app.ink-flow.me';
 
-/** Hostnames de la landing marketing (Framer) — ne jamais les utiliser comme redirectTo Supabase. */
+/** Chemin SPA de l'accueil marketing (login « Retour », logo, logout). */
+export const APP_HOME_PATH = '/';
+
+/** Lien interne vers l'accueil — préférer à LANDING_URL pour la navigation in-app. */
+export function getLandingHomeHref(): string {
+  return APP_HOME_PATH;
+}
+
+/** URL absolue de l'accueil (SEO, JSON-LD, partage). */
+export function getLandingHomeUrl(): string {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/`;
+  }
+  return `${APP_URL}/`;
+}
+
+/**
+ * @deprecated Préférer `getLandingHomeHref()` (navigation SPA) ou `getLandingHomeUrl()` (absolu).
+ * Conservé pour compatibilité — ne pointe plus vers la landing Framer ink-flow.me.
+ */
+export const LANDING_URL = APP_URL;
+
+/** Hostnames legacy Framer — rediriger vers l'app si la SPA s'y ouvre encore par erreur. */
 const LANDING_HOSTNAMES = new Set(['ink-flow.me', 'www.ink-flow.me']);
 
 /**
@@ -254,18 +274,18 @@ export function openStudioVitrine(slug: string): void {
     window.location.assign(url);
   }
 }
-export const LANDING_PRICING_URL = `${LANDING_URL}/#pricing`;
-/** Pages légales sur la landing Framer */
-export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;
-export const LANDING_TERMS_URL = `${LANDING_URL}/conditions-utilisation`;
-export const LANDING_LEGAL_URL = `${LANDING_URL}/mentions-legales`;
-export const LANDING_COOKIES_URL = `${LANDING_URL}/politique-cookies`;
-
 /** Chemins légaux in-app (SPA Vite — landing `/` + pages dédiées). */
 export const APP_PRIVACY_PATH = '/politique-confidentialite';
 export const APP_TERMS_PATH = '/conditions-utilisation';
 export const APP_LEGAL_PATH = '/mentions-legales';
 export const APP_COOKIES_PATH = '/politique-cookies';
+
+export const LANDING_PRICING_URL = '/#pricing';
+/** @deprecated Préférer APP_*_PATH — alias chemins légaux in-app. */
+export const LANDING_PRIVACY_URL = APP_PRIVACY_PATH;
+export const LANDING_TERMS_URL = APP_TERMS_PATH;
+export const LANDING_LEGAL_URL = APP_LEGAL_PATH;
+export const LANDING_COOKIES_URL = APP_COOKIES_PATH;
 
 /** Compte Instagram officiel InkFlow (lien partage / footer). */
 export const INKFLOW_INSTAGRAM_URL =

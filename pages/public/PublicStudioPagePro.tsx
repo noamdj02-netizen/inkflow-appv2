@@ -23,7 +23,7 @@ import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
 import {
-  LANDING_URL,
+  getLandingHomeHref,
   LANDING_TERMS_URL,
   LANDING_PRIVACY_URL,
   safeExternalHttpUrl,
@@ -658,7 +658,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <code className="text-xs bg-neutral-200/80 px-1 rounded">get_studio_public_by_slug</code> sont tracés.
         </p>
         <a
-          href={LANDING_URL}
+          href={getLandingHomeHref()}
           className="mt-6 text-sm font-medium text-neutral-900 underline-offset-2 hover:underline active:scale-[0.98] transition-all"
         >
           Retour à l’accueil
@@ -805,7 +805,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center gap-3">
               {studioSlug === 'demo' && (
-                <a href={LANDING_URL} className="flex items-center gap-2 px-3 py-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors text-sm font-medium">
+                <a href={getLandingHomeHref()} className="flex items-center gap-2 px-3 py-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors text-sm font-medium">
                   <ArrowLeft className="w-4 h-4" />
                   Retour à l&apos;accueil
                 </a>

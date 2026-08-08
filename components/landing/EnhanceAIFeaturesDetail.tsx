@@ -53,7 +53,8 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/Mobile_Mockup_2.1.png',
         alt: 'Aperçu mobile InkFlow Pro',
-        imgClassName: 'object-contain object-center p-4 sm:p-6',
+        imgClassName: 'object-contain object-center',
+        frameClassName: 'bg-transparent',
       },
       caption: t('features.section1.visualTitle'),
     },
@@ -70,7 +71,8 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/ë.png',
         alt: 'Application InkFlow — fiche client et historique',
-        imgClassName: 'object-contain object-center p-2 sm:p-4',
+        imgClassName: 'object-contain object-center',
+        frameClassName: 'bg-transparent',
       },
       caption: t('features.section2.visualTitle'),
     },
@@ -86,7 +88,8 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/Mobile_Mockup_2.2.jpg',
         alt: 'InkFlow — paiements Stripe et suivi des acomptes',
-        imgClassName: 'object-contain object-center p-4 sm:p-6',
+        imgClassName: 'object-contain object-center',
+        frameClassName: 'bg-transparent',
       },
       caption: t('features.section3.visualTitle'),
     },
@@ -103,7 +106,8 @@ function getSections(t: (k: string) => string): DetailSectionConfig[] {
       screenshot: {
         src: '/images/azzzzssss.png',
         alt: 'Vitrine et réservation en ligne InkFlow',
-        imgClassName: 'object-contain object-center p-2 sm:p-3',
+        imgClassName: 'object-contain object-center',
+        frameClassName: 'bg-transparent',
       },
       caption: t('features.section4.visualTitle'),
     },

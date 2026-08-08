@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bell,
@@ -10,6 +10,7 @@ import {
   Sun,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { LandingDashboardProSidebarPreview } from './LandingDashboardProSidebarPreview';
 import { LandingDemoMainView } from './LandingSnowDashboardViews';
 import {
@@ -48,29 +49,35 @@ type DemoNotification = {
   imageAlt?: string;
 };
 
-const BASE_NOTIFICATIONS: DemoNotification[] = [
-  { id: 'n1', icon: Calendar, tone: 'violet', title: 'RDV confirmé — Léa M.', time: 'À l’instant' },
+const BASE_NOTIFICATION_KEYS = [
+  {
+    id: 'n1',
+    icon: Calendar,
+    tone: 'violet' as const,
+    titleKey: 'demo.scene.overview.notif',
+    timeKey: 'demo.scene.overview.time',
+  },
   {
     id: 'n2',
     imageSrc: STRIPE_LOGO,
     imageAlt: 'Stripe',
-    tone: 'blue',
-    title: 'Acompte 120 € encaissé',
-    time: 'Il y a 12 min',
+    tone: 'blue' as const,
+    titleKey: 'demo.notif.deposit',
+    timeKey: 'demo.notif.depositTime',
   },
   {
     id: 'n3',
     icon: ClipboardList,
-    tone: 'violet',
-    title: 'Nouvelle demande projet',
-    time: 'Il y a 58 min',
+    tone: 'violet' as const,
+    titleKey: 'demo.notif.newRequest',
+    timeKey: 'demo.notif.newRequestTime',
   },
   {
     id: 'n4',
     icon: MessageSquare,
-    tone: 'blue',
-    title: 'Message client — Tom R.',
-    time: 'Aujourd’hui 11:40',
+    tone: 'blue' as const,
+    titleKey: 'demo.notif.message',
+    timeKey: 'demo.notif.messageTime',
   },
 ];
 
@@ -125,13 +132,33 @@ export function LandingSnowDashboard({
 }: {
   variant?: LandingSnowDashboardVariant;
 }) {
+  const { t, lang } = useLanguage();
   const playback = useLandingDashboardDemoPlayback();
-  const activeScene = resolveLandingDemoSceneForTab(playback.activeTab);
+  const activeScene = resolveLandingDemoSceneForTab(playback.activeTab, playback.scenes);
   const isFullscreen = variant === 'fullscreen';
-  const [liveNotifications, setLiveNotifications] = useState<DemoNotification[]>(
-    BASE_NOTIFICATIONS.slice(0, 2)
+
+  const baseNotifications = useMemo<DemoNotification[]>(
+    () =>
+      BASE_NOTIFICATION_KEYS.map((item) => ({
+        id: item.id,
+        icon: item.icon,
+        imageSrc: item.imageSrc,
+        imageAlt: item.imageAlt,
+        tone: item.tone,
+        title: t(item.titleKey),
+        time: t(item.timeKey),
+      })),
+    [t]
+  );
+
+  const [liveNotifications, setLiveNotifications] = useState<DemoNotification[]>(() =>
+    baseNotifications.slice(0, 2)
   );
   const notifIdRef = useRef(100);
+
+  useEffect(() => {
+    setLiveNotifications(baseNotifications.slice(0, 2));
+  }, [lang, baseNotifications]);
 
   useEffect(() => {
     if (!playback.scene.notification) return;
@@ -179,7 +206,7 @@ export function LandingSnowDashboard({
 
   const handleSetActiveTab = React.useCallback(
     (tab: Parameters<typeof playback.setActiveTab>[0]) => {
-      const scene = resolveLandingDemoSceneForTab(tab);
+      const scene = resolveLandingDemoSceneForTab(tab, playback.scenes);
       playback.setActiveTab(tab);
       playback.setExpandedMenus((prev) => ({ ...prev, ...scene.expandedMenus }));
       playback.pause();
@@ -194,9 +221,7 @@ export function LandingSnowDashboard({
         demoRoot,
         isFullscreen ? 'min-h-0' : 'rounded-3xl'
       )}
-      aria-label={
-        isFullscreen ? 'Dashboard InkFlow — mode démo' : 'Aperçu dashboard InkFlow en action'
-      }
+      aria-label={isFullscreen ? t('demo.dashboardFullscreenAria') : t('demo.dashboardAria')}
       onMouseEnter={playback.pause}
       onMouseLeave={playback.resume}
     >
@@ -218,7 +243,7 @@ export function LandingSnowDashboard({
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
               <span className={`${demoMicro} normal-case tracking-wide text-emerald-300`}>
-                Mode démo
+                {t('demo.demoMode')}
               </span>
             </span>
           ) : null}
@@ -238,7 +263,7 @@ export function LandingSnowDashboard({
             )}
           >
             <Search className="h-3.5 w-3.5 text-white/35" strokeWidth={2} />
-            <span className={demoCaption}>Rechercher…</span>
+            <span className={demoCaption}>{t('demo.search')}</span>
           </div>
           <div className="relative flex shrink-0 items-center gap-2 text-white/50">
             {isFullscreen ? (
@@ -246,7 +271,7 @@ export function LandingSnowDashboard({
                 href="/"
                 className={`hidden rounded-lg border border-white/10 px-2.5 py-1 ${demoCaption} font-medium text-white/70 transition-colors hover:bg-white/[0.06] sm:inline-flex`}
               >
-                Accueil
+                {t('demo.home')}
               </a>
             ) : null}
             <Sun className="h-3.5 w-3.5" strokeWidth={2} />
@@ -268,7 +293,7 @@ export function LandingSnowDashboard({
                 href="/signup"
                 className={`ml-1 inline-flex min-h-9 items-center rounded-xl bg-white px-3 py-1.5 ${demoCaption} font-semibold text-[#333] transition-all hover:bg-white/90 active:scale-[0.98]`}
               >
-                Créer mon studio
+                {t('demo.ctaSignup')}
               </a>
             ) : null}
           </div>
@@ -293,7 +318,7 @@ export function LandingSnowDashboard({
               type="button"
               className={`flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 ${demoCaption}`}
             >
-              Ce mois
+              {t('demo.thisMonth')}
               <ChevronDown className="h-3 w-3" strokeWidth={2} />
             </button>
           </div>
@@ -315,7 +340,7 @@ export function LandingSnowDashboard({
                 className="pointer-events-none absolute bottom-3 right-3 z-20 max-w-[220px] rounded-xl border border-white/15 bg-zinc-900/95 px-3 py-2 shadow-lg backdrop-blur-sm"
               >
                 <p className={`${demoMicro} normal-case tracking-[0.08em] text-emerald-400`}>
-                  Notification
+                  {t('demo.notificationLabel')}
                 </p>
                 <p className={`mt-0.5 ${demoHeading} leading-tight`}>{playback.toastQueue[0]}</p>
               </motion.div>
@@ -331,7 +356,7 @@ export function LandingSnowDashboard({
         )}
       >
         <section>
-          <p className={`mb-1 px-1 ${demoHeading}`}>Notifications</p>
+          <p className={`mb-1 px-1 ${demoHeading}`}>{t('demo.notifications')}</p>
           <div className="space-y-1">
             <AnimatePresence initial={false}>
               {liveNotifications.map((n) => (
@@ -361,7 +386,7 @@ export function LandingSnowDashboard({
         </section>
 
         <section className="mt-auto">
-          <p className={`mb-2 px-1 ${demoHeading}`}>Clients récents</p>
+          <p className={`mb-2 px-1 ${demoHeading}`}>{t('demo.recentClients')}</p>
           <div className="space-y-2">
             {CONTACTS.map((c) => (
               <div

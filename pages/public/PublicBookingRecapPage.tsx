@@ -16,7 +16,7 @@ import {
   DEFAULT_BOOKING_CONFIRM_DEPOSIT_EUR,
   inkflowPublicMessagesUrl,
 } from '../../lib/bookingRecapUrls';
-import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
+import { getLandingHomeHref, getClientAccountHubPath } from '../../lib/urls';
 
 export interface PublicBookingRecapPageProps {
   recapToken: string;
@@ -192,7 +192,7 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
       <SEO title="Votre rendez-vous — InkFlow" description="Récapitulatif et acompte sécurisé." noindex />
       <div className="mx-auto max-w-lg px-4 py-10 sm:py-14">
         <a
-          href={LANDING_URL}
+          href={getLandingHomeHref()}
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 mb-8 transition-colors"
         >
           <Sparkles className="w-4 h-4" aria-hidden />

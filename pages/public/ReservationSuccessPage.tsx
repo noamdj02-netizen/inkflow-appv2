@@ -12,7 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { SEO } from '../../components/SEO';
-import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
+import { getLandingHomeHref, getClientAccountHubPath } from '../../lib/urls';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import type { VitrineData } from '../../types/vitrine';
 
@@ -178,7 +178,7 @@ export const ReservationSuccessPage: React.FC = () => {
   const coverImage = vitrine?.coverImage?.trim() || '';
   const avatarUrl = vitrine?.avatar?.trim() || '';
   const addressLine = vitrine?.address?.trim() || '';
-  const backToStudioHref = studioSlug ? `/studio/${studioSlug}` : LANDING_URL;
+  const backToStudioHref = studioSlug ? `/studio/${studioSlug}` : getLandingHomeHref();
   const backLabel = studioSlug ? 'Retour au studio' : "Retour à l'accueil";
 
   const shell = (children: React.ReactNode, opts?: { ogImage?: string }) => (

@@ -7,50 +7,7 @@ import {
 } from '../../types/studioPreferences';
 import { saveDashboardPreferencesToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
-
-const MODULE_CORE_ROWS: {
-  id: StudioModuleId;
-  label: string;
-  description: string;
-  Icon: typeof Wallet;
-}[] = [
-  {
-    id: 'planning',
-    label: 'Planning & rendez-vous',
-    description: 'Demande inbox, agenda et créneaux — le flux principal résa/client.',
-    Icon: Calendar,
-  },
-  {
-    id: 'vitrine',
-    label: 'Page vitrine & app client',
-    description: 'Lien studio, page book et expérience côté client.',
-    Icon: Globe,
-  },
-  {
-    id: 'flash_shop',
-    label: 'Galerie flash & portfolio',
-    description: 'Flashs, vitrine médias.',
-    Icon: Sparkles,
-  },
-];
-
-/** Modules optionnels ou « niveau salon » — cache-les tant que le cœur n’est pas ancré. */
-const MODULE_PRO_ROWS: typeof MODULE_CORE_ROWS = [
-  { id: 'finance', label: 'Finance', description: 'Revenus, acomptes et pilotage.', Icon: Wallet },
-  { id: 'loyalty', label: 'Fidélité', description: 'Points et récompenses clients.', Icon: Star },
-  {
-    id: 'consent_forms',
-    label: 'Consentements',
-    description: 'Modèles de formulaires de consentement.',
-    Icon: FileCheck,
-  },
-  {
-    id: 'healing_followup',
-    label: 'Soins post-tattoo',
-    description: 'Fiches de soins et suivi après séance.',
-    Icon: Heart,
-  },
-];
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ModulesSettingsProps {
   studioId: string;
@@ -60,7 +17,64 @@ interface ModulesSettingsProps {
 
 export const ModulesSettings: React.FC<ModulesSettingsProps> = ({ studioId, value, onChange }) => {
   const toast = useToast();
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
+
+  const moduleCoreRows = useMemo(
+    () =>
+      [
+        {
+          id: 'planning' as StudioModuleId,
+          label: t('dashboard.settings.modules.planning.label'),
+          description: t('dashboard.settings.modules.planning.desc'),
+          Icon: Calendar,
+        },
+        {
+          id: 'vitrine' as StudioModuleId,
+          label: t('dashboard.settings.modules.vitrine.label'),
+          description: t('dashboard.settings.modules.vitrine.desc'),
+          Icon: Globe,
+        },
+        {
+          id: 'flash_shop' as StudioModuleId,
+          label: t('dashboard.settings.modules.flash.label'),
+          description: t('dashboard.settings.modules.flash.desc'),
+          Icon: Sparkles,
+        },
+      ] as const,
+    [t]
+  );
+
+  const moduleProRows = useMemo(
+    () =>
+      [
+        {
+          id: 'finance' as StudioModuleId,
+          label: t('dashboard.settings.modules.finance.label'),
+          description: t('dashboard.settings.modules.finance.desc'),
+          Icon: Wallet,
+        },
+        {
+          id: 'loyalty' as StudioModuleId,
+          label: t('dashboard.settings.modules.loyalty.label'),
+          description: t('dashboard.settings.modules.loyalty.desc'),
+          Icon: Star,
+        },
+        {
+          id: 'consent_forms' as StudioModuleId,
+          label: t('dashboard.settings.modules.consent.label'),
+          description: t('dashboard.settings.modules.consent.desc'),
+          Icon: FileCheck,
+        },
+        {
+          id: 'healing_followup' as StudioModuleId,
+          label: t('dashboard.settings.modules.care.label'),
+          description: t('dashboard.settings.modules.care.desc'),
+          Icon: Heart,
+        },
+      ] as const,
+    [t]
+  );
 
   const merged = useMemo(
     () => ({
@@ -92,15 +106,15 @@ export const ModulesSettings: React.FC<ModulesSettingsProps> = ({ studioId, valu
     setSaving(true);
     try {
       await saveDashboardPreferencesToSupabase(studioId, merged);
-      toast.success('Modules enregistrés');
+      toast.success(t('dashboard.settings.modules.saved'));
     } catch {
-      toast.error('Impossible d’enregistrer les modules');
+      toast.error(t('dashboard.settings.modules.saveError'));
     } finally {
       setSaving(false);
     }
-  }, [studioId, merged, toast]);
+  }, [studioId, merged, toast, t]);
 
-  const renderModuleRow = (row: (typeof MODULE_CORE_ROWS)[0]) => {
+  const renderModuleRow = (row: (typeof moduleCoreRows)[number]) => {
     const { id, label, description, Icon } = row;
     const enabled = merged.modules[id]?.enabled !== false;
     return (
@@ -141,29 +155,25 @@ export const ModulesSettings: React.FC<ModulesSettingsProps> = ({ studioId, valu
   return (
     <div className="space-y-6 max-w-2xl w-full">
       <div>
-        <h2 className="type-heading">Modules</h2>
-        <p className="type-subtitle mt-1.5 max-w-2xl">
-          Le <strong>cœur InkFlow</strong> couvre réservations, lien book et médias ; activez
-          ensuite le bloc <strong>Pro & suivi</strong> (finance, fidélité, conformité). Les données
-          restent en base si vous masquez un module.
-        </p>
+        <h2 className="type-heading">{t('dashboard.settings.modules.pageTitle')}</h2>
+        <p className="type-subtitle mt-1.5 max-w-2xl">{t('dashboard.settings.modules.pageDesc')}</p>
       </div>
 
       <div className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-          Cœur — réservations & vitrine
+          {t('dashboard.settings.modules.coreHeading')}
         </h3>
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
-          {MODULE_CORE_ROWS.map((row) => renderModuleRow(row))}
+          {moduleCoreRows.map((row) => renderModuleRow(row))}
         </div>
       </div>
 
       <div className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Pro & suivi (avancé)
+          {t('dashboard.settings.modules.proHeading')}
         </h3>
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
-          {MODULE_PRO_ROWS.map((row) => renderModuleRow(row))}
+          {moduleProRows.map((row) => renderModuleRow(row))}
         </div>
       </div>
 
@@ -174,7 +184,7 @@ export const ModulesSettings: React.FC<ModulesSettingsProps> = ({ studioId, valu
           disabled={saving}
           className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold text-sm  transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
         >
-          {saving ? 'Enregistrement…' : 'Enregistrer'}
+          {saving ? t('dashboard.settings.modules.saving') : t('dashboard.settings.modules.save')}
         </button>
       </div>
     </div>

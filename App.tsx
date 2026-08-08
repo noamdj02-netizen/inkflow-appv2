@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
-import { LANDING_URL } from './lib/urls';
+import { getLandingHomeHref } from './lib/urls';
 import { SEO } from './components/SEO';
 import { VercelAnalyticsOptIn } from './components/VercelAnalyticsOptIn';
 import { PostHogOptIn } from './components/PostHogOptIn';
@@ -480,10 +480,8 @@ const Router: React.FC = () => {
                 Réessayer
               </button>
               <a
-                href={LANDING_URL}
+                href={getLandingHomeHref()}
                 className="px-6 py-3 border-2 border-[var(--border)] rounded-xl font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-                target="_blank"
-                rel="noopener noreferrer"
               >
                 Retour à l&apos;accueil
               </a>
@@ -540,7 +538,7 @@ const NotFoundPage: React.FC = () => (
         Soit la page a bougé, soit l&apos;URL est fausse.
       </p>
       <a
-        href={LANDING_URL}
+        href={getLandingHomeHref()}
         className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
       >
         Retour à l'accueil

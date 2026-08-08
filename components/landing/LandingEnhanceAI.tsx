@@ -1,4 +1,5 @@
 import React, { useEffect, lazy, Suspense } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { EnhanceAINavbar } from './EnhanceAINavbar';
 import { EnhanceAIHero } from './EnhanceAIHero';
 import { SEO, faqPageSchemaFr } from '../SEO';
@@ -33,6 +34,8 @@ const EnhanceAIFooter = lazy(() =>
  * Glassmorphism, animations Framer Motion.
  */
 export const LandingEnhanceAI: React.FC = () => {
+  const { t, lang } = useLanguage();
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
     return () => {};
@@ -41,11 +44,15 @@ export const LandingEnhanceAI: React.FC = () => {
   return (
     <div className="landing-scroll min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2]">
       <SEO
-        title="InkFlow | Logiciel tatoueur France — agenda et réservations en ligne"
-        description="Logiciel de gestion pour tatoueurs en France : agenda, réservations en ligne, acomptes Stripe (EUR), CRM et vitrine. Moins d'allers-retours sur Insta, plus de temps pour tatouer. Essai gratuit 1 mois sans carte."
+        title={t('seo.landing.title')}
+        description={t('seo.landing.description')}
         canonical="/"
-        keywords="logiciel tatoueur France, agenda tatouage, réservation tatouage en ligne, SaaS tatouage, CRM studio tattoo, gestion salon tatouage, acompte Stripe tatoueur, vitrine tatoueur, application tatoueur professionnel"
-        ogImageAlt="InkFlow — application de gestion pour tatoueurs"
+        keywords={t('seo.landing.keywords')}
+        ogImageAlt={
+          lang === 'en'
+            ? 'InkFlow — tattoo studio management app'
+            : 'InkFlow — application de gestion pour tatoueurs'
+        }
         schema={faqPageSchemaFr}
       />
       <EnhanceAINavbar hideOnMobile />

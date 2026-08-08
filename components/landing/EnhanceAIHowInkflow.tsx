@@ -59,6 +59,7 @@ function FeatureGlassCard({
   cardVariants,
   contentVariants,
 }: {
+  key?: React.Key;
   icon: LucideIcon;
   title: string;
   text: string;

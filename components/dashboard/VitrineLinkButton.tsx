@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Copy,
   Check,
@@ -17,6 +17,7 @@ import QRCodeLib from 'qrcode';
 import { getStudioId } from '../../lib/supabase';
 import { getStudioSlug } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
 import {
   getVitrineLinkSettingsFromSupabase,
@@ -36,20 +37,15 @@ interface VitrineSettings {
 }
 
 const defaultSettings: VitrineSettings = {
-  title: 'Lien de votre vitrine',
-  description:
-    "Partagez ce lien avec vos clients pour qu'ils découvrent vos flashs, prennent rendez-vous et consultent votre portfolio.",
+  title: '',
+  description: '',
   primaryColor: '#2563eb',
-  copyButtonText: 'Copier le lien',
-  copiedText: 'Copié !',
-  openButtonText: 'Ouvrir',
+  copyButtonText: '',
+  copiedText: '',
+  openButtonText: '',
 };
 
-const VITRINE_QR_STEPS: readonly { id: string; label: string; Icon: LucideIcon }[] = [
-  { id: 'scan', label: 'Scannez le code', Icon: ScanLine },
-  { id: 'flash', label: 'Choisissez votre Flash', Icon: LayoutGrid },
-  { id: 'deposit', label: "Réservez & Payez l'acompte", Icon: BadgeCheck },
-];
+const QR_STEP_IDS = ['scan', 'flash', 'deposit'] as const;
 
 /** Aligné sur l’aperçu : bordure ~6px pour un cadre ~180px de côté */
 const QR_EXPORT_FRAME = 640;
@@ -102,6 +98,24 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   showLabel: _showLabel = true,
 }) => {
   const toast = useToast();
+  const { t } = useLanguage();
+  const vitrineQrSteps = useMemo(
+    () =>
+      QR_STEP_IDS.map((id) => ({
+        id,
+        label:
+          id === 'scan'
+            ? t('dashboard.vitrine.link.qrStepScan')
+            : id === 'flash'
+              ? t('dashboard.vitrine.link.qrStepFlash')
+              : t('dashboard.vitrine.link.qrStepDeposit'),
+        Icon: id === 'scan' ? ScanLine : id === 'flash' ? LayoutGrid : BadgeCheck,
+      })),
+    [t]
+  );
+  const copyLabel = t('dashboard.vitrine.link.copy');
+  const copiedLabel = t('dashboard.vitrine.link.copied');
+  const openLabel = t('dashboard.vitrine.link.open');
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   /** Aperçu & export PNG : même carte, bandeau bleu ou noir */
@@ -138,7 +152,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
         }
       })
       .catch(() => {
-        toast.error('Une erreur est survenue');
+        toast.error(t('dashboard.vitrine.link.error'));
       });
   }, [studioId, useSupabase, toast]);
 
@@ -151,7 +165,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
         studioId,
         settings as unknown as Record<string, unknown>
       ).catch(() => {
-        toast.error('Erreur de sauvegarde des paramètres');
+        toast.error(t('dashboard.vitrine.link.saveError'));
       });
       saveTimeoutRef.current = null;
     }, 500);
@@ -234,12 +248,12 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     y += 52;
     ctx.font = '500 36px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#52525b';
-    ctx.fillText('Choisissez, Réservez et Payez en ligne', W / 2, y);
+    ctx.fillText(t('dashboard.vitrine.link.qrTagline'), W / 2, y);
 
     y += 56;
     ctx.font = '600 26px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#71717a';
-    ctx.fillText('ÉTAPES', W / 2, y);
+    ctx.fillText(t('dashboard.vitrine.link.qrSteps').toUpperCase(), W / 2, y);
 
     const stepCardH = 80;
     const stepGap = 14;
@@ -248,7 +262,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
-    for (let i = 0; i < VITRINE_QR_STEPS.length; i++) {
+    for (let i = 0; i < vitrineQrSteps.length; i++) {
       const rowY = y;
       ctx.fillStyle = '#fafafa';
       canvasRoundRect(ctx, padX, rowY, contentW, stepCardH, stepR);
@@ -273,7 +287,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
       ctx.textAlign = 'left';
       ctx.fillStyle = '#27272a';
       ctx.font = '600 26px system-ui, -apple-system, sans-serif';
-      const labelRaw = VITRINE_QR_STEPS[i].label;
+      const labelRaw = vitrineQrSteps[i].label;
       const maxW = padX + contentW - (bx + badge + 20) - 16;
       let stepText = labelRaw;
       if (ctx.measureText(stepText).width > maxW) {
@@ -310,7 +324,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     ctx.textBaseline = 'alphabetic';
     ctx.font = '500 30px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#71717a';
-    ctx.fillText('Votre tatouage, simplement réservé.', W / 2, y);
+    ctx.fillText(t('dashboard.vitrine.link.qrFooter'), W / 2, y);
 
     y += 44;
     ctx.font = '22px system-ui, -apple-system, sans-serif';
@@ -321,7 +335,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     link.href = canvas.toDataURL('image/png');
     link.download = `qr-vitrine-${qrPreviewTheme}-${studioSlugFromDb ?? 'studio'}.png`;
     link.click();
-  }, [vitrineUrl, studioName, studioSlugFromDb, qrPreviewTheme]);
+  }, [vitrineUrl, studioName, studioSlugFromDb, qrPreviewTheme, t, vitrineQrSteps]);
 
   const handleShareQr = useCallback(async () => {
     const shareTitle = `Vitrine ${studioName} — Inkflow`;
@@ -348,30 +362,30 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
             text: shareText,
             url: vitrineUrl,
           });
-          toast.success('QR partagé');
+          toast.success(t('dashboard.vitrine.link.shareQrSuccess'));
           return;
         }
       }
       if (typeof navigator.share === 'function') {
         await navigator.share({ title: shareTitle, text: shareText, url: vitrineUrl });
-        toast.success('Lien partagé');
+        toast.success(t('dashboard.vitrine.link.shareLinkSuccess'));
         return;
       }
       await navigator.clipboard.writeText(vitrineUrl);
-      toast.success('Lien copié — collez-le où vous voulez partager');
+      toast.success(t('dashboard.vitrine.link.shareCopySuccess'));
     } catch (err) {
       const name = err instanceof Error ? err.name : '';
       if (name === 'AbortError') return;
       try {
         await navigator.clipboard.writeText(vitrineUrl);
-        toast.success('Lien copié');
+        toast.success(t('dashboard.vitrine.link.shareCopied'));
       } catch {
-        toast.error('Partage indisponible sur cet appareil');
+        toast.error(t('dashboard.vitrine.link.shareUnavailable'));
       }
     } finally {
       setShareQrBusy(false);
     }
-  }, [studioName, studioSlugFromDb, toast, vitrineUrl]);
+  }, [studioName, studioSlugFromDb, toast, vitrineUrl, t]);
 
   useEffect(() => {
     if (showQr && qrCanvasRef.current) {
@@ -417,12 +431,12 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
           {copied ? (
             <>
               <Check className="w-4 h-4" />
-              {settings.copiedText}
+              {copiedLabel}
             </>
           ) : (
             <>
               <Copy className="w-4 h-4" />
-              {settings.copyButtonText}
+              {copyLabel}
             </>
           )}
         </button>
@@ -455,7 +469,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
           style={{ backgroundColor: settings.primaryColor, color: textOnPrimary }}
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? settings.copiedText : settings.copyButtonText}
+          {copied ? copiedLabel : copyLabel}
         </button>
         <a
           href={vitrineUrl}
@@ -464,12 +478,12 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
           className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-2xl font-semibold text-sm hover:bg-neutral-200 transition-colors flex-shrink-0 min-h-[44px]"
         >
           <ExternalLink className="w-4 h-4" />
-          {settings.openButtonText}
+          {openLabel}
         </a>
         <button
           onClick={() => setShowQr((v) => !v)}
           className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-2xl font-semibold text-sm hover:bg-neutral-200 transition-colors flex-shrink-0 min-h-[44px]"
-          title="Afficher le QR Code"
+          title={t('dashboard.vitrine.link.qrTitle')}
         >
           <QrCode className="w-4 h-4" />
           QR
@@ -481,13 +495,13 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
         <div className="mt-3 flex flex-col items-center gap-4 p-5 bg-white border border-neutral-200 rounded-2xl dark:border-zinc-800 dark:bg-zinc-950/30">
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide dark:text-zinc-400">
-              QR Code vitrine
+              {t('dashboard.vitrine.link.qrHeading')}
             </p>
             <div className="flex items-center gap-2">
               <div
                 className="flex items-center gap-0.5 rounded-2xl border border-zinc-200/80 bg-zinc-100/80 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
                 role="group"
-                aria-label="Variante d’aperçu"
+                aria-label={t('dashboard.vitrine.link.qrPreviewVariant')}
               >
                 <button
                   type="button"
@@ -498,7 +512,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                       : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                   }`}
                 >
-                  Bleu
+                  {t('dashboard.vitrine.link.qrBlue')}
                 </button>
                 <button
                   type="button"
@@ -509,13 +523,13 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                       : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                   }`}
                 >
-                  Noir
+                  {t('dashboard.vitrine.link.qrBlack')}
                 </button>
               </div>
               <button
                 onClick={() => setShowQr(false)}
                 className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 transition-colors dark:hover:bg-zinc-800"
-                aria-label="Fermer"
+                aria-label={t('dashboard.vitrine.link.close')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -539,17 +553,17 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                 {studioName}
               </p>
               <p className="mt-1.5 px-1 text-center text-xs font-medium leading-snug text-zinc-600 dark:text-zinc-400">
-                Choisissez, Réservez et Payez en ligne
+                {t('dashboard.vitrine.link.qrTagline')}
               </p>
               <section
                 className="mt-5 w-full border-t border-zinc-100 pt-4 dark:border-zinc-700"
-                aria-label="Étapes côté client"
+                aria-label={t('dashboard.vitrine.link.qrStepsAria')}
               >
                 <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                  Étapes
+                  {t('dashboard.vitrine.link.qrSteps')}
                 </p>
                 <ul className="flex w-full flex-col gap-2">
-                  {VITRINE_QR_STEPS.map(({ id, label, Icon }, index) => (
+                  {vitrineQrSteps.map(({ id, label, Icon }, index) => (
                     <li
                       key={id}
                       className="flex min-h-[44px] items-center gap-3 rounded-xl border border-zinc-100 bg-zinc-50/90 px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-900/50"
@@ -581,7 +595,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                 ))}
               </div>
               <p className="mt-3 text-center text-[11px] font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Votre tatouage, simplement réservé.
+                {t('dashboard.vitrine.link.qrFooter')}
               </p>
             </div>
           </div>
@@ -598,7 +612,9 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
               className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 font-semibold text-sm text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-100 dark:hover:bg-zinc-800"
             >
               <Share2 className="h-4 w-4 shrink-0" aria-hidden />
-              {shareQrBusy ? 'Ouverture…' : 'Partager le QR'}
+              {shareQrBusy
+                ? t('dashboard.vitrine.link.sharing')
+                : t('dashboard.vitrine.link.share')}
             </button>
             <button
               type="button"
@@ -606,12 +622,11 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
               className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 font-semibold text-sm text-white transition-colors hover:bg-neutral-800 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             >
               <Download className="h-4 w-4 shrink-0" aria-hidden />
-              Télécharger pour impression
+              {t('dashboard.vitrine.link.download')}
             </button>
           </div>
           <p className="text-[11px] text-neutral-400 text-center dark:text-zinc-500">
-            Partage : image du QR si le système le permet, sinon lien. PNG 1200×1600 pour
-            l’impression.
+            {t('dashboard.vitrine.link.downloadHint')}
           </p>
         </div>
       )}

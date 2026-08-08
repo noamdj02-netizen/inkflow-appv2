@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LANDING_URL } from '@/lib/urls';
+import { getLandingHomeHref } from '@/lib/urls';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
@@ -21,7 +22,7 @@ type Navbar1Props = {
 
 export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
 
   const toggleMenu = () => setIsOpen((open) => !open);
   const closeMenu = () => setIsOpen(false);
@@ -52,12 +53,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
         aria-label="Navigation principale"
       >
         <div className="pointer-events-auto relative z-10 flex w-full max-w-3xl items-center justify-between rounded-full border border-zinc-200/80 bg-white/95 px-4 py-2.5 shadow-lg shadow-zinc-900/5 backdrop-blur-md sm:px-6 sm:py-3">
-          <a
-            href={LANDING_URL}
-            className="flex shrink-0 items-center gap-2.5"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href={getLandingHomeHref()} className="flex shrink-0 items-center gap-2.5">
             <motion.div
               className="flex items-center"
               initial={{ scale: 0.92 }}
@@ -92,28 +88,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <div className="flex items-center rounded-full border border-zinc-200 bg-zinc-50 p-0.5">
-              <button
-                type="button"
-                onClick={() => setLang('fr')}
-                className={cn(
-                  'rounded-full px-2 py-1 text-xs font-semibold transition-colors',
-                  lang === 'fr' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-800'
-                )}
-              >
-                Fr
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('en')}
-                className={cn(
-                  'rounded-full px-2 py-1 text-xs font-semibold transition-colors',
-                  lang === 'en' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-800'
-                )}
-              >
-                En
-              </button>
-            </div>
+            <LanguageToggle />
             <a
               href="/login"
               className="text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900"
@@ -190,30 +165,7 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
               ))}
 
               <div className="flex items-center gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setLang('fr')}
-                  className={cn(
-                    'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors',
-                    lang === 'fr'
-                      ? 'border-zinc-900 bg-zinc-900 text-white'
-                      : 'border-zinc-200 text-zinc-700'
-                  )}
-                >
-                  Français
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang('en')}
-                  className={cn(
-                    'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors',
-                    lang === 'en'
-                      ? 'border-zinc-900 bg-zinc-900 text-white'
-                      : 'border-zinc-200 text-zinc-700'
-                  )}
-                >
-                  English
-                </button>
+                <LanguageToggle variant="buttons" className="w-full" />
               </div>
 
               <motion.div

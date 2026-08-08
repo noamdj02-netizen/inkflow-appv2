@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, useMemo, type ElementType } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
 type BlurTextProps = {
+  /** Réservé React — évite TS2322 sur les listes / changements de langue. */
+  key?: React.Key;
   text?: string;
   delay?: number;
   className?: string;

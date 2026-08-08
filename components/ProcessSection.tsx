@@ -20,6 +20,12 @@ import {
   LandingMotionReveal,
   LandingMotionStagger,
 } from './landing/landingMotion';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 /** Chrome fenêtre app — previews cohérentes type produit. */
 function PreviewFrame({
@@ -57,44 +63,60 @@ function PreviewFrame({
   );
 }
 
-const fieldLabel = 'text-[9px] font-medium text-zinc-500';
-const fieldBox =
-  'flex h-9 items-center rounded-xl border border-zinc-200 bg-white px-2.5 text-[10px] text-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]';
+const previewLabel = 'text-[9px] font-medium text-muted-foreground';
 
 const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ type, t }) => {
   if (type === 'signup') {
     return (
-      <PreviewFrame title="Inscription · InkFlow">
-        <div className="flex h-full flex-col p-3.5 sm:p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-950 text-[10px] font-bold text-white">
+      <PreviewFrame title={t('process.preview.signupTitle')}>
+        <div className="flex h-full flex-col gap-2.5 p-3.5 sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-[10px] font-bold text-primary-foreground">
               IF
             </span>
             <div>
-              <p className="text-[11px] font-semibold tracking-tight text-zinc-950">
-                Créer mon studio
+              <p className="text-[11px] font-semibold tracking-tight text-foreground">
+                {t('process.preview.createStudio')}
               </p>
-              <p className="text-[9px] text-zinc-500">Essai 30 jours · sans carte</p>
+              <p className="text-[9px] text-muted-foreground">{t('process.preview.trialHint')}</p>
             </div>
           </div>
 
-          <div className="space-y-2.5">
-            <div>
-              <p className={fieldLabel}>Nom du studio</p>
-              <div className={`${fieldBox} mt-1 font-medium`}>Studio Noam</div>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-1">
+              <p className={previewLabel}>{t('process.preview.studioName')}</p>
+              <Input
+                readOnly
+                tabIndex={-1}
+                value="Studio Noam"
+                className="pointer-events-none h-9 rounded-xl text-[10px] font-medium"
+              />
             </div>
-            <div>
-              <p className={fieldLabel}>E-mail pro</p>
-              <div className={`${fieldBox} mt-1 gap-2`}>
-                <Mail className="h-3.5 w-3.5 shrink-0 text-emerald-600" strokeWidth={1.75} />
-                <span className="truncate font-medium">email@studio.fr</span>
+            <div className="flex flex-col gap-1">
+              <p className={previewLabel}>{t('process.preview.proEmail')}</p>
+              <div className="relative">
+                <Mail
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-emerald-600"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+                <Input
+                  readOnly
+                  tabIndex={-1}
+                  value="email@studio.fr"
+                  className="pointer-events-none h-9 rounded-xl pl-8 text-[10px] font-medium"
+                />
               </div>
             </div>
           </div>
 
-          <div className="mt-auto flex h-9 items-center justify-center rounded-xl bg-zinc-950 text-[10px] font-semibold text-white shadow-[0_10px_24px_-12px_rgba(9,9,11,0.55)]">
-            Commencer l&apos;essai
-          </div>
+          <Button
+            type="button"
+            tabIndex={-1}
+            className="pointer-events-none mt-auto h-9 w-full rounded-xl text-[10px] font-semibold shadow-[0_10px_24px_-12px_rgba(9,9,11,0.55)]"
+          >
+            {t('process.preview.startTrial')}
+          </Button>
         </div>
       </PreviewFrame>
     );
@@ -102,32 +124,56 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
 
   if (type === 'config') {
     const rows = [
-      { icon: Calendar, label: 'Disponibilités', value: 'Lun-Ven 10h-19h', done: true },
-      { icon: CreditCard, label: 'Paiements', value: 'Stripe connecté', done: true },
-      { icon: Sparkles, label: 'Services', value: '3 actifs', done: true },
+      {
+        icon: Calendar,
+        label: t('process.preview.availability'),
+        value: t('process.preview.availabilityValue'),
+        done: true,
+      },
+      {
+        icon: CreditCard,
+        label: t('process.preview.payments'),
+        value: t('process.preview.paymentsValue'),
+        done: true,
+      },
+      {
+        icon: Sparkles,
+        label: t('process.preview.services'),
+        value: t('process.preview.servicesValue'),
+        done: true,
+      },
     ];
     return (
       <PreviewFrame title={t('process.settings')}>
-        <div className="flex h-full flex-col p-3 sm:p-3.5">
-          <p className="text-[10px] font-semibold text-zinc-900">Configuration rapide</p>
-          <p className="mt-0.5 text-[9px] text-zinc-500">Tout est prêt pour recevoir des RDV</p>
-          <ul className="mt-3 space-y-1.5">
+        <div className="flex h-full flex-col gap-3 p-3 sm:p-3.5">
+          <div>
+            <p className="text-[10px] font-semibold text-foreground">
+              {t('process.preview.quickSetup')}
+            </p>
+            <p className="mt-0.5 text-[9px] text-muted-foreground">
+              {t('process.preview.readyForBookings')}
+            </p>
+          </div>
+          <ul className="flex flex-col gap-1.5">
             {rows.map(({ icon: RowIcon, label, value, done }) => (
               <li
                 key={label}
-                className="flex items-center gap-2.5 rounded-xl border border-zinc-200/80 bg-white px-2.5 py-2"
+                className="flex items-center gap-2.5 rounded-xl border border-border/80 bg-card px-2.5 py-2"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                  <RowIcon className="h-3.5 w-3.5 text-zinc-600" strokeWidth={1.75} />
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <RowIcon className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[9px] font-medium text-zinc-500">{label}</p>
-                  <p className="truncate text-[10px] font-semibold text-zinc-900">{value}</p>
+                  <p className="text-[9px] font-medium text-muted-foreground">{label}</p>
+                  <p className="truncate text-[10px] font-semibold text-foreground">{value}</p>
                 </div>
                 {done ? (
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/12">
-                    <Check className="h-3 w-3 text-emerald-600" strokeWidth={2.5} />
-                  </span>
+                  <Badge
+                    variant="secondary"
+                    className="size-5 shrink-0 rounded-full border-0 bg-emerald-500/12 p-0 text-emerald-600"
+                  >
+                    <Check className="size-3" strokeWidth={2.5} />
+                  </Badge>
                 ) : null}
               </li>
             ))}
@@ -139,45 +185,52 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
 
   if (type === 'share') {
     return (
-      <PreviewFrame title="Vitrine · Partage">
-        <div className="flex h-full flex-col p-3.5 sm:p-4">
-          <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/90 px-2.5 py-2">
-            <div className="flex items-center gap-2">
-              <Copy className="h-3.5 w-3.5 shrink-0 text-emerald-700" strokeWidth={1.75} />
-              <p className="text-[10px] font-semibold text-emerald-900">
-                {t('process.linkCopied')}
-              </p>
-            </div>
-          </div>
+      <PreviewFrame title={t('process.preview.shareTitle')}>
+        <div className="flex h-full flex-col gap-3 p-3.5 sm:p-4">
+          <Alert className="border-emerald-200/70 bg-emerald-50/90 px-2.5 py-2">
+            <Copy className="text-emerald-700" strokeWidth={1.75} />
+            <AlertTitle className="text-[10px] font-semibold text-emerald-900">
+              {t('process.linkCopied')}
+            </AlertTitle>
+          </Alert>
 
-          <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm">
-            <p className="text-[9px] font-medium text-zinc-500">Lien de réservation</p>
-            <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-zinc-50 px-2 py-1.5 ring-1 ring-zinc-200/80">
-              <Link2 className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={1.75} />
-              <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-semibold text-zinc-800">
-                ink-flow.me/monstudio
-              </span>
-              <span className="shrink-0 rounded-md bg-zinc-950 px-1.5 py-0.5 text-[8px] font-semibold text-white">
-                Copier
-              </span>
-            </div>
-          </div>
+          <Card size="sm" className="gap-0 py-0 shadow-sm ring-border/80">
+            <CardHeader className="gap-1 px-2.5 py-2">
+              <CardDescription className="text-[9px]">
+                {t('process.preview.bookingLink')}
+              </CardDescription>
+              <div className="flex items-center gap-2 rounded-lg bg-muted px-2 py-1.5 ring-1 ring-border/80">
+                <Link2 className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-semibold text-foreground">
+                  /studio/monstudio
+                </span>
+                <Badge variant="default" className="h-auto shrink-0 px-1.5 py-0.5 text-[8px]">
+                  {t('process.preview.copy')}
+                </Badge>
+              </div>
+            </CardHeader>
+          </Card>
 
-          <p className="mt-3 text-[9px] font-medium text-zinc-500">Partager sur</p>
-          <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-            {[
-              { label: 'Instagram', short: 'IG' },
-              { label: 'WhatsApp', short: 'WA' },
-              { label: 'SMS', short: 'SMS' },
-            ].map(({ label, short }) => (
-              <span
-                key={label}
-                title={label}
-                className="flex h-8 items-center justify-center rounded-lg border border-zinc-200/80 bg-white text-[9px] font-semibold text-zinc-700"
-              >
-                {short}
-              </span>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[9px] font-medium text-muted-foreground">
+              {t('process.preview.shareOn')}
+            </p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: 'Instagram', short: 'IG' },
+                { label: 'WhatsApp', short: 'WA' },
+                { label: 'SMS', short: 'SMS' },
+              ].map(({ label, short }) => (
+                <Badge
+                  key={label}
+                  variant="outline"
+                  title={label}
+                  className="flex h-8 w-full justify-center rounded-lg text-[9px] font-semibold"
+                >
+                  {short}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
       </PreviewFrame>
@@ -188,42 +241,44 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
     const requests = [
       {
         name: 'Camille R.',
-        detail: 'Flash botanique · Demain 15h30',
+        detail: t('process.preview.request1Detail'),
         amount: '60 €',
         active: true,
       },
       {
         name: 'Lucas M.',
-        detail: 'Manchette · En attente',
+        detail: t('process.preview.request2Detail'),
         amount: '80 €',
         active: false,
       },
     ];
     return (
-      <PreviewFrame title="Demandes · Inbox" dark>
-        <div className="flex h-full flex-col bg-zinc-950 p-3 sm:p-3.5">
+      <PreviewFrame title={t('process.preview.inboxTitle')} dark>
+        <div className="flex h-full flex-col gap-2.5 bg-zinc-950 p-3 sm:p-3.5">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-white">Boîte de réception</p>
-            <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[8px] font-semibold text-amber-400">
-              1 nouvelle
-            </span>
+            <p className="text-[10px] font-semibold text-white">{t('process.preview.inbox')}</p>
+            <Badge className="h-auto border-0 bg-amber-500/15 px-1.5 py-0.5 text-[8px] font-semibold text-amber-400">
+              {t('process.preview.newCount')}
+            </Badge>
           </div>
 
-          <ul className="mt-2.5 flex-1 space-y-1.5 overflow-hidden">
+          <ul className="flex flex-1 flex-col gap-1.5 overflow-hidden">
             {requests.map(({ name, detail, amount, active }) => (
               <li
                 key={name}
-                className={`rounded-xl border px-2.5 py-2 ${
+                className={cn(
+                  'rounded-xl border px-2.5 py-2',
                   active
                     ? 'border-emerald-500/30 bg-emerald-500/10'
                     : 'border-white/8 bg-white/[0.04]'
-                }`}
+                )}
               >
                 <div className="flex items-start gap-2">
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold ${
+                    className={cn(
+                      'flex size-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold',
                       active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-400'
-                    }`}
+                    )}
                   >
                     {name.slice(0, 2).toUpperCase()}
                   </span>
@@ -232,9 +287,10 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
                     <p className="truncate text-[9px] text-zinc-400">{detail}</p>
                   </div>
                   <span
-                    className={`shrink-0 text-[9px] font-semibold tabular-nums ${
+                    className={cn(
+                      'shrink-0 text-[9px] font-semibold tabular-nums',
                       active ? 'text-emerald-400' : 'text-zinc-500'
-                    }`}
+                    )}
                   >
                     {amount}
                   </span>
@@ -243,17 +299,22 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
             ))}
           </ul>
 
-          <div className="mt-2 rounded-xl border border-white/10 bg-zinc-900/90 p-2.5">
-            <div className="flex items-start gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
-                <Bell className="h-3.5 w-3.5 text-amber-400" strokeWidth={1.75} />
+          <Card
+            size="sm"
+            className="gap-0 border-white/10 bg-zinc-900/90 py-0 text-card-foreground ring-0"
+          >
+            <CardContent className="flex items-start gap-2 px-2.5 py-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
+                <Bell className="size-3.5 text-amber-400" strokeWidth={1.75} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold text-white">{t('process.newRdv')}</p>
-                <p className="mt-0.5 text-[9px] text-zinc-400">Acompte Stripe reçu · Camille R.</p>
+                <CardTitle className="text-[10px] text-white">{t('process.newRdv')}</CardTitle>
+                <CardDescription className="mt-0.5 text-[9px] text-zinc-400">
+                  {t('process.preview.depositReceived')}
+                </CardDescription>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </PreviewFrame>
     );
@@ -355,30 +416,41 @@ export const ProcessSection: React.FC = () => {
                 className="group relative w-[min(88vw,340px)] shrink-0 snap-center sm:w-auto sm:shrink"
               >
                 <div
-                  className={`${LANDING_SURFACE} ${LANDING_SURFACE_INNER} flex h-full flex-col overflow-hidden border-l-4 ${STEP_ACCENTS[index]} transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-[0_28px_56px_-22px_rgba(9,9,11,0.16)]`}
+                  className={cn(
+                    LANDING_SURFACE,
+                    LANDING_SURFACE_INNER,
+                    'flex h-full flex-col overflow-hidden border-l-4 transition-shadow duration-300',
+                    STEP_ACCENTS[index],
+                    '[@media(hover:hover)]:hover:shadow-[0_28px_56px_-22px_rgba(9,9,11,0.16)]'
+                  )}
                 >
                   <div
-                    className="relative aspect-[4/3] overflow-hidden border-b border-zinc-200/60 bg-zinc-100"
+                    className="relative aspect-[4/3] overflow-hidden border-b border-border/60 bg-muted"
                     data-gsap-scrub
                     data-gsap-scrub-y="20"
                     data-gsap-scrub-scale="0.02"
                   >
                     <StepPreview type={step.preview} t={t} />
-                    <span className="absolute right-3 top-3 z-10 rounded-lg bg-white/95 px-2 py-1 text-[10px] font-semibold text-zinc-600 shadow-sm ring-1 ring-zinc-200/80 backdrop-blur-sm">
+                    <Badge
+                      variant="outline"
+                      className="absolute top-3 right-3 z-10 border-border/80 bg-background/95 text-[10px] font-semibold text-muted-foreground shadow-sm backdrop-blur-sm"
+                    >
                       {t(step.durationKey)}
-                    </span>
+                    </Badge>
                   </div>
 
-                  <div className="flex flex-1 flex-col p-5">
-                    <div className="mb-2.5 flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-800 transition-colors duration-300 group-hover:bg-zinc-950 group-hover:text-white">
-                        <Icon className="h-4 w-4" strokeWidth={1.75} />
+                  <div className="flex flex-1 flex-col gap-2.5 p-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                        <Icon className="size-4" strokeWidth={1.75} />
                       </div>
-                      <h3 className="text-base font-bold tracking-tight text-zinc-950 sm:text-[1.05rem]">
+                      <CardTitle className="text-base font-bold tracking-tight sm:text-[1.05rem]">
                         {t(step.titleKey)}
-                      </h3>
+                      </CardTitle>
                     </div>
-                    <p className="text-sm leading-relaxed text-zinc-600">{t(step.descKey)}</p>
+                    <CardDescription className="text-sm leading-relaxed">
+                      {t(step.descKey)}
+                    </CardDescription>
                   </div>
                 </div>
               </LandingMotionItem>
@@ -388,20 +460,23 @@ export const ProcessSection: React.FC = () => {
 
         <LandingMotionReveal className="mt-12 text-center sm:mt-14">
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <a
-              href="/signup"
-              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-zinc-950 px-8 py-3.5 text-sm font-semibold text-white shadow-[0_16px_32px_-12px_rgba(9,9,11,0.35)] transition-all hover:bg-zinc-800 active:scale-[0.98]"
+            <Button
+              asChild
+              size="lg"
+              className="min-h-12 rounded-xl px-8 text-sm font-semibold shadow-[0_16px_32px_-12px_rgba(9,9,11,0.35)]"
             >
-              {t('process.cta1')}
-            </a>
-            <a
-              href="/dashboard-demo"
-              className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-zinc-200 bg-white px-8 py-3.5 text-sm font-semibold text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98]"
+              <a href="/signup">{t('process.cta1')}</a>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="min-h-12 rounded-xl px-8 text-sm font-semibold"
             >
-              {t('process.cta2')}
-            </a>
+              <a href="/dashboard-demo">{t('process.cta2')}</a>
+            </Button>
           </div>
-          <p className="mt-4 text-sm text-zinc-500">{t('process.trial')}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t('process.trial')}</p>
         </LandingMotionReveal>
       </div>
     </section>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { CHANGELOG_ENTRIES } from '../lib/changelogData';
-import { LANDING_URL } from '../lib/urls';
+import { getLandingHomeHref } from '../lib/urls';
 
 export const ChangelogPage: React.FC = () => {
   return (
@@ -17,10 +17,8 @@ export const ChangelogPage: React.FC = () => {
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <a
-            href={LANDING_URL}
+            href={getLandingHomeHref()}
             className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors text-sm font-medium"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <ArrowLeft className="w-5 h-5" />
             Accueil

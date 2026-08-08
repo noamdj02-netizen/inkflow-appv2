@@ -106,13 +106,7 @@ export const LandingAppScreenshot: React.FC<AppScreenshotProps> = ({
 
   return (
     <div className={shellClass}>
-      <div
-        className={`relative h-full w-full ${
-          variant === 'flush'
-            ? `bg-[radial-gradient(ellipse_at_center,rgba(24,24,27,0.06)_0%,transparent_68%)] ${frameClassName}`
-            : frameClassName
-        }`}
-      >
+      <div className={`relative h-full w-full ${frameClassName}`}>
         {backdropClassName ? (
           <div aria-hidden="true" className={`pointer-events-none absolute ${backdropClassName}`} />
         ) : null}
