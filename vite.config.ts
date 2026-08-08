@@ -19,14 +19,28 @@ if (hashArgIndex !== -1) {
   process.argv.splice(hashArgIndex);
 }
 
-/** Vendor splitting — isoler les grosses libs du chunk applicatif (index / routes). */
+/** Vendor splitting — isoler les grosses libs sans créer de cycles React ↔ motion ↔ others. */
 function inkflowManualChunks(id: string): string | undefined {
   if (!id.includes('node_modules')) return undefined;
+
+  // React + motion + radix : ne PAS isoler en chunks séparés — cycle vendor-react ↔ vendor-others ↔ vendor-motion
+  // casse createContext en prod (page blanche). Rollup les garde dans le graphe principal / chunks cohérents.
+  if (
+    id.includes('/react-dom/') ||
+    id.includes('/react/') ||
+    id.includes('scheduler/') ||
+    id.includes('use-sync-external-store') ||
+    id.includes('framer-motion') ||
+    id.includes('motion-dom') ||
+    id.includes('radix-ui') ||
+    id.includes('@radix-ui')
+  ) {
+    return undefined;
+  }
 
   if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
   if (id.includes('@supabase')) return 'vendor-supabase';
   if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
-  if (id.includes('framer-motion') || id.includes('motion-dom')) return 'vendor-motion';
   if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-leaflet';
   if (id.includes('react-joyride')) return 'vendor-joyride';
   if (id.includes('lucide-react')) return 'vendor-icons';
@@ -34,17 +48,9 @@ function inkflowManualChunks(id: string): string | undefined {
   if (id.includes('posthog-js')) return 'vendor-analytics';
   if (id.includes('antd-mobile')) return 'vendor-antd-mobile';
   if (id.includes('gsap')) return 'vendor-gsap';
-  if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'vendor-radix';
-  if (
-    id.includes('/react-dom/') ||
-    id.includes('/react/') ||
-    id.includes('scheduler/') ||
-    id.includes('use-sync-external-store')
-  ) {
-    return 'vendor-react';
-  }
 
-  return 'vendor-others';
+  // Pas de catch-all vendor-others — provoquait un blob 1 Mo+ avec imports croisés vers motion/react.
+  return undefined;
 }
 
 const PWA_ICON_SIZES = [48, 72, 96, 128, 144, 152, 192, 384, 512] as const;
