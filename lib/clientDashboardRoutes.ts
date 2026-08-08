@@ -1,8 +1,11 @@
 /**
- * Chemins stables de l’espace client (alignés sur le state onglet de ClientDashboard).
- * — À utiliser dans tout le front : liens, redirects, e-mails React, CTA.
+ * Chemins stables de l’espace client web.
  *
- * Portail client canonique: `/discover`.
+ * Portail canonique : `/discover` → `ClientAccountHubPage` (compte, santé, magic link).
+ * Exploration tatoueurs : `/explorer`, `/discover/:city`, etc.
+ *
+ * `@deprecated` L’ancien monolithe `ClientDashboard.tsx` et `/client/dashboard` sont retirés ;
+ * redirects dans `App.tsx` (`ClientLegacySubpathRedirect`).
  */
 export type ClientDashboardTab = 'home' | 'explore' | 'favorites' | 'map' | 'rdv' | 'profile';
 

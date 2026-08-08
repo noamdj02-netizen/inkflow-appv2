@@ -16,11 +16,13 @@ const NAV_LINKS = [
 ] as const;
 
 type Navbar1Props = {
-  /** Landing hero vidéo : masquer la barre fixe sur mobile pour ne pas masquer le fond. */
+  /** @deprecated Conservé pour compat — la nav est toujours visible sur mobile. */
   hideOnMobile?: boolean;
+  /** Hero vidéo sombre : pill glass dark ; sections claires : pill blanche. */
+  variant?: 'light' | 'dark';
 };
 
-export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
+export function Navbar1({ hideOnMobile = false, variant = 'light' }: Navbar1Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useLanguage();
 
@@ -43,19 +45,31 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
     };
   }, [isOpen]);
 
+  const isDark = variant === 'dark';
+
   return (
     <>
       <header
         className={cn(
-          'pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6',
+          'landing-nav-fixed pointer-events-none fixed inset-x-0 top-0 z-[120] flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6',
           hideOnMobile && 'hidden md:flex'
         )}
         aria-label="Navigation principale"
       >
-        <div className="pointer-events-auto relative z-10 flex w-full max-w-3xl items-center justify-between rounded-full border border-zinc-200/80 bg-white/95 px-4 py-2.5 shadow-lg shadow-zinc-900/5 backdrop-blur-md sm:px-6 sm:py-3">
+        <div
+          className={cn(
+            'pointer-events-auto relative z-10 flex w-full max-w-3xl items-center justify-between rounded-full px-4 py-2.5 backdrop-blur-md sm:px-6 sm:py-3',
+            isDark
+              ? 'border border-white/15 bg-black/55 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.65)]'
+              : 'border border-zinc-200/80 bg-white/95 shadow-lg shadow-zinc-900/5'
+          )}
+        >
           <a
             href={getLandingHomeHref()}
-            className="flex shrink-0 items-center gap-2.5 !text-zinc-900"
+            className={cn(
+              'flex shrink-0 items-center gap-2.5',
+              isDark ? '!text-white' : '!text-zinc-900'
+            )}
           >
             <motion.div
               className="flex items-center"
@@ -66,7 +80,12 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
             >
               <Logo size="sm" />
             </motion.div>
-            <span className="font-hero-title text-sm font-bold tracking-tight text-zinc-900 sm:text-base">
+            <span
+              className={cn(
+                'font-hero-title text-sm font-bold tracking-tight sm:text-base',
+                isDark ? 'text-white' : 'text-zinc-900'
+              )}
+            >
               Inkflow
             </span>
           </a>
@@ -115,13 +134,19 @@ export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
 
           <motion.button
             type="button"
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 md:hidden touch-manipulation"
+            className={cn(
+              'inline-flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-full border md:hidden',
+              isDark ? 'border-white/20 bg-white/10' : 'border-zinc-200 bg-zinc-50'
+            )}
             onClick={toggleMenu}
             whileTap={{ scale: 0.92 }}
             aria-label={isOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={isOpen}
           >
-            <Menu className="h-5 w-5 text-zinc-900" strokeWidth={2} />
+            <Menu
+              className={cn('h-5 w-5', isDark ? 'text-white' : 'text-zinc-900')}
+              strokeWidth={2}
+            />
           </motion.button>
         </div>
       </header>

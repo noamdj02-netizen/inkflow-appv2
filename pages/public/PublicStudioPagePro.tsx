@@ -781,7 +781,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   return (
     <div
       ref={landingScrollRef}
-      className={`landing-scroll relative min-h-[100dvh] ${activeTheme?.containerClasses ?? 'bg-neutral-50'}`}
+      className={`landing-scroll vitrine-scroll relative min-h-[100dvh] max-lg:pb-[calc(var(--inkflow-vitrine-sticky-bar,4.75rem)+env(safe-area-inset-bottom,0px))] ${activeTheme?.containerClasses ?? 'bg-neutral-50'}`}
       style={{ ['--vitrine-primary' as string]: primaryColor }}
     >
       <SEO
@@ -1067,7 +1067,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       )}
 
       {/* Main Content — safe-bottom pour éviter contenu coupé sur mobile */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 pb-[max(7rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 pb-[max(2rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
           <div className="lg:col-span-2 space-y-10 sm:space-y-16 relative z-10">
             {/* About */}
@@ -1525,7 +1525,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       </main>
 
       {/* Footer — safe-bottom pour éviter coupure sur mobile */}
-      <footer className="bg-neutral-900 text-white mt-24 py-16 pb-[max(7rem,env(safe-area-inset-bottom))] lg:pb-[max(4rem,env(safe-area-inset-bottom))]">
+      <footer className="bg-neutral-900 text-white mt-24 py-16 pb-[max(2rem,env(safe-area-inset-bottom))] lg:pb-[max(4rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {studioDisplay.siret && (
             <p className="text-neutral-500 text-sm mb-6">

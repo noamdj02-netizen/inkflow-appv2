@@ -43,34 +43,36 @@ export const LandingEnhanceAI: React.FC = () => {
   }, []);
 
   return (
-    <div className="landing-scroll min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2] pb-[calc(var(--inkflow-landing-sticky-cta,4.5rem)+env(safe-area-inset-bottom,0px))] md:pb-0">
-      <SEO
-        title={t('seo.landing.title')}
-        description={t('seo.landing.description')}
-        canonical="/"
-        keywords={t('seo.landing.keywords')}
-        ogImageAlt={
-          lang === 'en'
-            ? 'InkFlow — tattoo studio management app'
-            : 'InkFlow — application de gestion pour tatoueurs'
-        }
-        schema={faqPageSchemaFr}
-      />
-      <EnhanceAINavbar />
-      <main className="min-h-[60vh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2]">
-        <EnhanceAIHero />
-        <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
-          <LandingDemoSection />
-          <EnhanceAIFeaturesDetail />
-          <EnhanceAIHowInkflow />
-          <ProcessSection />
-          <PricingSection />
-          <TestimonialsSection />
-          <EnhanceAIFAQ />
-          <EnhanceAIFooter />
-        </Suspense>
-      </main>
+    <>
+      <EnhanceAINavbar variant="dark" />
+      <div className="landing-scroll min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2] pb-[calc(var(--inkflow-landing-sticky-cta,4.5rem)+env(safe-area-inset-bottom,0px))] md:pb-0">
+        <SEO
+          title={t('seo.landing.title')}
+          description={t('seo.landing.description')}
+          canonical="/"
+          keywords={t('seo.landing.keywords')}
+          ogImageAlt={
+            lang === 'en'
+              ? 'InkFlow — tattoo studio management app'
+              : 'InkFlow — application de gestion pour tatoueurs'
+          }
+          schema={faqPageSchemaFr}
+        />
+        <main className="min-h-[60vh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2]">
+          <EnhanceAIHero />
+          <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
+            <LandingDemoSection />
+            <EnhanceAIFeaturesDetail />
+            <EnhanceAIHowInkflow />
+            <ProcessSection />
+            <PricingSection />
+            <TestimonialsSection />
+            <EnhanceAIFAQ />
+            <EnhanceAIFooter />
+          </Suspense>
+        </main>
+      </div>
       <LandingMobileStickyCta />
-    </div>
+    </>
   );
 };

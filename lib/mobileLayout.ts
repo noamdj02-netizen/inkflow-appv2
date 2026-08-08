@@ -21,9 +21,13 @@ export const MOBILE_DOCK_RESERVE_SHELL_REM = 4.25;
 /** Hauteur sticky CTA landing mobile (barre basse + safe area approx.). */
 export const LANDING_MOBILE_STICKY_CTA_REM = 4.5;
 
+/** Barre sticky vitrine mobile (Réserver + Contact + safe area). */
+export const VITRINE_MOBILE_STICKY_BAR_REM = 4.75;
+
 export const mobileLayoutCssVars = {
   touchMin: `${TOUCH_TARGET_PX}px`,
   dockReserve: `${MOBILE_DOCK_RESERVE_REM}rem`,
   dockReserveShell: `${MOBILE_DOCK_RESERVE_SHELL_REM}rem`,
   landingStickyCta: `${LANDING_MOBILE_STICKY_CTA_REM}rem`,
+  vitrineStickyBar: `${VITRINE_MOBILE_STICKY_BAR_REM}rem`,
 } as const;

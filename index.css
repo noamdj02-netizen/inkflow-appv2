@@ -626,6 +626,7 @@ video {
   --inkflow-mobile-dock-reserve: 4.75rem;
   --inkflow-mobile-dock-reserve-shell: 4.25rem;
   --inkflow-landing-sticky-cta: 4.5rem;
+  --inkflow-vitrine-sticky-bar: 4.75rem;
 }
 
 /* Default + Mode Clair — shadcn Vercel (21st.dev / tweakcn) + legacy dashboard vars */
@@ -1904,6 +1905,15 @@ select,
 /* Corps des modales : évite que le champ actif soit masqué par le clavier virtuel */
 .inkflow-modal-body {
   padding-bottom: max(0px, var(--keyboard-inset-height));
+}
+
+/* Fixed chrome hors .landing-scroll — iOS Safari clippe position:fixed dans overflow-y:auto */
+.landing-nav-fixed,
+.landing-mobile-sticky-cta {
+  position: fixed;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* 3. LANDING PAGE & PUBLIC PAGES — Liberation du scroll pour marketing et vitrines */

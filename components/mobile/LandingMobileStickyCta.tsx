@@ -11,7 +11,7 @@ export const LandingMobileStickyCta: React.FC = () => {
 
   return (
     <div
-      className="landing-mobile-sticky-cta fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/95 backdrop-blur-md md:hidden"
+      className="landing-mobile-sticky-cta fixed inset-x-0 bottom-0 z-[110] border-t border-zinc-200/80 bg-white/95 backdrop-blur-md md:hidden"
       style={{
         paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
       }}
