@@ -3,9 +3,11 @@ import { ArrowLeft } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { Footer } from '../../components/Footer';
 import { SEO } from '../../components/SEO';
-import { LANDING_URL } from '../../lib/urls';
+import { getLegalIdentity } from '../../lib/legalIdentity';
 
 export const PrivacyPolicyPage: React.FC = () => {
+  const legal = getLegalIdentity();
+
   return (
     <div className="landing-scroll bg-white min-h-screen flex flex-col">
       <SEO
@@ -18,7 +20,7 @@ export const PrivacyPolicyPage: React.FC = () => {
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <a
-            href={LANDING_URL}
+            href="/"
             className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -48,9 +50,10 @@ export const PrivacyPolicyPage: React.FC = () => {
           <section>
             <h2 className="text-xl font-semibold text-neutral-900 mb-3">1. Introduction</h2>
             <p>
-              InkFlow (« nous », « notre ») s'engage à protéger la vie privée des utilisateurs de sa
-              plateforme de gestion pour tatoueurs et studios. Cette politique décrit les données
-              que nous collectons, comment nous les utilisons et vos droits.
+              {legal.tradeName} (« nous », « notre »), édité par {legal.entrepreneurName},{' '}
+              {legal.legalForm.toLowerCase()}, s&apos;engage à protéger la vie privée des
+              utilisateurs de sa plateforme de gestion pour tatoueurs et studios. Cette politique
+              décrit les données que nous collectons, comment nous les utilisons et vos droits.
             </p>
           </section>
 
@@ -243,11 +246,15 @@ export const PrivacyPolicyPage: React.FC = () => {
             <p>
               Cookies <strong>strictement nécessaires</strong> (session, préférences) sans
               consentement préalable. Si vous
-              <strong> acceptez</strong> le bandeau « Tout accepter »,{' '}
+              <strong> acceptez</strong> le bandeau « Accepter tout »,{' '}
               <strong>Vercel Analytics</strong> (mesure d’audience) peut être chargé — pas
               d’affichage publicitaire ciblé par défaut. <strong>Google Analytics</strong> n’est pas
               intégré par défaut dans l’app ; toute intégration future nécessiterait consentement
-              explicite (opt-in).
+              explicite (opt-in). Consultez la{' '}
+              <a href="/politique-cookies" className="text-indigo-600 hover:underline">
+                politique cookies
+              </a>{' '}
+              pour le détail des traceurs et la gestion de vos préférences.
             </p>
           </section>
 

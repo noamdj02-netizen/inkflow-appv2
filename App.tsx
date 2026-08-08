@@ -86,6 +86,9 @@ const TermsOfServicePage = lazy(() =>
 const LegalNoticePage = lazy(() =>
   import('./pages/legal/LegalNoticePage').then((m) => ({ default: m.LegalNoticePage }))
 );
+const CookiePolicyPage = lazy(() =>
+  import('./pages/legal/CookiePolicyPage').then((m) => ({ default: m.CookiePolicyPage }))
+);
 const AidePage = lazy(() => import('./pages/AidePage').then((m) => ({ default: m.AidePage })));
 const ChangelogPage = lazy(() =>
   import('./pages/ChangelogPage').then((m) => ({ default: m.ChangelogPage }))
@@ -350,6 +353,8 @@ const Router: React.FC = () => {
     { path: '/cgv', component: TermsOfServicePage },
     { path: '/mentions-legales', component: LegalNoticePage },
     { path: '/legal', component: LegalNoticePage },
+    { path: '/politique-cookies', component: CookiePolicyPage },
+    { path: '/cookies', component: CookiePolicyPage },
     { path: '/aide', component: AidePage },
     { path: '/changelog', component: ChangelogPage },
     { path: '/quoi-de-neuf', component: ChangelogPage },

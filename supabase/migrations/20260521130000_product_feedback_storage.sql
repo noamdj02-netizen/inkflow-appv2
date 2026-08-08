@@ -1,4 +1,6 @@
 -- Captures d'écran signalements produit (tatoueurs authentifiés)
+DROP POLICY IF EXISTS "Authenticated upload product feedback screenshots" ON storage.objects;
+
 CREATE POLICY "Authenticated upload product feedback screenshots"
   ON storage.objects
   FOR INSERT

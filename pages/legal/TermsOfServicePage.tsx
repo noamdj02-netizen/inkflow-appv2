@@ -3,9 +3,11 @@ import { ArrowLeft } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { Footer } from '../../components/Footer';
 import { SEO } from '../../components/SEO';
-import { LANDING_URL } from '../../lib/urls';
+import { getLegalIdentity } from '../../lib/legalIdentity';
 
 export const TermsOfServicePage: React.FC = () => {
+  const legal = getLegalIdentity();
+
   return (
     <div className="landing-scroll bg-white min-h-screen flex flex-col">
       <SEO
@@ -18,7 +20,7 @@ export const TermsOfServicePage: React.FC = () => {
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <a
-            href={LANDING_URL}
+            href="/"
             className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -57,9 +59,10 @@ export const TermsOfServicePage: React.FC = () => {
             </p>
             <h2 className="text-xl font-semibold text-neutral-900 mb-3">1. Objet (CGU)</h2>
             <p>
-              Les présentes conditions régissent l'utilisation de la plateforme InkFlow
-              (https://ink-flow.me), service de gestion pour tatoueurs et studios. En créant un
-              compte, vous acceptez ces conditions.
+              Les présentes conditions régissent l&apos;utilisation de la plateforme{' '}
+              {legal.tradeName} ({legal.website}), service de gestion pour tatoueurs et studios,
+              édité par {legal.entrepreneurName}, {legal.legalForm.toLowerCase()} (SIRET{' '}
+              {legal.siret}). En créant un compte, vous acceptez ces conditions.
             </p>
           </section>
 

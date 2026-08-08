@@ -111,6 +111,14 @@ verify_jwt = false
 [functions.post-appointment-closeout]
 verify_jwt = false
 
+# Trigger pg_net (sans JWT) — tampons fidélité après RDV completed.
+[functions.process-stamp-loyalty-db]
+verify_jwt = false
+
+# Webhook Database Supabase → push (header X-Inkflow-Secret requis).
+[functions.notification-webhook]
+verify_jwt = false
+
 # Cron pg_net : rappel si créneau dépassé sans clôture (confirmed / in_progress).
 [functions.remind-slot-closeout-nudge]
 verify_jwt = false

@@ -14,7 +14,12 @@ const NAV_LINKS = [
   { href: '/#avis', key: 'nav.reviews' },
 ] as const;
 
-export function Navbar1() {
+type Navbar1Props = {
+  /** Landing hero vidéo : masquer la barre fixe sur mobile pour ne pas masquer le fond. */
+  hideOnMobile?: boolean;
+};
+
+export function Navbar1({ hideOnMobile = false }: Navbar1Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
 
@@ -40,7 +45,10 @@ export function Navbar1() {
   return (
     <>
       <header
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6"
+        className={cn(
+          'pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6',
+          hideOnMobile && 'hidden md:flex'
+        )}
         aria-label="Navigation principale"
       >
         <div className="pointer-events-auto relative z-10 flex w-full max-w-3xl items-center justify-between rounded-full border border-zinc-200/80 bg-white/95 px-4 py-2.5 shadow-lg shadow-zinc-900/5 backdrop-blur-md sm:px-6 sm:py-3">
@@ -141,7 +149,7 @@ export function Navbar1() {
       </header>
 
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !hideOnMobile && (
           <motion.div
             className="fixed inset-0 z-[9999] bg-white pt-24 px-6 md:hidden"
             initial={{ opacity: 0, x: '100%' }}

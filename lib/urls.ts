@@ -259,6 +259,13 @@ export const LANDING_PRICING_URL = `${LANDING_URL}/#pricing`;
 export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;
 export const LANDING_TERMS_URL = `${LANDING_URL}/conditions-utilisation`;
 export const LANDING_LEGAL_URL = `${LANDING_URL}/mentions-legales`;
+export const LANDING_COOKIES_URL = `${LANDING_URL}/politique-cookies`;
+
+/** Chemins légaux in-app (SPA Vite — landing `/` + pages dédiées). */
+export const APP_PRIVACY_PATH = '/politique-confidentialite';
+export const APP_TERMS_PATH = '/conditions-utilisation';
+export const APP_LEGAL_PATH = '/mentions-legales';
+export const APP_COOKIES_PATH = '/politique-cookies';
 
 /** Compte Instagram officiel InkFlow (lien partage / footer). */
 export const INKFLOW_INSTAGRAM_URL =

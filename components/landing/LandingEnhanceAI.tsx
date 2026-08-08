@@ -48,7 +48,7 @@ export const LandingEnhanceAI: React.FC = () => {
         ogImageAlt="InkFlow — application de gestion pour tatoueurs"
         schema={faqPageSchemaFr}
       />
-      <EnhanceAINavbar />
+      <EnhanceAINavbar hideOnMobile />
       <main className="min-h-[60vh] w-full max-w-full overflow-x-hidden bg-[#f6f5f2]">
         <EnhanceAIHero />
         <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>

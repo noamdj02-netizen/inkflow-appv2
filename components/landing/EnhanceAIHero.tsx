@@ -35,7 +35,7 @@ export const EnhanceAIHero: React.FC = () => {
 
   return (
     <section
-      className="landing-hero relative flex min-h-[100dvh] w-full min-w-0 flex-col overflow-hidden pt-[calc(4.25rem+env(safe-area-inset-top,0px))] pb-16 sm:pb-20 lg:pb-24"
+      className="landing-hero relative flex min-h-[100dvh] w-full min-w-0 flex-col overflow-hidden pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-16 md:pt-[calc(4.25rem+env(safe-area-inset-top,0px))] sm:pb-20 lg:pb-24"
       data-gsap-hero
     >
       <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>

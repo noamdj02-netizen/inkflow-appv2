@@ -7,21 +7,10 @@
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
-import { internalFunctionSecretOk } from "../_shared/edgeInvokeAuth.ts";
+import { assertInternalFunctionAuthorized } from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-function requireInternalOrOpen(req: Request): Response | null {
-  const secret = (Deno.env.get("INTERNAL_FUNCTION_SECRET") || "").trim();
-  if (secret.length >= 12 && !internalFunctionSecretOk(req)) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-  return null;
-}
 
 function randomPromoCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -31,7 +20,8 @@ function randomPromoCode(): string {
 }
 
 Deno.serve(async (req: Request) => {
-  const denied = requireInternalOrOpen(req);
+  const origin = req.headers.get("origin");
+  const denied = assertInternalFunctionAuthorized(req, origin);
   if (denied) return denied;
 
   if (req.method === "OPTIONS") {

@@ -4,6 +4,7 @@
  * + rate-limit mémoire par IP (meilleur que rien ; pour une prod à charge, prévoir Upstash).
  */
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getCorsHeaders } from "./cors.ts";
 
 const bucket = new Map<string, number[]>();
 
@@ -25,6 +26,29 @@ export function internalFunctionSecretOk(req: Request): boolean {
   if (secret.length < 12) return false;
   const h = (req.headers.get("X-Inkflow-Secret") || "").trim();
   return h === secret;
+}
+
+/** Garde fail-closed pour webhooks DB / pg_net — 503 si secret absent, 403 si header invalide. */
+export function assertInternalFunctionAuthorized(
+  req: Request,
+  origin: string | null,
+): Response | null {
+  const secret = (Deno.env.get("INTERNAL_FUNCTION_SECRET") || "").trim();
+  const corsHeaders = getCorsHeaders(origin);
+
+  if (secret.length < 12) {
+    return new Response(JSON.stringify({ error: "Internal function secret not configured" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
+  if (internalFunctionSecretOk(req)) return null;
+
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 403,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
 }
 
 /** Appels serveur à serveur (ex. webhook Stripe) : secret interne OU Authorization Bearer service_role. */

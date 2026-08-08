@@ -1,8 +1,9 @@
 import React from 'react';
 import { Instagram, Mail } from 'lucide-react';
 import { Logo } from './Logo';
-import { LANDING_URL, INKFLOW_INSTAGRAM_URL } from '../lib/urls';
+import { LANDING_URL, INKFLOW_INSTAGRAM_URL, APP_COOKIES_PATH } from '../lib/urls';
 import { supportMailto, SUPPORT_EMAIL } from '../lib/supportContact';
+import { openCookieSettings } from '../lib/cookieConsentStorage';
 
 export const Footer: React.FC = () => {
   return (
@@ -59,6 +60,19 @@ export const Footer: React.FC = () => {
             >
               Mentions légales
             </a>
+            <a
+              href={APP_COOKIES_PATH}
+              className="hover:text-neutral-900 transition-colors duration-200"
+            >
+              Politique cookies
+            </a>
+            <button
+              type="button"
+              onClick={() => openCookieSettings()}
+              className="hover:text-neutral-900 transition-colors duration-200 text-left"
+            >
+              Gérer les cookies
+            </button>
             <a href="/aide" className="hover:text-neutral-900 transition-colors duration-200">
               Aide
             </a>
