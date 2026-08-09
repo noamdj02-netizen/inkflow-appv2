@@ -40,15 +40,23 @@ Sans ces variables, les boutons Wallet utilisent partage ou copie du code + lien
 
 ### Vercel — Daily Brief (cron + API, sans préfixe `VITE_`)
 
-| Variable                    | Obligatoire      | Description                                                                                            |
-| --------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
-| `CRON_SECRET`               | pour le cron     | Secret partagé : header `Authorization: Bearer <CRON_SECRET>` sur `GET /api/cron/daily-brief`          |
-| `SUPABASE_SERVICE_ROLE_KEY` | oui côté serveur | Même clé qu’en Edge (déjà souvent en variable Vercel pour d’autres besoins)                            |
-| `DAILY_BRIEF_STUDIO_ID`     | non              | UUID `inkflow_studios` : push Web quotidien vers les abonnements de ce studio                          |
-| `INSTAGRAM_ACCESS_TOKEN`    | non              | Insights Instagram (si configuré)                                                                      |
-| `FOUNDER_ADMIN_EMAILS`      | recommandé       | E-mails autorisés pour `GET /api/daily-brief` si le compte n’est pas en `@ink-flow.me` / `@inkflow.me` |
+| Variable                         | Obligatoire      | Description                                                                                            |
+| -------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `CRON_SECRET`                    | pour le cron     | Secret partagé : header `Authorization: Bearer <CRON_SECRET>` sur `GET /api/cron/daily-brief`          |
+| `SUPABASE_SERVICE_ROLE_KEY`      | oui côté serveur | Même clé qu’en Edge (déjà souvent en variable Vercel pour d’autres besoins)                            |
+| `DAILY_BRIEF_STUDIO_ID`          | non              | UUID `inkflow_studios` : push Web quotidien vers les abonnements de ce studio                          |
+| `INSTAGRAM_ACCESS_TOKEN`         | non              | Insights Instagram (si configuré)                                                                      |
+| `SLACK_DAILY_BRIEF_WEBHOOK_URL`  | non              | Incoming Webhook Slack (channel Inkflow). Absent/vide → skip Slack ; échec Slack non bloquant          |
+| `FOUNDER_ADMIN_EMAILS`           | recommandé       | E-mails autorisés pour `GET /api/daily-brief` si le compte n’est pas en `@ink-flow.me` / `@inkflow.me` |
 
-Voir `docs/inkflow-daily-brief.md`.
+**Setup Slack (fondateur)** : créer un Incoming Webhook vers le channel Inkflow → coller l’URL dans `SLACK_DAILY_BRIEF_WEBHOOK_URL` (Production) → redéployer → tester :
+
+```bash
+curl -sS -H "Authorization: Bearer $CRON_SECRET" \
+  "https://app.ink-flow.me/api/cron/daily-brief"
+```
+
+Ne jamais logger ni committer l’URL complète du webhook. Voir `docs/inkflow-daily-brief.md`.
 
 ---
 

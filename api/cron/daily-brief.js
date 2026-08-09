@@ -1,12 +1,88 @@
 /**
  * Vercel Cron — GET /api/cron/daily-brief
  * Secured with Authorization: Bearer CRON_SECRET (set in Vercel env, same for manual curl).
+ * Optional Slack Incoming Webhook: SLACK_DAILY_BRIEF_WEBHOOK_URL (skip if unset; never fail cron).
  */
 import { createClient } from '@supabase/supabase-js';
 import { DateTime } from 'luxon';
 
+const SLACK_TIMEOUT_MS = 8_000;
+const DAILY_BRIEF_ADMIN_URL = 'https://app.ink-flow.me/admin/daily-brief';
+
 function ymd(d) {
   return d.toFormat('yyyy-LL-dd');
+}
+
+/**
+ * Post founder Daily Brief to Slack Incoming Webhook.
+ * @returns {'ok'|'skipped'|'error'}
+ */
+async function postDailyBriefToSlack({
+  title,
+  totalRevenue,
+  newBookings,
+  newStudios,
+  unpaidDeposits,
+  pendingProjects,
+  alerts,
+}) {
+  const webhookUrl = (process.env.SLACK_DAILY_BRIEF_WEBHOOK_URL || '').trim();
+  if (!webhookUrl) {
+    return 'skipped';
+  }
+
+  const lines = [
+    `💰 *${totalRevenue.toFixed(0)}€* encaissés`,
+    `📅 *${newBookings}* bookings`,
+    `👤 *${newStudios}* nouveaux studios`,
+    `💳 *${unpaidDeposits}* acomptes pending`,
+    `📋 *${pendingProjects}* projets pending`,
+  ];
+  if (alerts.length > 0) {
+    lines.push('', '*Alertes*', ...alerts.map((a) => `• ${a}`));
+  }
+  lines.push('', `<${DAILY_BRIEF_ADMIN_URL}|Ouvrir le Daily Brief>`);
+
+  const textFallback = `${title}\n${lines.join('\n').replace(/\*/g, '')}`;
+  const payload = {
+    text: textFallback,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: title.slice(0, 150), emoji: true },
+      },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: lines.join('\n') },
+      },
+    ],
+  };
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SLACK_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      // Never log the webhook URL (secret).
+      console.error('[daily-brief] Slack webhook failed', { status: res.status });
+      return 'error';
+    }
+    return 'ok';
+  } catch (err) {
+    const reason = err?.name === 'AbortError' ? 'timeout' : 'network';
+    console.error('[daily-brief] Slack webhook error', { reason });
+    return 'error';
+  }
 }
 
 export default async function handler(req, res) {
@@ -189,5 +265,15 @@ export default async function handler(req, res) {
     return;
   }
 
-  res.status(200).json({ ok: true, sent, date: yDate, alerts: alerts.length });
+  const slack = await postDailyBriefToSlack({
+    title,
+    totalRevenue,
+    newBookings,
+    newStudios,
+    unpaidDeposits,
+    pendingProjects,
+    alerts,
+  });
+
+  res.status(200).json({ ok: true, sent, date: yDate, alerts: alerts.length, slack });
 }
